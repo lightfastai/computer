@@ -18,8 +18,10 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
-      "trailingComma": "es5",
       "semicolons": "always"
     }
+  },
+  "files": {
+    "ignore": ["**/node_modules/**", "**/dist/**", "**/.turbo/**", "**/build/**", "**/.next/**"]
   }
 }

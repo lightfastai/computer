@@ -1,4 +1,4 @@
-import { Agent, AgentStatus, AgentType, Message, MessageType } from './types';
+import { type Agent, AgentStatus, type AgentType, type Message, MessageType } from './types';
 
 /**
  * Base class for MCP agents
@@ -60,7 +60,7 @@ export class MCPAgent implements Agent {
     };
 
     // Implementation will be specific to each agent type
-    
+
     return message;
   }
 }

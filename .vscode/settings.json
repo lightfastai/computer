@@ -13,12 +13,12 @@
     "**/.git": true,
     "**/.turbo": true
   },
-  "files.exclude": {
-    "**/.git": true,
-    "**/node_modules": true,
-    "**/dist": true,
-    "**/.turbo": true
-  },
+  // "files.exclude": {
+  //   "**/.git": true,
+  //   "**/node_modules": true,
+  //   "**/dist": true,
+  //   "**/.turbo": true
+  // },
   "files.eol": "\n",
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,

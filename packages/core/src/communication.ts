@@ -47,7 +47,7 @@ export class CommunicationManager {
   async sendMessage(
     agentId: string,
     content: string,
-    type: MessageType = MessageType.COMMAND
+    type: MessageType = MessageType.COMMAND,
   ): Promise<Message | null> {
     const agent = this.agents.get(agentId);
     if (!agent) {

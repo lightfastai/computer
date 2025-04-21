@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
+import type React from 'react';
+import { useState } from 'react';
 
 interface CommandInputProps {
   onSubmit: (command: string) => void;
@@ -17,12 +18,12 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onSubmit, disabled =
     if (key.return) {
       if (input.trim() !== '') {
         onSubmit(input);
-        setHistory(prev => [input, ...prev].slice(0, 50));
+        setHistory((prev) => [input, ...prev].slice(0, 50));
         setInput('');
         setHistoryIndex(-1);
       }
     } else if (key.backspace || key.delete) {
-      setInput(prev => prev.slice(0, -1));
+      setInput((prev) => prev.slice(0, -1));
     } else if (key.upArrow) {
       if (historyIndex < history.length - 1) {
         const newIndex = historyIndex + 1;
@@ -39,7 +40,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onSubmit, disabled =
         setInput('');
       }
     } else if (input) {
-      setInput(prev => prev + input);
+      setInput((prev) => prev + input);
     }
   });
 

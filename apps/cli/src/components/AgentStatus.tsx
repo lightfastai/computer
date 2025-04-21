@@ -1,6 +1,6 @@
-import React from 'react';
-import { Text } from 'ink';
 import { AgentStatus } from '@lightfast/core';
+import { Text } from 'ink';
+import type React from 'react';
 
 interface AgentStatusIndicatorProps {
   status: AgentStatus;
@@ -8,8 +8,8 @@ interface AgentStatusIndicatorProps {
 
 export const AgentStatusIndicator: React.FC<AgentStatusIndicatorProps> = ({ status }) => {
   let color = 'gray';
-  let symbol = '●';
-  
+  const symbol = '●';
+
   switch (status) {
     case AgentStatus.CONNECTED:
       color = 'green';
@@ -24,6 +24,6 @@ export const AgentStatusIndicator: React.FC<AgentStatusIndicatorProps> = ({ stat
       color = 'red';
       break;
   }
-  
+
   return <Text color={color}>{symbol}</Text>;
 };
