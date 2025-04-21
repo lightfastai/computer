@@ -1,0 +1,6 @@
+[install]
+# Use the exact version specified in package.json
+exact = true
+
+[install.scopes]
+lightfast = "workspace:*"

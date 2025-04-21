@@ -1,0 +1,34 @@
+{
+  "name": "@lightfast/cli",
+  "version": "0.1.0",
+  "description": "Terminal UI for lightfast computer integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "lightfast": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "dev": "bun --watch ./src/cli.tsx",
+    "test": "bun test",
+    "lint": "biome check .",
+    "clean": "rm -rf dist .turbo node_modules"
+  },
+  "keywords": ["lightfast", "cli", "terminal", "ink"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@lightfast/core": "workspace:*",
+    "ink": "^4.4.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "^18.2.37",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1",
+    "vitest": "^1.0.0"
+  },
+  "packageManager": "bun@1.0.25"
+}

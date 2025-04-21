@@ -1,0 +1,27 @@
+{
+  "name": "@lightfast/adapter-blender",
+  "version": "0.1.0",
+  "description": "Blender adapter for lightfast computer integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "dev": "bun build ./src/index.ts --outdir ./dist --target node --watch",
+    "test": "bun test",
+    "lint": "biome check .",
+    "clean": "rm -rf dist .turbo node_modules"
+  },
+  "keywords": ["lightfast", "blender", "adapter", "mcp"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@lightfast/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "~5.7.2",
+    "vitest": "^1.0.0"
+  },
+  "packageManager": "bun@1.0.25"
+}

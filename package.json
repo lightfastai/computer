@@ -1,0 +1,22 @@
+{
+  "name": "lightfast-computer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "biome format --write .",
+    "test": "turbo test",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "turbo": "^2.5.0",
+    "typescript": "5.8.3",
+    "bun-types": "latest"
+  },
+  "packageManager": "bun@1.2.10",
+  "workspaces": ["packages/*", "internal/*"]
+}
