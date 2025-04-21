@@ -98,6 +98,6 @@ export {
   unregisterAgent,
 };
 
-// For backward compatibility
-// These exports are kept for backward compatibility but will be deprecated in future versions
-export * from './types';
+export * from './adapters/ableton-adapter';
+export * from './adapters/blender-adapter';
+export * from './adapters/touchdesigner-adapter';

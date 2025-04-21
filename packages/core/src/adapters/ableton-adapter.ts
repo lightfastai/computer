@@ -2,16 +2,8 @@
  * Functional utilities for Ableton adapter
  */
 import { randomUUID } from 'node:crypto';
-import {
-  type Agent,
-  type Message,
-  type MessageType,
-  createAgent,
-  createMessage,
-  setCapabilities,
-  updateAgentStatus,
-  validateAgent,
-} from '@lightfast/core';
+import { createAgent, createMessage, setCapabilities, updateAgentStatus } from '../agent';
+import { type Agent, type Message, type MessageType, validateAgent } from '../schemas';
 
 /**
  * Ableton connection options
@@ -31,7 +23,7 @@ export const createAbletonAgent = (
 ): Agent => {
   // Create a base agent
   const agent = createAgent(name, 'ableton', id);
-  
+
   // Add Ableton-specific capabilities
   return setCapabilities(agent, [
     'track-control',
@@ -90,7 +82,7 @@ export const sendAbletonMessage = async (
 ): Promise<Message> => {
   // Validate the agent
   validateAgent(agent);
-  
+
   // Create the message
   const message = createMessage('lightfast', agent.id, content, type);
 

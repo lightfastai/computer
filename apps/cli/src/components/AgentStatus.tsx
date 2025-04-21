@@ -1,4 +1,4 @@
-import { AgentStatus } from '@lightfast/core';
+import type { AgentStatus } from '@lightfast/core/src/schemas';
 import { Text } from 'ink';
 import type React from 'react';
 
@@ -11,16 +11,16 @@ export const AgentStatusIndicator: React.FC<AgentStatusIndicatorProps> = ({ stat
   const symbol = '●';
 
   switch (status) {
-    case AgentStatus.CONNECTED:
+    case 'connected':
       color = 'green';
       break;
-    case AgentStatus.DISCONNECTED:
+    case 'disconnected':
       color = 'gray';
       break;
-    case AgentStatus.BUSY:
+    case 'busy':
       color = 'yellow';
       break;
-    case AgentStatus.ERROR:
+    case 'error':
       color = 'red';
       break;
   }

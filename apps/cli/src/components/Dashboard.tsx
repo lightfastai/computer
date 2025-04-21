@@ -1,4 +1,3 @@
-import type { MCPAgent } from '@lightfast/core';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { AgentStatusIndicator } from './AgentStatus';

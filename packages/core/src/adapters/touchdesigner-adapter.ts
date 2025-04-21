@@ -2,16 +2,9 @@
  * Functional utilities for TouchDesigner adapter
  */
 import { randomUUID } from 'node:crypto';
-import {
-  type Agent,
-  type Message,
-  type MessageType,
-  createAgent,
-  createMessage,
-  setCapabilities,
-  updateAgentStatus,
-  validateAgent,
-} from '@lightfast/core';
+
+import { createAgent, createMessage, setCapabilities, updateAgentStatus } from '../agent';
+import { type Agent, type Message, type MessageType, validateAgent } from '../schemas';
 
 /**
  * TouchDesigner connection options

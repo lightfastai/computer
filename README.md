@@ -1,6 +1,6 @@
 # Lightfast Computer
 
-A terminal-based integration layer for creative software like Blender, Ableton Live, and TouchDesigner using a functional approach with Zod validation.
+A terminal-based integration layer for creative software like Blender, Ableton Live, and TouchDesigner using a purely functional approach with Zod validation.
 
 ## Overview
 
@@ -56,28 +56,38 @@ bun run build
 bun run dev
 ```
 
-## Core Package
+## Functional Architecture
 
-The core package has been refactored to use a functional approach with Zod validation:
+The project has been completely refactored to use a purely functional approach with immutable data structures and Zod validation:
 
 ```typescript
 // Create an agent
 const agent = createAgent('BlenderMain', 'blender');
 
-// Validate the agent with Zod
-const validatedAgent = validateAgent(agent);
+// Add capabilities to the agent
+const capableAgent = setCapabilities(agent, [
+  'scene-management',
+  'object-manipulation',
+  'rendering',
+]);
 
-// Create a communication state
-let state = createCommunicationState();
+// Connect the agent
+const connectedAgent = await connectBlender(capableAgent);
 
-// Register the agent with the communication state
-state = registerAgent(state, agent);
+// Check if the agent is connected
+if (isConnected(connectedAgent)) {
+  // Create a communication state
+  let state = createCommunicationState();
 
-// Send a message to the agent
-const message = await communicationSendMessage(state, agent.id, 'Hello, Blender!');
+  // Register the agent with the communication state
+  state = registerAgent(state, connectedAgent);
+
+  // Send a message to the agent
+  const message = await communicationSendMessage(state, connectedAgent.id, 'create cube');
+}
 ```
 
-See the [Core Package README](packages/core/README.md) for more details.
+See the [Core Package README](packages/core/README.md) and [Adapters Package README](packages/adapters/README.md) for more details.
 
 ## Development
 

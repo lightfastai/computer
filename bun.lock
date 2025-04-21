@@ -37,18 +37,6 @@
       "name": "@repo/typescript-config",
       "version": "0.0.0",
     },
-    "packages/adapters": {
-      "name": "@lightfast/adapters",
-      "version": "0.1.0",
-      "dependencies": {
-        "@lightfast/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
-        "typescript": "~5.7.2",
-        "vitest": "^1.0.0",
-      },
-    },
     "packages/core": {
       "name": "@lightfast/core",
       "version": "0.1.0",
@@ -131,8 +119,6 @@
     "@jest/schemas": ["@jest/schemas@29.6.3", "", { "dependencies": { "@sinclair/typebox": "^0.27.8" } }, "sha512-mo5j5X+jIZmJQveBKeS/clAueipV7KgiX1vMgCxam1RNYiqE1w62n0/tJJnHtjW8ZHcQco5gY85jA3mi0L+nSA=="],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.0", "", {}, "sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ=="],
-
-    "@lightfast/adapters": ["@lightfast/adapters@workspace:packages/adapters"],
 
     "@lightfast/cli": ["@lightfast/cli@workspace:apps/cli"],
 
@@ -431,8 +417,6 @@
     "yoga-wasm-web": ["yoga-wasm-web@0.3.3", "", {}, "sha512-N+d4UJSJbt/R3wqY7Coqs5pcV0aUj2j9IaQ3rNj9bVCLld8tTGKRa2USARjnvZJWVx1NDmQev8EknoczaOQDOA=="],
 
     "zod": ["zod@4.0.0-beta.20250420T053007", "", { "dependencies": { "@zod/core": "0.8.1" } }, "sha512-5pp8Q0PNDaNcUptGiBE9akyioJh3RJpagIxrLtAVMR9IxwcSZiOsJD/1/98CyhItdTlI2H91MfhhLzRlU+fifA=="],
-
-    "@lightfast/adapters/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
 
     "@lightfast/cli/typescript": ["typescript@5.7.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw=="],
 
