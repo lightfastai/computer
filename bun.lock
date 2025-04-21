@@ -10,11 +10,7 @@
         "typescript": "5.8.3",
       },
     },
-    "internal/typescript": {
-      "name": "@repo/typescript-config",
-      "version": "0.0.0",
-    },
-    "packages/cli": {
+    "apps/cli": {
       "name": "@lightfast/cli",
       "version": "0.1.0",
       "bin": {
@@ -33,6 +29,10 @@
         "vite": "^6.3.1",
         "vitest": "^1.0.0",
       },
+    },
+    "internal/typescript": {
+      "name": "@repo/typescript-config",
+      "version": "0.0.0",
     },
     "packages/core": {
       "name": "@lightfast/core",
@@ -114,7 +114,7 @@
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.0", "", {}, "sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ=="],
 
-    "@lightfast/cli": ["@lightfast/cli@workspace:packages/cli"],
+    "@lightfast/cli": ["@lightfast/cli@workspace:apps/cli"],
 
     "@lightfast/core": ["@lightfast/core@workspace:packages/core"],
 

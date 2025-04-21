@@ -18,5 +18,5 @@
     "bun-types": "latest"
   },
   "packageManager": "bun@1.2.10",
-  "workspaces": ["packages/*", "internal/*"]
+  "workspaces": ["packages/*", "internal/*", "apps/*"]
 }
