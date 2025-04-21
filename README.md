@@ -1,10 +1,45 @@
 # Lightfast Computer
 
-A centralized IPC (Inter-Process Communication) server for managing connections between creative applications like Blender, TouchDesigner, and Ableton Live.
+A centralized IPC (Inter-Process Communication) server for managing connections between creative applications like Blender, TouchDesigner, and Ableton Live, enhanced with AI-powered instruction generation using Model Context Protocol (MCP). Supports seamless multi-application workflows with context-aware synchronization.
 
 ## Overview
 
-This project provides a robust communication layer between different creative applications, enabling seamless integration and control. It uses WebSocket for real-time communication and provides type-safe interfaces for each supported application.
+This project provides a robust communication layer between different creative applications, enabling seamless integration and control. It uses:
+- WebSocket for real-time communication
+- LLM (Claude/OpenAI) for instruction generation
+- MCP for standardized application communication
+- Type-safe interfaces for each supported application
+- Context-aware state management across applications
+
+## Key Features
+
+- **Multi-Application Workflows**: Seamlessly work across multiple creative applications
+- **Context Awareness**: Maintains state and relationships between applications
+- **Natural Language Control**: Control multiple applications using natural language
+- **Real-time Synchronization**: Keep applications in sync during creative work
+- **Intelligent Command Generation**: AI-powered command generation based on context
+
+## Example Workflow
+
+Create a synchronized music-visual experience:
+```typescript
+// Initialize a multi-application project
+const project = await client.createProject({
+  applications: ['ableton', 'blender', 'touchdesigner']
+});
+
+// Create music in Ableton
+await project.sendInstruction("Create a new track in Ableton with a bass line");
+
+// Generate visuals in Blender
+await project.sendInstruction("Create a 3D scene in Blender that reacts to the bass");
+
+// Connect visuals to music in TouchDesigner
+await project.sendInstruction("Set up TouchDesigner to visualize the audio from Ableton");
+
+// Synchronize all applications
+await project.synchronize();
+```
 
 ## Supported Applications
 
@@ -16,6 +51,11 @@ This project provides a robust communication layer between different creative ap
 
 ```mermaid
 graph TB
+    subgraph "AI Layer"
+        LLM[LLM Service]
+        MCP[MCP Server]
+    end
+
     subgraph "Central Server"
         CS[Node/Deno Server]
         WS[WebSocket Server]
@@ -34,19 +74,11 @@ graph TB
         AB[Ableton Bridge]
     end
 
-    subgraph "Clients"
-        BC[Blender Client]
-        TDC[TouchDesigner Client]
-        AC[Ableton Client]
-    end
-
-    CS <--> BC
-    CS <--> TDC
-    CS <--> AC
-
-    BC <--> BB
-    TDC <--> TDB
-    AC <--> AB
+    LLM --> MCP
+    MCP --> CS
+    CS <--> BB
+    CS <--> TDB
+    CS <--> AB
 
     BB <--> B
     TDB <--> TD
@@ -59,6 +91,7 @@ graph TB
 - Blender 3.0+
 - TouchDesigner 2022+
 - Ableton Live 11+
+- Claude/OpenAI API access
 
 ## Installation
 
@@ -68,6 +101,10 @@ git clone https://github.com/yourusername/creative-apps-ipc.git
 
 # Install dependencies
 npm install
+
+# Configure LLM and MCP settings
+cp config.example.json config.json
+# Edit config.json with your API keys and settings
 
 # Build the project
 npm run build
@@ -94,6 +131,9 @@ import { BlenderClient } from './clients/blender-client';
 
 const client = new BlenderClient();
 await client.connect();
+
+// Send natural language instructions
+await client.sendInstruction("Create a sphere with radius 2");
 ```
 
 ## Development
@@ -102,6 +142,8 @@ await client.connect();
 
 ```
 src/
+├── llm/              # LLM service implementation
+├── mcp/              # MCP server and protocol
 ├── server/           # Central server implementation
 ├── bridges/          # Application-specific bridges
 ├── clients/          # TypeScript clients for each app
