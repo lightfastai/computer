@@ -1,136 +1,134 @@
 # Lightfast Computer
 
-A terminal-based integration layer for creative software like Blender, Ableton Live, and TouchDesigner using a purely functional approach with Zod validation.
+A centralized IPC (Inter-Process Communication) server for managing connections between creative applications like Blender, TouchDesigner, and Ableton Live.
 
 ## Overview
 
-Lightfast Computer provides a unified interface for controlling and coordinating different creative software applications. It uses a modular architecture with adapters for each supported software and a central communication system to enable cross-application workflows.
+This project provides a robust communication layer between different creative applications, enabling seamless integration and control. It uses WebSocket for real-time communication and provides type-safe interfaces for each supported application.
 
-## Features
+## Supported Applications
 
-- Terminal-based UI using Ink.js
-- Support for Blender, Ableton Live, and TouchDesigner
-- Extensible adapter system for adding new software integrations
-- Real-time communication between different applications
-- Context-aware command system
-- Functional programming approach with immutable data
-- Strong type validation using Zod schemas
+- Blender (via Python API)
+- TouchDesigner (via Python API)
+- Ableton Live (via MIDI/OSC)
 
-## Project Structure
+## Architecture
 
+```mermaid
+graph TB
+    subgraph "Central Server"
+        CS[Node/Deno Server]
+        WS[WebSocket Server]
+        CS --> WS
+    end
+
+    subgraph "Creative Applications"
+        B[Blender]
+        TD[TouchDesigner]
+        A[Ableton Live]
+    end
+
+    subgraph "Application Bridges"
+        BB[Blender Bridge]
+        TDB[TouchDesigner Bridge]
+        AB[Ableton Bridge]
+    end
+
+    subgraph "Clients"
+        BC[Blender Client]
+        TDC[TouchDesigner Client]
+        AC[Ableton Client]
+    end
+
+    CS <--> BC
+    CS <--> TDC
+    CS <--> AC
+
+    BC <--> BB
+    TDC <--> TDB
+    AC <--> AB
+
+    BB <--> B
+    TDB <--> TD
+    AB <--> A
 ```
-packages/
-  ├── core/             # Core functionality, schemas, and types
-  │   ├── schemas.ts    # Zod schemas for validation
-  │   ├── agent.ts      # Functional agent utilities
-  │   └── communication.ts # Functional communication utilities
-  ├── adapters/         # Software-specific adapters
-  │   ├── blender/      # Blender integration
-  │   ├── ableton/      # Ableton Live integration
-  │   └── touchdesigner/ # TouchDesigner integration
-  └── cli/              # Terminal UI using Ink.js
-examples/
-  └── functional-example.ts # Example of using the functional approach
-```
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+- Node.js 18+ or Deno 1.30+
+- Blender 3.0+
+- TouchDesigner 2022+
+- Ableton Live 11+
 
-- [Bun](https://bun.sh/) 1.0.25 or higher
-
-### Installation
+## Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/creative-apps-ipc.git
+
 # Install dependencies
-./install.sh
+npm install
 
-# Build all packages
-bun run build
+# Build the project
+npm run build
 ```
 
-### Running the CLI
+## Usage
 
+1. Start the central server:
 ```bash
-# Start the CLI
-bun run dev
+npm start
 ```
 
-## Functional Architecture
+2. Start the application bridges:
+```bash
+# In separate terminals
+npm run bridge:blender
+npm run bridge:td
+npm run bridge:ableton
+```
 
-The project has been completely refactored to use a purely functional approach with immutable data structures and Zod validation:
-
+3. Connect your applications:
 ```typescript
-// Create an agent
-const agent = createAgent('BlenderMain', 'blender');
+import { BlenderClient } from './clients/blender-client';
 
-// Add capabilities to the agent
-const capableAgent = setCapabilities(agent, [
-  'scene-management',
-  'object-manipulation',
-  'rendering',
-]);
-
-// Connect the agent
-const connectedAgent = await connectBlender(capableAgent);
-
-// Check if the agent is connected
-if (isConnected(connectedAgent)) {
-  // Create a communication state
-  let state = createCommunicationState();
-
-  // Register the agent with the communication state
-  state = registerAgent(state, connectedAgent);
-
-  // Send a message to the agent
-  const message = await communicationSendMessage(state, connectedAgent.id, 'create cube');
-}
+const client = new BlenderClient();
+await client.connect();
 ```
-
-See the [Core Package README](packages/core/README.md) and [Adapters Package README](packages/adapters/README.md) for more details.
 
 ## Development
 
-This project uses [Turborepo](https://turbo.build/) for optimized builds and better caching.
+### Project Structure
 
-```bash
-# Format code
-bun run format
-
-# Lint code
-bun run lint
-
-# Run tests
-bun run test
-
-# Clean all build artifacts and node_modules
-bun run clean
+```
+src/
+├── server/           # Central server implementation
+├── bridges/          # Application-specific bridges
+├── clients/          # TypeScript clients for each app
+├── types/            # TypeScript type definitions
+└── utils/            # Utility functions
 ```
 
-### Turborepo Features
-
-- Incremental builds - only rebuild what changed
-- Content-aware hashing - only rebuild when content changes, not timestamps
-- Parallel execution - run tasks across packages in parallel
-- Remote caching - share build caches with your team or CI/CD
-- Task pipelines - define dependencies between tasks
-- Pruned subsets - run tasks only for packages that have changed
-
-### Filtering Builds
-
-You can use Turborepo's filtering to build specific packages:
+### Running Tests
 
 ```bash
-# Build only the core package
-turbo build --filter=@lightfast/core
-
-# Build the CLI and its dependencies
-turbo build --filter=@lightfast/cli...
-
-# Build all adapter packages
-turbo build --filter=./packages/adapters/*
+npm test
 ```
+
+### Building
+
+```bash
+npm run build
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
