@@ -3,7 +3,10 @@
  */
 import { randomUUID } from 'node:crypto';
 import { createAgent, createMessage, setCapabilities, updateAgentStatus } from '../agent';
-import { type Agent, type Message, type MessageType, validateAgent } from '../schemas';
+import type { Agent } from '../schema/agent';
+import type { Message } from '../schema/message';
+import type { MessageType } from '../schema/message-type';
+import { validateAgent } from '../schema/schemas';
 
 /**
  * Ableton connection options

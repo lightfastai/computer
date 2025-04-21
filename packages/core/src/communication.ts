@@ -1,5 +1,7 @@
 import { sendMessage as sendAgentMessage } from './agent';
-import type { Agent, Message, MessageType } from './schemas';
+import type { Agent } from './schema/agent';
+import type { Message } from './schema/message';
+import type { MessageType } from './schema/message-type';
 
 /**
  * Functional communication utilities

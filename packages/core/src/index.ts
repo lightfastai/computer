@@ -1,24 +1,18 @@
 // Core functionality for lightfast computer integration
 
+import { type Agent, AgentSchema } from './schema/agent';
+import { type AgentStatus, AgentStatusSchema } from './schema/agent-status';
+import { type AgentType, AgentTypeSchema } from './schema/agent-type';
+import { type ConnectionOptions, ConnectionOptionsSchema } from './schema/connection-options';
+import { type Message, MessageSchema } from './schema/message';
+import { type MessageType, MessageTypeSchema } from './schema/message-type';
 // Export schemas and types
 import {
-  type Agent,
-  AgentSchema,
-  type AgentStatus,
-  AgentStatusSchema,
-  type AgentType,
-  AgentTypeSchema,
-  type ConnectionOptions,
-  ConnectionOptionsSchema,
-  type Message,
-  MessageSchema,
-  type MessageType,
-  MessageTypeSchema,
   validateAgent,
   validateConnectionOptions,
   validateMessage,
   validatePartialAgent,
-} from './schemas';
+} from './schema/schemas';
 
 // Export agent functionality
 import {

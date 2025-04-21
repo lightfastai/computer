@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { Agent, AgentStatus, AgentType, Message, MessageType } from './schemas';
+import type { Agent } from './schema/agent';
+import type { AgentStatus } from './schema/agent-status';
+import type { AgentType } from './schema/agent-type';
+import type { Message } from './schema/message';
+import type { MessageType } from './schema/message-type';
 
 /**
  * Functional utilities for agent management
