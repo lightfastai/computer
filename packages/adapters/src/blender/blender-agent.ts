@@ -1,4 +1,4 @@
-import { MCPAgent, AgentType, MessageType, Message, AgentStatus } from '@lightfast/core';
+import { AgentStatus, AgentType, MCPAgent, type Message, MessageType } from '@lightfast/core';
 
 /**
  * Blender-specific agent implementation
@@ -7,7 +7,7 @@ export class BlenderAgent extends MCPAgent {
   private port: number;
   private host: string;
 
-  constructor(id: string, name: string, host: string = 'localhost', port: number = 8080) {
+  constructor(id: string, name: string, host = 'localhost', port = 8080) {
     super(id, name, AgentType.BLENDER);
     this.host = host;
     this.port = port;
@@ -16,7 +16,7 @@ export class BlenderAgent extends MCPAgent {
       'object-manipulation',
       'rendering',
       'animation',
-      'scripting'
+      'scripting',
     ];
   }
 

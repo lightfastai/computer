@@ -1,7 +1,7 @@
 {
-  "name": "@lightfast/adapter-touchdesigner",
+  "name": "@lightfast/adapters",
   "version": "0.1.0",
-  "description": "TouchDesigner adapter for lightfast computer integration",
+  "description": "Adapters for lightfast computer integration",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -12,7 +12,7 @@
     "lint": "biome check .",
     "clean": "rm -rf dist .turbo node_modules"
   },
-  "keywords": ["lightfast", "touchdesigner", "adapter", "mcp"],
+  "keywords": ["lightfast", "adapter", "mcp", "blender", "ableton", "touchdesigner"],
   "author": "",
   "license": "MIT",
   "dependencies": {

@@ -1,4 +1,4 @@
-import { MCPAgent, AgentType, MessageType, Message, AgentStatus } from '@lightfast/core';
+import { AgentStatus, AgentType, MCPAgent, type Message, MessageType } from '@lightfast/core';
 
 /**
  * Ableton-specific agent implementation
@@ -7,7 +7,7 @@ export class AbletonAgent extends MCPAgent {
   private port: number;
   private host: string;
 
-  constructor(id: string, name: string, host: string = 'localhost', port: number = 9000) {
+  constructor(id: string, name: string, host = 'localhost', port = 9000) {
     super(id, name, AgentType.ABLETON);
     this.host = host;
     this.port = port;
@@ -16,7 +16,7 @@ export class AbletonAgent extends MCPAgent {
       'clip-launching',
       'device-parameters',
       'transport-control',
-      'midi-mapping'
+      'midi-mapping',
     ];
   }
 
@@ -27,7 +27,7 @@ export class AbletonAgent extends MCPAgent {
     try {
       // Implementation would connect to Ableton via MIDI or OSC
       console.log(`Connecting to Ableton at ${this.host}:${this.port}`);
-      
+
       // For now, just simulate a successful connection
       this.status = AgentStatus.CONNECTED;
       return true;
@@ -45,7 +45,7 @@ export class AbletonAgent extends MCPAgent {
     try {
       // Implementation would disconnect from Ableton
       console.log(`Disconnecting from Ableton at ${this.host}:${this.port}`);
-      
+
       // For now, just simulate a successful disconnection
       this.status = AgentStatus.DISCONNECTED;
       return true;
@@ -72,7 +72,7 @@ export class AbletonAgent extends MCPAgent {
     try {
       // Implementation would send the message to Ableton
       console.log(`Sending message to Ableton: ${content}`);
-      
+
       // For now, just log the message
       return message;
     } catch (error) {

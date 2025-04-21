@@ -1,4 +1,4 @@
-import { MCPAgent, AgentType, MessageType, Message, AgentStatus } from '@lightfast/core';
+import { AgentStatus, AgentType, MCPAgent, type Message, MessageType } from '@lightfast/core';
 
 /**
  * TouchDesigner-specific agent implementation
@@ -7,7 +7,7 @@ export class TouchDesignerAgent extends MCPAgent {
   private port: number;
   private host: string;
 
-  constructor(id: string, name: string, host: string = 'localhost', port: number = 7000) {
+  constructor(id: string, name: string, host = 'localhost', port = 7000) {
     super(id, name, AgentType.TOUCHDESIGNER);
     this.host = host;
     this.port = port;
@@ -16,7 +16,7 @@ export class TouchDesignerAgent extends MCPAgent {
       'node-creation',
       'texture-manipulation',
       'real-time-rendering',
-      'osc-communication'
+      'osc-communication',
     ];
   }
 
@@ -27,7 +27,7 @@ export class TouchDesignerAgent extends MCPAgent {
     try {
       // Implementation would connect to TouchDesigner via Python or OSC
       console.log(`Connecting to TouchDesigner at ${this.host}:${this.port}`);
-      
+
       // For now, just simulate a successful connection
       this.status = AgentStatus.CONNECTED;
       return true;
@@ -45,7 +45,7 @@ export class TouchDesignerAgent extends MCPAgent {
     try {
       // Implementation would disconnect from TouchDesigner
       console.log(`Disconnecting from TouchDesigner at ${this.host}:${this.port}`);
-      
+
       // For now, just simulate a successful disconnection
       this.status = AgentStatus.DISCONNECTED;
       return true;
@@ -72,7 +72,7 @@ export class TouchDesignerAgent extends MCPAgent {
     try {
       // Implementation would send the message to TouchDesigner
       console.log(`Sending message to TouchDesigner: ${content}`);
-      
+
       // For now, just log the message
       return message;
     } catch (error) {

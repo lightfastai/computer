@@ -1,5 +1,5 @@
-import { Agent, AgentType, ConnectionOptions, Message, MessageType } from './types';
-import { MCPAgent } from './agent';
+import type { MCPAgent } from './agent';
+import { type Message, MessageType } from './types';
 
 /**
  * Manages communication between different agents
@@ -44,7 +44,11 @@ export class CommunicationManager {
   /**
    * Send a message to an agent
    */
-  async sendMessage(agentId: string, content: string, type: MessageType = MessageType.COMMAND): Promise<Message | null> {
+  async sendMessage(
+    agentId: string,
+    content: string,
+    type: MessageType = MessageType.COMMAND
+  ): Promise<Message | null> {
     const agent = this.agents.get(agentId);
     if (!agent) {
       return null;
@@ -60,7 +64,7 @@ export class CommunicationManager {
     if (!this.messageHandlers.has(agentId)) {
       this.messageHandlers.set(agentId, []);
     }
-    
+
     this.messageHandlers.get(agentId)?.push(handler);
   }
 
@@ -70,7 +74,9 @@ export class CommunicationManager {
   handleMessage(message: Message): void {
     const handlers = this.messageHandlers.get(message.sender);
     if (handlers) {
-      handlers.forEach(handler => handler(message));
+      for (const handler of handlers) {
+        handler(message);
+      }
     }
   }
 }
