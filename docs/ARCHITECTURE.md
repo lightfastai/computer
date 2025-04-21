@@ -2,9 +2,128 @@
 
 ## System Overview
 
-The Creative Apps IPC Server is designed as a centralized communication hub for creative applications. It uses a WebSocket-based architecture to enable real-time, bidirectional communication between applications, enhanced with LLM-powered instruction generation and MCP (Model Context Protocol) integration.
+The Creative Apps IPC Server is designed as a centralized communication hub for creative applications. It uses internal IPC (Inter-Process Communication) mechanisms to enable real-time, bidirectional communication between applications, enhanced with LLM-powered instruction generation and MCP (Model Context Protocol) integration.
 
 ## Component Architecture
+
+### 1. IPC Communication Layer
+
+The IPC layer handles direct process-to-process communication:
+
+```mermaid
+classDiagram
+    class IPCManager {
+        -processes: Map
+        -pipes: Map
+        +startProcess(command: string, args: string[])
+        +sendCommand(processId: string, command: Command)
+        +handleResponse(processId: string, response: Response)
+    }
+
+    class ProcessBridge {
+        -process: ChildProcess
+        -stdin: WriteStream
+        -stdout: ReadStream
+        +execute(command: Command)
+        +onResponse(callback: Function)
+    }
+
+    class CommandHandler {
+        -handlers: Map
+        +registerHandler(type: string, handler: Function)
+        +handle(command: Command)
+    }
+
+    IPCManager --> ProcessBridge
+    IPCManager --> CommandHandler
+```
+
+### 2. Process Communication Flow
+
+```mermaid
+sequenceDiagram
+    participant Main
+    participant IPC
+    participant Bridge
+    participant App
+
+    Main->>IPC: Start Application Bridge
+    IPC->>Bridge: Spawn Process
+    Bridge->>App: Initialize
+
+    Main->>IPC: Send Command
+    IPC->>Bridge: Write to stdin
+    Bridge->>App: Execute Command
+    App->>Bridge: Return Result
+    Bridge->>IPC: Read from stdout
+    IPC->>Main: Process Response
+```
+
+### 3. Implementation Examples
+
+#### Unix-based Systems (Unix Domain Sockets):
+```typescript
+interface UnixIPC {
+  // Create Unix domain socket
+  createSocket(path: string): Promise<void>;
+
+  // Send command through socket
+  sendCommand(socket: Socket, command: Command): Promise<void>;
+
+  // Handle responses
+  handleResponse(socket: Socket): Promise<Response>;
+}
+```
+
+#### Windows (Named Pipes):
+```typescript
+interface WindowsIPC {
+  // Create named pipe
+  createPipe(name: string): Promise<void>;
+
+  // Send command through pipe
+  sendCommand(pipe: Pipe, command: Command): Promise<void>;
+
+  // Handle responses
+  handleResponse(pipe: Pipe): Promise<Response>;
+}
+```
+
+#### Cross-Platform Process Communication:
+```typescript
+interface ProcessIPC {
+  // Start application bridge
+  startBridge(command: string, args: string[]): Promise<ChildProcess>;
+
+  // Send command to process
+  sendCommand(process: ChildProcess, command: Command): Promise<void>;
+
+  // Handle process response
+  handleResponse(process: ChildProcess): Promise<Response>;
+}
+```
+
+### 4. Command Protocol
+
+```typescript
+interface IPCCommand {
+  type: CommandType;
+  payload: unknown;
+  metadata: {
+    timestamp: number;
+    source: string;
+    target: string;
+    correlationId: string;
+  };
+}
+
+enum CommandType {
+  INIT = 'init',
+  EXECUTE = 'execute',
+  QUERY = 'query',
+  TERMINATE = 'terminate'
+}
+```
 
 ### 1. LLM Service Layer
 
@@ -548,5 +667,431 @@ interface SystemConfig {
       capabilities: string[];
     };
   };
+}
+```
+
+## MCP Architecture
+
+### 1. MCP Components
+
+```mermaid
+graph TB
+    subgraph "MCP Host (Node/Deno Server)"
+        Host[Central Server]
+        WS[WebSocket Server]
+        Host --> WS
+    end
+
+    subgraph "MCP Servers (Application Bridges)"
+        BS[Blender MCP Server]
+        TS[TouchDesigner MCP Server]
+        AS[Ableton MCP Server]
+    end
+
+    subgraph "MCP Clients (Application Interfaces)"
+        BC[Blender Client]
+        TC[TouchDesigner Client]
+        AC[Ableton Client]
+    end
+
+    Host --> BS
+    Host --> TS
+    Host --> AS
+
+    BS --> BC
+    TS --> TC
+    AS --> AC
+```
+
+### 2. Component Roles
+
+#### MCP Host
+The MCP Host is the central coordinator of all MCP communications:
+
+```typescript
+interface MPCHost {
+  // Server management
+  startServer(): Promise<void>;
+  stopServer(): Promise<void>;
+
+  // Connection management
+  registerServer(server: MCPServer): Promise<void>;
+  unregisterServer(serverId: string): Promise<void>;
+
+  // Message routing
+  routeMessage(message: Message): Promise<void>;
+  broadcastMessage(message: Message): Promise<void>;
+
+  // State management
+  getServerState(serverId: string): Promise<ServerState>;
+  updateServerState(serverId: string, state: ServerState): Promise<void>;
+}
+```
+
+#### MCP Servers
+MCP Servers handle application-specific communication:
+
+```typescript
+interface MCPServer {
+  // Server identification
+  readonly id: string;
+  readonly type: ApplicationType;
+
+  // Command handling
+  executeCommand(command: Command): Promise<Result>;
+  validateCommand(command: Command): Promise<ValidationResult>;
+
+  // State management
+  getState(): Promise<ApplicationState>;
+  updateState(state: Partial<ApplicationState>): Promise<void>;
+
+  // Event handling
+  onStateChange(callback: (state: ApplicationState) => void): void;
+  onError(callback: (error: Error) => void): void;
+}
+```
+
+#### MCP Clients
+MCP Clients provide type-safe interfaces for application control:
+
+```typescript
+interface MCPClient {
+  // Connection management
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+
+  // Command execution
+  sendCommand(command: Command): Promise<Result>;
+  sendBatchCommands(commands: Command[]): Promise<Result[]>;
+
+  // State management
+  getState(): Promise<ClientState>;
+  subscribeToState(callback: (state: ClientState) => void): void;
+
+  // Error handling
+  onError(callback: (error: Error) => void): void;
+  retryCommand(command: Command, maxRetries: number): Promise<Result>;
+}
+```
+
+### 3. Communication Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Host
+    participant Server
+    participant App
+
+    Client->>Host: Connect to MCP Host
+    Host->>Server: Register MCP Server
+    Server->>App: Initialize Application
+
+    Client->>Host: Send Command
+    Host->>Server: Route Command
+    Server->>App: Execute Command
+    App->>Server: Return Result
+    Server->>Host: Forward Result
+    Host->>Client: Send Response
+
+    Note over Host,Server: State Updates
+    Server->>Host: State Change
+    Host->>Client: State Update
+```
+
+### 4. Protocol Messages
+
+```typescript
+interface MCPMessage {
+  type: MessageType;
+  payload: any;
+  metadata: {
+    timestamp: number;
+    source: string;
+    target: string;
+    correlationId: string;
+  };
+}
+
+enum MessageType {
+  COMMAND = 'command',
+  RESULT = 'result',
+  STATE_UPDATE = 'state_update',
+  ERROR = 'error',
+  HEARTBEAT = 'heartbeat'
+}
+```
+
+## Error Handling Strategies
+
+### 1. Error Types and Hierarchy
+
+```typescript
+// Base error class for all application errors
+class LightfastError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public severity: ErrorSeverity,
+    public context?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'LightfastError';
+  }
+}
+
+// IPC-specific errors
+class IPCError extends LightfastError {
+  constructor(message: string, context?: Record<string, unknown>) {
+    super(message, 'IPC_ERROR', ErrorSeverity.CRITICAL, context);
+    this.name = 'IPCError';
+  }
+}
+
+// Process management errors
+class ProcessError extends LightfastError {
+  constructor(message: string, context?: Record<string, unknown>) {
+    super(message, 'PROCESS_ERROR', ErrorSeverity.CRITICAL, context);
+    this.name = 'ProcessError';
+  }
+}
+
+// Application-specific errors
+class ApplicationError extends LightfastError {
+  constructor(
+    message: string,
+    public application: string,
+    context?: Record<string, unknown>
+  ) {
+    super(message, 'APPLICATION_ERROR', ErrorSeverity.ERROR, context);
+    this.name = 'ApplicationError';
+  }
+}
+
+// Command execution errors
+class CommandError extends LightfastError {
+  constructor(
+    message: string,
+    public command: string,
+    context?: Record<string, unknown>
+  ) {
+    super(message, 'COMMAND_ERROR', ErrorSeverity.ERROR, context);
+    this.name = 'CommandError';
+  }
+}
+
+enum ErrorSeverity {
+  INFO = 'info',
+  WARNING = 'warning',
+  ERROR = 'error',
+  CRITICAL = 'critical'
+}
+```
+
+### 2. Error Handling Patterns
+
+```mermaid
+classDiagram
+    class ErrorHandler {
+        -errorHandlers: Map
+        -errorLog: ErrorLog
+        +handleError(error: LightfastError)
+        +registerHandler(type: string, handler: ErrorHandler)
+        +logError(error: LightfastError)
+    }
+
+    class ErrorRecovery {
+        -recoveryStrategies: Map
+        +attemptRecovery(error: LightfastError)
+        +registerStrategy(type: string, strategy: RecoveryStrategy)
+    }
+
+    class ErrorMonitor {
+        -errorCounts: Map
+        -errorThresholds: Map
+        +monitorError(error: LightfastError)
+        +checkThresholds()
+        +alertIfNeeded()
+    }
+
+    ErrorHandler --> ErrorRecovery
+    ErrorHandler --> ErrorMonitor
+```
+
+### 3. Error Recovery Strategies
+
+```typescript
+interface RecoveryStrategy {
+  // Attempt to recover from an error
+  attemptRecovery(error: LightfastError): Promise<boolean>;
+
+  // Check if recovery is possible
+  canRecover(error: LightfastError): boolean;
+
+  // Get recovery status
+  getStatus(): RecoveryStatus;
+}
+
+class ProcessRecoveryStrategy implements RecoveryStrategy {
+  async attemptRecovery(error: ProcessError): Promise<boolean> {
+    if (error.code === 'PROCESS_CRASHED') {
+      // Attempt to restart the process
+      return await this.restartProcess(error.context.processId);
+    }
+    return false;
+  }
+
+  canRecover(error: ProcessError): boolean {
+    return error.code === 'PROCESS_CRASHED' ||
+           error.code === 'PROCESS_TIMEOUT';
+  }
+
+  getStatus(): RecoveryStatus {
+    return {
+      attempts: this.attemptCount,
+      lastAttempt: this.lastAttemptTime,
+      success: this.lastAttemptSuccess
+    };
+  }
+}
+```
+
+### 4. Error Monitoring and Alerting
+
+```typescript
+interface ErrorMonitor {
+  // Track error occurrence
+  trackError(error: LightfastError): void;
+
+  // Check error thresholds
+  checkThresholds(): boolean;
+
+  // Get error statistics
+  getStatistics(): ErrorStatistics;
+}
+
+class ErrorAlertSystem {
+  private readonly thresholds = {
+    [ErrorSeverity.CRITICAL]: 1,
+    [ErrorSeverity.ERROR]: 5,
+    [ErrorSeverity.WARNING]: 10
+  };
+
+  private errorCounts: Map<ErrorSeverity, number> = new Map();
+
+  trackError(error: LightfastError): void {
+    const count = this.errorCounts.get(error.severity) || 0;
+    this.errorCounts.set(error.severity, count + 1);
+
+    if (this.shouldAlert(error.severity)) {
+      this.sendAlert(error);
+    }
+  }
+
+  private shouldAlert(severity: ErrorSeverity): boolean {
+    const count = this.errorCounts.get(severity) || 0;
+    return count >= this.thresholds[severity];
+  }
+}
+```
+
+### 5. Error Handling Flow
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant Handler
+    participant Recovery
+    participant Monitor
+    participant Alert
+
+    App->>Handler: Error Occurs
+    Handler->>Monitor: Track Error
+    Monitor->>Alert: Check Thresholds
+
+    alt Error is Recoverable
+        Handler->>Recovery: Attempt Recovery
+        Recovery->>App: Apply Recovery
+    else Error is Critical
+        Handler->>Alert: Send Critical Alert
+        Alert->>App: Stop Operation
+    end
+
+    Handler->>Monitor: Update Statistics
+```
+
+### 6. Implementation Example
+
+```typescript
+class IPCManager {
+  private errorHandler: ErrorHandler;
+  private errorMonitor: ErrorMonitor;
+  private recoveryStrategies: Map<string, RecoveryStrategy>;
+
+  constructor() {
+    this.errorHandler = new ErrorHandler();
+    this.errorMonitor = new ErrorMonitor();
+    this.recoveryStrategies = new Map();
+
+    // Register recovery strategies
+    this.recoveryStrategies.set('PROCESS_ERROR', new ProcessRecoveryStrategy());
+    this.recoveryStrategies.set('IPC_ERROR', new IPCRecoveryStrategy());
+  }
+
+  async handleError(error: LightfastError): Promise<void> {
+    // Log error
+    this.errorHandler.logError(error);
+
+    // Track error
+    this.errorMonitor.trackError(error);
+
+    // Attempt recovery if possible
+    const strategy = this.recoveryStrategies.get(error.code);
+    if (strategy && strategy.canRecover(error)) {
+      const recovered = await strategy.attemptRecovery(error);
+      if (!recovered) {
+        // If recovery failed, escalate
+        this.errorHandler.handleError(error);
+      }
+    } else {
+      // No recovery strategy, handle normally
+      this.errorHandler.handleError(error);
+    }
+  }
+}
+```
+
+### 7. Error Prevention Strategies
+
+1. **Input Validation**:
+```typescript
+function validateCommand(command: Command): ValidationResult {
+  if (!command.type || !command.payload) {
+    throw new CommandError('Invalid command structure');
+  }
+  // Additional validation
+}
+```
+
+2. **Timeout Handling**:
+```typescript
+async function executeWithTimeout<T>(
+  operation: Promise<T>,
+  timeout: number
+): Promise<T> {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new TimeoutError()), timeout);
+  });
+
+  return Promise.race([operation, timeoutPromise]);
+}
+```
+
+3. **State Verification**:
+```typescript
+function verifyState(state: ApplicationState): void {
+  if (!state.isValid()) {
+    throw new StateError('Invalid application state');
+  }
 }
 ```
