@@ -1,6 +1,6 @@
 # Lightfast Computer
 
-A terminal-based integration layer for creative software like Blender, Ableton Live, and TouchDesigner using MCP agents.
+A terminal-based integration layer for creative software like Blender, Ableton Live, and TouchDesigner using a functional approach with Zod validation.
 
 ## Overview
 
@@ -13,17 +13,24 @@ Lightfast Computer provides a unified interface for controlling and coordinating
 - Extensible adapter system for adding new software integrations
 - Real-time communication between different applications
 - Context-aware command system
+- Functional programming approach with immutable data
+- Strong type validation using Zod schemas
 
 ## Project Structure
 
 ```
 packages/
-  ├── core/             # Core functionality and types
-  ├── cli/              # Terminal UI using Ink.js
-  └── adapters/         # Software-specific adapters
-      ├── blender/      # Blender integration
-      ├── ableton/      # Ableton Live integration
-      └── touchdesigner/ # TouchDesigner integration
+  ├── core/             # Core functionality, schemas, and types
+  │   ├── schemas.ts    # Zod schemas for validation
+  │   ├── agent.ts      # Functional agent utilities
+  │   └── communication.ts # Functional communication utilities
+  ├── adapters/         # Software-specific adapters
+  │   ├── blender/      # Blender integration
+  │   ├── ableton/      # Ableton Live integration
+  │   └── touchdesigner/ # TouchDesigner integration
+  └── cli/              # Terminal UI using Ink.js
+examples/
+  └── functional-example.ts # Example of using the functional approach
 ```
 
 ## Getting Started
@@ -48,6 +55,29 @@ bun run build
 # Start the CLI
 bun run dev
 ```
+
+## Core Package
+
+The core package has been refactored to use a functional approach with Zod validation:
+
+```typescript
+// Create an agent
+const agent = createAgent('BlenderMain', 'blender');
+
+// Validate the agent with Zod
+const validatedAgent = validateAgent(agent);
+
+// Create a communication state
+let state = createCommunicationState();
+
+// Register the agent with the communication state
+state = registerAgent(state, agent);
+
+// Send a message to the agent
+const message = await communicationSendMessage(state, agent.id, 'Hello, Blender!');
+```
+
+See the [Core Package README](packages/core/README.md) for more details.
 
 ## Development
 

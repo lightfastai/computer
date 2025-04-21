@@ -15,5 +15,8 @@
   "keywords": ["lightfast", "mcp", "integration"],
   "author": "",
   "license": "MIT",
-  "packageManager": "bun@1.0.25"
+  "packageManager": "bun@1.0.25",
+  "dependencies": {
+    "zod": "4.0.0-beta.20250420T053007"
+  }
 }

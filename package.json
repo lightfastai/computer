@@ -18,5 +18,8 @@
     "bun-types": "latest"
   },
   "packageManager": "bun@1.2.10",
-  "workspaces": ["packages/*", "internal/*", "apps/*"]
+  "workspaces": ["packages/*", "internal/*", "apps/*"],
+  "dependencies": {
+    "zod": "4.0.0-beta.20250420T053007"
+  }
 }

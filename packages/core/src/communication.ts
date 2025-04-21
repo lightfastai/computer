@@ -1,82 +1,106 @@
-import type { MCPAgent } from './agent';
-import { type Message, MessageType } from './types';
+import { sendMessage as sendAgentMessage } from './agent';
+import type { Agent, Message, MessageType } from './schemas';
 
 /**
- * Manages communication between different agents
+ * Functional communication utilities
  */
-export class CommunicationManager {
-  private agents: Map<string, MCPAgent>;
-  private messageHandlers: Map<string, ((message: Message) => void)[]>;
 
-  constructor() {
-    this.agents = new Map();
-    this.messageHandlers = new Map();
-  }
-
-  /**
-   * Register a new agent
-   */
-  registerAgent(agent: MCPAgent): void {
-    this.agents.set(agent.id, agent);
-  }
-
-  /**
-   * Unregister an agent
-   */
-  unregisterAgent(agentId: string): boolean {
-    return this.agents.delete(agentId);
-  }
-
-  /**
-   * Get all registered agents
-   */
-  getAgents(): MCPAgent[] {
-    return Array.from(this.agents.values());
-  }
-
-  /**
-   * Get an agent by ID
-   */
-  getAgent(agentId: string): MCPAgent | undefined {
-    return this.agents.get(agentId);
-  }
-
-  /**
-   * Send a message to an agent
-   */
-  async sendMessage(
-    agentId: string,
-    content: string,
-    type: MessageType = MessageType.COMMAND,
-  ): Promise<Message | null> {
-    const agent = this.agents.get(agentId);
-    if (!agent) {
-      return null;
-    }
-
-    return agent.sendMessage(content, type);
-  }
-
-  /**
-   * Register a message handler
-   */
-  onMessage(agentId: string, handler: (message: Message) => void): void {
-    if (!this.messageHandlers.has(agentId)) {
-      this.messageHandlers.set(agentId, []);
-    }
-
-    this.messageHandlers.get(agentId)?.push(handler);
-  }
-
-  /**
-   * Handle an incoming message
-   */
-  handleMessage(message: Message): void {
-    const handlers = this.messageHandlers.get(message.sender);
-    if (handlers) {
-      for (const handler of handlers) {
-        handler(message);
-      }
-    }
-  }
+// Type for the communication state
+export interface CommunicationState {
+  agents: Map<string, Agent>;
+  messageHandlers: Map<string, ((message: Message) => void)[]>;
 }
+
+/**
+ * Create a new communication state
+ */
+export const createCommunicationState = (): CommunicationState => {
+  return {
+    agents: new Map(),
+    messageHandlers: new Map(),
+  };
+};
+
+/**
+ * Register a new agent
+ */
+export const registerAgent = (state: CommunicationState, agent: Agent): CommunicationState => {
+  const newState = { ...state };
+  newState.agents = new Map(state.agents);
+  newState.agents.set(agent.id, agent);
+  return newState;
+};
+
+/**
+ * Unregister an agent
+ */
+export const unregisterAgent = (state: CommunicationState, agentId: string): CommunicationState => {
+  const newState = { ...state };
+  newState.agents = new Map(state.agents);
+  newState.agents.delete(agentId);
+  return newState;
+};
+
+/**
+ * Get all registered agents
+ */
+export const getAgents = (state: CommunicationState): Agent[] => {
+  return Array.from(state.agents.values());
+};
+
+/**
+ * Get an agent by ID
+ */
+export const getAgent = (state: CommunicationState, agentId: string): Agent | undefined => {
+  return state.agents.get(agentId);
+};
+
+/**
+ * Send a message to an agent
+ */
+export const sendMessage = async (
+  state: CommunicationState,
+  agentId: string,
+  content: string,
+  type: MessageType = 'command',
+): Promise<Message | null> => {
+  const agent = state.agents.get(agentId);
+  if (!agent) {
+    return null;
+  }
+
+  return sendAgentMessage(agent, content, type);
+};
+
+/**
+ * Register a message handler
+ */
+export const onMessage = (
+  state: CommunicationState,
+  agentId: string,
+  handler: (message: Message) => void,
+): CommunicationState => {
+  const newState = { ...state };
+  newState.messageHandlers = new Map(state.messageHandlers);
+
+  if (!newState.messageHandlers.has(agentId)) {
+    newState.messageHandlers.set(agentId, []);
+  }
+
+  const handlers = newState.messageHandlers.get(agentId) || [];
+  newState.messageHandlers.set(agentId, [...handlers, handler]);
+
+  return newState;
+};
+
+/**
+ * Handle an incoming message
+ */
+export const handleMessage = (state: CommunicationState, message: Message): void => {
+  const handlers = state.messageHandlers.get(message.sender);
+  if (handlers) {
+    for (const handler of handlers) {
+      handler(message);
+    }
+  }
+};
