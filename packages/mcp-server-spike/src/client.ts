@@ -7,7 +7,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
  * @param transportType The type of transport to use ('stdio' or 'http')
  * @param serverUrl The URL of the server (only used for HTTP transport)
  */
-async function createClient(transportType: 'stdio' | 'http', serverUrl?: string) {
+export async function createClient(transportType: 'stdio' | 'http', serverUrl?: string) {
   try {
     console.log(`Creating MCP client with ${transportType} transport...`);
 
@@ -20,6 +20,7 @@ async function createClient(transportType: 'stdio' | 'http', serverUrl?: string)
     // Create the transport
     let transport: StdioClientTransport | StreamableHTTPClientTransport;
     if (transportType === 'stdio') {
+      // For stdio transport, we start the server as a subprocess
       transport = new StdioClientTransport({
         command: 'bun',
         args: ['dist/stdio-server.js'],
@@ -46,7 +47,7 @@ async function createClient(transportType: 'stdio' | 'http', serverUrl?: string)
  * Tests the MCP client by listing resources, tools, and prompts
  * @param client The MCP client to test
  */
-async function testClient(client: Client) {
+export async function testClient(client: Client) {
   try {
     console.log('Testing MCP client...');
 
@@ -108,28 +109,3 @@ async function testClient(client: Client) {
     throw error;
   }
 }
-
-/**
- * Main function to run the client
- */
-async function main() {
-  try {
-    // Parse command line arguments
-    const args = process.argv.slice(2);
-    const transportType = (args[0] as 'stdio' | 'http') || 'stdio';
-    const serverUrl = args[1] || 'http://localhost:3000/mcp';
-
-    // Create and test the client
-    const client = await createClient(transportType, serverUrl);
-    await testClient(client);
-
-    // Note: The client doesn't have a disconnect method in the current SDK version
-    console.log('MCP client test completed');
-  } catch (error) {
-    console.error('Error running MCP client:', error);
-    process.exit(1);
-  }
-}
-
-// Run the main function
-main();
