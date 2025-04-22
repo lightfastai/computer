@@ -15,7 +15,7 @@ interface ToolCall {
 }
 
 interface ChatContext {
-  llmClient: Client;
+  mcpClient: Client;
   anthropic: Anthropic;
   rl: readline.Interface;
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -39,10 +39,10 @@ export async function initializeClient(
   });
 
   // Initialize MCP client
-  const llmClient = await createClient(transportType, serverUrl);
+  const mcpClient = await createClient(transportType, serverUrl);
 
   // List available tools
-  const toolsResponse = await llmClient.listTools();
+  const toolsResponse = await mcpClient.listTools();
 
   // Map MCP tools to Anthropic tool format
   const availableTools: Tool[] = toolsResponse.tools.map((tool) => {
@@ -63,7 +63,7 @@ export async function initializeClient(
   console.log('Available tools:', availableTools.map((t) => t.name).join(', '));
 
   return {
-    llmClient,
+    mcpClient,
     anthropic,
     rl,
     conversationHistory: [],
@@ -104,10 +104,10 @@ function parseToolCalls(aiResponse: string): ToolCall[] {
 }
 
 // Function to execute a tool call
-async function executeToolCall(llmClient: Client, toolCall: ToolCall): Promise<unknown> {
+async function executeToolCall(mcpClient: Client, toolCall: ToolCall): Promise<unknown> {
   try {
     console.log(`\nExecuting tool: ${toolCall.name}`);
-    const result = await llmClient.callTool({
+    const result = await mcpClient.callTool({
       name: toolCall.name,
       arguments: toolCall.arguments,
     });
@@ -120,7 +120,7 @@ async function executeToolCall(llmClient: Client, toolCall: ToolCall): Promise<u
 }
 
 export async function startChat(context: ChatContext): Promise<void> {
-  const { llmClient, anthropic, rl, conversationHistory, availableTools } = context;
+  const { mcpClient, anthropic, rl, conversationHistory, availableTools } = context;
 
   console.log('AI Chat Client Started!');
   console.log('Type your messages (or "quit" to exit)');
@@ -161,7 +161,7 @@ export async function startChat(context: ChatContext): Promise<void> {
 
         // Execute each tool call
         for (const toolCall of toolCalls) {
-          const toolResult = await executeToolCall(llmClient, toolCall);
+          const toolResult = await executeToolCall(mcpClient, toolCall);
 
           // Format the tool result for the AI
           const toolResultMessage = `Tool "${toolCall.name}" returned: ${JSON.stringify(toolResult)}`;
