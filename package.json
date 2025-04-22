@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "turbo dev",
+    "dev:cli": "turbo dev --filter=@lightfast/cli",
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "biome format --write .",

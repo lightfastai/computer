@@ -1,9 +1,10 @@
+import type { Agent } from '@lightfast/core/src/schema/agent';
 import { Box, Text } from 'ink';
 import type React from 'react';
 import { AgentStatusIndicator } from './AgentStatus';
 
 interface DashboardProps {
-  agents: MCPAgent[];
+  agents: Agent[];
   onSelectAgent: (agentId: string | null) => void;
 }
 

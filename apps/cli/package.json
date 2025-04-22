@@ -2,16 +2,16 @@
   "name": "@lightfast/cli",
   "version": "0.1.0",
   "description": "Terminal UI for lightfast computer integration",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
   "type": "module",
   "bin": {
     "lightfast": "./dist/cli.js"
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node",
-    "dev": "bun --watch ./src/cli.tsx",
-    "test": "bun test",
+    "build": "vite build",
+    "dev": "vite",
+    "test": "vitest",
     "lint": "biome check .",
     "clean": "rm -rf dist .turbo node_modules"
   },
@@ -29,7 +29,7 @@
     "react-devtools-core": "^4.28.5",
     "typescript": "~5.7.2",
     "vite": "^6.3.1",
-    "vitest": "^1.0.0"
+    "vitest": "^1.6.1"
   },
-  "packageManager": "bun@1.0.25"
+  "packageManager": "bun@1.2.10"
 }

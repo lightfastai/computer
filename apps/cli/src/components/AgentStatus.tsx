@@ -1,4 +1,4 @@
-import type { AgentStatus } from '@lightfast/core/src/schemas';
+import type { AgentStatus } from '@lightfast/core/src/schema/agent-status';
 import { Text } from 'ink';
 import type React from 'react';
 
