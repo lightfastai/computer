@@ -1,9 +1,0 @@
-{
-  "extends": "./base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "jsx": "react-jsx",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"]
-  },
-  "include": ["src/**/*"]
-}
