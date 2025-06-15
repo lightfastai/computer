@@ -6,6 +6,12 @@ This guide provides instructions for AI assistants working on the Fly.io Workflo
 
 This system enables users to create and manage Ubuntu instances on Fly.io, execute SSH commands, and build complex workflows. Think of it as "Infrastructure as Code" meets "Workflow Automation" with a focus on developer productivity.
 
+### Fly.io Deployment Details
+- **App Name**: `lightfast-workflow-orchestrator`
+- **Organization**: `lightfast`
+- **Primary Region**: `iad` (US East)
+- **Configuration**: See `fly.toml` for full deployment configuration
+
 ## Key Architecture Decisions
 
 ### Technology Stack
@@ -135,10 +141,10 @@ bun run typecheck
 ```env
 # Required
 FLY_API_TOKEN=your_fly_api_token
-FLY_ORG_SLUG=your_organization
+FLY_ORG_SLUG=lightfast
 
 # Optional
-PORT=3000
+PORT=8080
 NODE_ENV=development
 LOG_LEVEL=info
 SSH_KEY_PATH=~/.ssh/id_rsa
@@ -193,9 +199,11 @@ bun test            # Run tests
 bun run build       # Build for production
 
 # Deployment
-fly deploy          # Deploy to Fly.io
+fly deploy          # Deploy to Fly.io (lightfast org)
 fly logs            # View production logs
 fly ssh console     # SSH into production
+fly status          # Check app status
+fly scale count 1   # Scale instances
 
 # Database
 bun run db:migrate  # Run migrations

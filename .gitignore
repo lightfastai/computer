@@ -46,3 +46,25 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# Database
+*.db
+*.sqlite
+data.db
+
+# SSH Keys (NEVER commit these)
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Fly.io
+fly.toml.backup
+
+# Bun
+bun.lockb

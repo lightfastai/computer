@@ -1,0 +1,37 @@
+{
+  "name": "fly-workflow-orchestrator",
+  "version": "0.1.0",
+  "description": "Workflow orchestration system for Fly.io Ubuntu instances",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --target node --outdir dist",
+    "start": "NODE_ENV=production bun run dist/index.js",
+    "test": "bun test",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "db:seed": "bun run src/db/seed.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.2",
+    "hono": "^4.6.14",
+    "zod": "^3.23.8",
+    "ssh2": "^1.16.0",
+    "dotenv": "^16.4.7",
+    "nanoid": "^5.0.9",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "@types/node": "^22.10.5",
+    "@types/ssh2": "^1.11.19",
+    "typescript": "^5.7.3",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^9.18.0",
+    "vitest": "^2.1.8"
+  }
+}

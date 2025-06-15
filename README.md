@@ -63,6 +63,14 @@ The system consists of:
 
 ## Getting Started
 
+## Prerequisites
+
+- [Bun](https://bun.sh/) runtime
+- [Fly.io CLI](https://fly.io/docs/hands-on/install-flyctl/) (`brew install flyctl`)
+- Fly.io account and API token
+
+## Setup
+
 ```bash
 # Clone the repository
 git clone https://github.com/lightfastai/computer.git
@@ -75,12 +83,39 @@ bun install
 cp .env.example .env
 # Edit .env with your Fly.io API token and configuration
 
+# Login to Fly.io
+fly auth login
+
 # Run development server
 bun dev
-
-# Deploy to Fly.io
-fly deploy
 ```
+
+## Deployment
+
+This project is configured to deploy to the `lightfast` organization on Fly.io.
+
+```bash
+# Deploy to Fly.io (uses fly.toml configuration)
+fly deploy
+
+# View deployment logs
+fly logs
+
+# SSH into the deployed instance
+fly ssh console
+
+# Scale the application
+fly scale count 1
+```
+
+### Fly.io Configuration
+
+The application is configured in `fly.toml`:
+- **App Name**: `lightfast-workflow-orchestrator`
+- **Organization**: `lightfast`
+- **Primary Region**: `iad` (US East)
+- **Auto-scaling**: Enabled with auto-stop/start
+- **Health Checks**: Configured on `/health` endpoint
 
 ## API Endpoints
 
@@ -108,12 +143,12 @@ fly deploy
 {
   "fly": {
     "apiToken": "YOUR_FLY_API_TOKEN",
-    "organization": "your-org",
-    "region": "sea", // Singapore
+    "organization": "lightfast",
+    "region": "iad", // US East (primary region)
     "machineConfig": {
       "image": "ubuntu:22.04",
       "size": "shared-cpu-1x",
-      "memory": 512
+      "memory": 256
     }
   },
   "ssh": {
