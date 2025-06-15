@@ -198,6 +198,12 @@ bun dev              # Start dev server
 bun test            # Run tests
 bun run build       # Build for production
 
+# Dependency Management
+bun add <package>    # Add a production dependency (latest version)
+bun add -d <package> # Add a dev dependency (latest version)
+bun install          # Install all dependencies from lockfile
+bun update           # Update all dependencies
+
 # Deployment
 fly deploy          # Deploy to Fly.io (lightfast org)
 fly logs            # View production logs
@@ -209,5 +215,14 @@ fly scale count 1   # Scale instances
 bun run db:migrate  # Run migrations
 bun run db:seed     # Seed test data
 ```
+
+## Dependencies
+
+All dependencies use latest versions. Key packages:
+- **hono** (v4.7+): Lightweight web framework
+- **@hono/zod-validator** (v0.7+): Request validation
+- **ssh2** (v1.16+): SSH client implementation
+- **pino** (v9.7+): Structured logging
+- **zod** (v3.25+): Schema validation
 
 Remember: This is a tool for developers. Prioritize developer experience, clear error messages, and robust documentation.

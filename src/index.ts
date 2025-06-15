@@ -11,12 +11,14 @@ import pino from 'pino';
 
 const log = pino({
   level: config.logLevel,
-  transport: {
-    target: 'pino-pretty',
-    options: {
-      colorize: true,
+  ...(config.nodeEnv === 'development' && {
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+      },
     },
-  },
+  }),
 });
 
 const app = new Hono();
