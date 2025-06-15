@@ -50,12 +50,12 @@ workflowRoutes.get('/:id', async (c) => {
 workflowRoutes.post('/:id/execute', zValidator('json', executeWorkflowSchema), async (c) => {
   const workflowId = c.req.param('id');
   const body = c.req.valid('json');
-  
+
   const execution = await workflowService.executeWorkflow(
     workflowId,
     body.context || {}
   );
-  
+
   return c.json(execution, 202); // 202 Accepted - async operation
 });
 

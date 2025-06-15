@@ -7,10 +7,16 @@ This guide provides instructions for AI assistants working on the Fly.io Workflo
 This system enables users to create and manage Ubuntu instances on Fly.io, execute SSH commands, and build complex workflows. Think of it as "Infrastructure as Code" meets "Workflow Automation" with a focus on developer productivity.
 
 ### Fly.io Deployment Details
-- **App Name**: `lightfast-workflow-orchestrator`
+- **Orchestrator App**: `lightfast-workflow-orchestrator` (the API server)
+- **Worker App**: `lightfast-worker-instances` (where Ubuntu instances run)
 - **Organization**: `lightfast`
 - **Primary Region**: `iad` (US East)
-- **Configuration**: See `fly.toml` for full deployment configuration
+- **Configuration**: See `fly.toml` for deployment configuration
+
+### Important Implementation Notes
+- The Fly.io app name is hardcoded in `fly-service.ts` as `lightfast-worker-instances`
+- Instances are created without public IPs (only private IPv6 addresses)
+- SSH connections require public IP allocation (not yet implemented)
 
 ## Key Architecture Decisions
 
@@ -194,9 +200,14 @@ When stuck:
 
 ```bash
 # Development
-bun dev              # Start dev server
+bun dev              # Start dev server (port 3000 by default)
 bun test            # Run tests
 bun run build       # Build for production
+
+# Testing the API
+curl http://localhost:3000/health  # Health check
+curl http://localhost:3000/api/workflows  # List workflows
+curl -X POST http://localhost:3000/api/instances -H "Content-Type: application/json" -d '{"name":"test"}'
 
 # Dependency Management
 bun add <package>    # Add a production dependency (latest version)
@@ -204,14 +215,18 @@ bun add -d <package> # Add a dev dependency (latest version)
 bun install          # Install all dependencies from lockfile
 bun update           # Update all dependencies
 
+# Fly.io Setup
+fly auth token       # Get your API token for .env
+fly apps create lightfast-worker-instances --org lightfast  # Create worker app
+
 # Deployment
 fly deploy          # Deploy to Fly.io (lightfast org)
 fly logs            # View production logs
 fly ssh console     # SSH into production
 fly status          # Check app status
-fly scale count 1   # Scale instances
+fly machines list -a lightfast-worker-instances  # List worker instances
 
-# Database
+# Database (future)
 bun run db:migrate  # Run migrations
 bun run db:seed     # Seed test data
 ```
@@ -224,5 +239,25 @@ All dependencies use latest versions. Key packages:
 - **ssh2** (v1.16+): SSH client implementation
 - **pino** (v9.7+): Structured logging
 - **zod** (v3.25+): Schema validation
+
+## Common Issues & Solutions
+
+### Authentication Errors
+- If you get "Authorization header required", check that `API_KEY` is not set in `.env`
+- For production, generate an API key and include it in requests
+
+### Fly.io Errors
+- "app not found": Run `fly apps create lightfast-worker-instances --org lightfast`
+- "invalid token": Get a fresh token with `fly auth token`
+- Instances stop immediately: This is normal - Fly.io stops idle machines
+
+### SSH Connection Issues
+- Currently, instances only have private IPs
+- Public IP allocation needs to be implemented for SSH access
+- Consider using Fly.io's proxy or wireguard for connectivity
+
+### Port Conflicts
+- Default port is 3000, change in `.env` if needed
+- Kill existing process: `kill -9 $(lsof -ti:3000)`
 
 Remember: This is a tool for developers. Prioritize developer experience, clear error messages, and robust documentation.

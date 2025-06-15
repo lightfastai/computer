@@ -22,27 +22,66 @@ Rebuilding Manus AI's computer infrastructure with cloud-based development envir
 - Isolated testing environments
 - Automated workflow execution
 
-## Example Workflow
+## Example Workflows
+
+### Built-in Workflows
+
+1. **Git Clone and Push**
+   - Creates an Ubuntu instance
+   - Installs Git
+   - Clones a repository
+   - Waits for user changes
+   - (Future: commits and pushes changes)
+
+2. **Development Environment Setup**
+   - Creates a larger instance (2 CPU, 2GB RAM)
+   - Updates system packages
+   - Installs development tools (git, curl, vim, tmux, etc.)
+   - Installs Node.js LTS
+
+### Example API Usage
 
 ```bash
-# User workflow example:
-1. Create Ubuntu instance on Fly.io
-2. SSH into instance
-3. git clone repository
-4. Make code changes
-5. Run tests
-6. git commit and push
-7. Destroy instance (optional)
+# Execute a workflow
+curl -X POST http://localhost:3000/api/workflows/{workflowId}/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context": {
+      "repoUrl": "https://github.com/example/repo.git"
+    }
+  }'
+
+# Check execution status
+curl http://localhost:3000/api/workflows/executions/{executionId}
 ```
+
+## How It Works
+
+1. **Instance Creation**: When you create an instance, the system:
+   - Calls Fly.io Machines API to provision an Ubuntu machine
+   - Configures the machine with specified resources (CPU, memory)
+   - Waits for the machine to be ready
+   - Returns instance details including private IP
+
+2. **Workflow Execution**: Workflows are multi-step automation scripts that:
+   - Create instances as needed
+   - Execute commands in sequence
+   - Handle dependencies between steps
+   - Clean up resources when complete
+
+3. **Current Limitations**:
+   - Instances only have private IPs (no public SSH access yet)
+   - SSH execution is implemented but requires public IP allocation
+   - In-memory storage (instances are lost on server restart)
 
 ## Architecture
 
 The system consists of:
 - **API Server**: Hono-based REST API for managing instances and executing commands
-- **Fly.io Integration**: Machine creation and management via Fly.io API
-- **SSH Client**: Secure command execution on remote instances
+- **Fly.io Integration**: Machine creation and management via Fly.io Machines API
+- **SSH Client**: Secure command execution on remote instances (SSH2 library)
 - **Workflow Engine**: Orchestration of complex multi-step workflows
-- **Frontend (Optional)**: Web interface for workflow management
+- **Instance Service**: Manages instance lifecycle and state
 
 ## Features
 
@@ -63,13 +102,13 @@ The system consists of:
 
 ## Getting Started
 
-## Prerequisites
+### Prerequisites
 
 - [Bun](https://bun.sh/) runtime
 - [Fly.io CLI](https://fly.io/docs/hands-on/install-flyctl/) (`brew install flyctl`)
 - Fly.io account and API token
 
-## Setup
+### Setup
 
 ```bash
 # Clone the repository
@@ -81,13 +120,53 @@ bun install
 
 # Set up environment variables
 cp .env.example .env
-# Edit .env with your Fly.io API token and configuration
 
-# Login to Fly.io
-fly auth login
+# Get your Fly.io API token
+fly auth token
+
+# Edit .env with your token:
+# FLY_API_TOKEN=your_token_here
+# FLY_ORG_SLUG=your_org_name
+
+# Create Fly.io app for worker instances
+fly apps create lightfast-worker-instances --org lightfast
 
 # Run development server
 bun dev
+```
+
+### Testing the API
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# List available workflows
+curl http://localhost:3000/api/workflows
+
+# Create an Ubuntu instance
+curl -X POST http://localhost:3000/api/instances \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "dev-box",
+    "region": "iad",
+    "size": "shared-cpu-1x",
+    "memoryMb": 256
+  }'
+
+# List instances
+curl http://localhost:3000/api/instances
+
+# Execute a command (replace {instanceId})
+curl -X POST http://localhost:3000/api/instances/{instanceId}/exec \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "uname -a",
+    "timeout": 5000
+  }'
+
+# Destroy instance
+curl -X DELETE http://localhost:3000/api/instances/{instanceId}
 ```
 
 ## Deployment
@@ -127,14 +206,15 @@ The application is configured in `fly.toml`:
 
 ### Command Execution
 - `POST /instances/:id/exec` - Execute command on instance
-- `GET /instances/:id/sessions` - List active sessions
-- `WebSocket /instances/:id/shell` - Interactive shell session
+- `GET /instances/executions/:executionId` - Get command execution details
 
 ### Workflow Management
 - `POST /workflows` - Create new workflow
 - `GET /workflows` - List workflows
-- `POST /workflows/:id/run` - Execute workflow
-- `GET /workflows/:id/status` - Get workflow execution status
+- `GET /workflows/:id` - Get workflow details
+- `POST /workflows/:id/execute` - Execute workflow
+- `GET /workflows/executions/:executionId` - Get workflow execution status
+- `GET /workflows/:id/executions` - List workflow executions
 
 ## Configuration
 
@@ -169,17 +249,30 @@ See [CLAUDE.md](./CLAUDE.md) for development guidelines and AI assistant instruc
 - Instance access is scoped to user permissions
 - Automatic instance cleanup after inactivity
 
-## Roadmap
+## Current Status
 
-- [ ] Core API implementation
-- [ ] Fly.io machine provisioning
-- [ ] SSH command execution
-- [ ] Workflow template system
-- [ ] Web UI (optional)
-- [ ] Plugin architecture
-- [ ] Multi-region support
-- [ ] Instance snapshots
-- [ ] Collaborative workflows
+### ✅ Implemented
+- Core API server with Hono
+- Fly.io machine provisioning
+- Instance lifecycle management (create, list, destroy)
+- Workflow template system with pre-built workflows
+- Error handling and logging
+- Development environment setup
+
+### 🚧 In Progress
+- SSH command execution on instances
+- Public IP allocation for SSH access
+- Interactive shell sessions
+
+### 📋 Roadmap
+- [ ] Database persistence (SQLite/PostgreSQL)
+- [ ] User authentication and multi-tenancy
+- [ ] Web UI dashboard
+- [ ] Plugin architecture for custom workflow steps
+- [ ] Instance snapshots and templates
+- [ ] Cost tracking and limits
+- [ ] Webhook notifications
+- [ ] CLI tool for easier interaction
 
 ## Contributing
 

@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(bun install:*)"
+      "Bash(bun install:*)",
+      "Bash(grep:*)",
+      "Bash(bun:*)",
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Bash(fly machines list:*)"
     ],
     "deny": []
   }

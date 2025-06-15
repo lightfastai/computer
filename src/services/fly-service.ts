@@ -44,10 +44,10 @@ export class FlyService {
 
   async createMachine(options: CreateInstanceOptions): Promise<FlyMachine> {
     const { name, region, image, size, memoryMb, metadata, sshKeyContent } = options;
-    
+
     // Parse CPU configuration from size
     const cpuConfig = this.parseMachineSize(size || config.defaultMachineSize);
-    
+
     const machineConfig = {
       name: name || `instance-${Date.now()}`,
       region: region || config.defaultRegion,
@@ -63,18 +63,8 @@ export class FlyService {
           DEBIAN_FRONTEND: 'noninteractive',
         },
         metadata: metadata || {},
-        services: [
-          {
-            ports: [
-              {
-                port: 22,
-                handlers: ['tcp'],
-              },
-            ],
-            protocol: 'tcp',
-            internal_port: 22,
-          },
-        ],
+        services: [],
+        auto_destroy: false,
       },
     };
 
@@ -93,7 +83,7 @@ export class FlyService {
 
     try {
       const response = await fetch(
-        `${this.apiUrl}/apps/${config.flyOrgSlug}/machines`,
+        `${this.apiUrl}/apps/lightfast-worker-instances/machines`,
         {
           method: 'POST',
           headers: this.headers,
@@ -108,10 +98,10 @@ export class FlyService {
 
       const machine = await response.json();
       log.info(`Created Fly machine: ${machine.id}`);
-      
+
       // Wait for machine to be ready
       await this.waitForMachineReady(machine.id);
-      
+
       return machine;
     } catch (error) {
       log.error('Failed to create Fly machine:', error);
@@ -122,7 +112,7 @@ export class FlyService {
   async getMachine(machineId: string): Promise<FlyMachine> {
     try {
       const response = await fetch(
-        `${this.apiUrl}/apps/${config.flyOrgSlug}/machines/${machineId}`,
+        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}`,
         {
           method: 'GET',
           headers: this.headers,
@@ -144,7 +134,7 @@ export class FlyService {
   async listMachines(): Promise<FlyMachine[]> {
     try {
       const response = await fetch(
-        `${this.apiUrl}/apps/${config.flyOrgSlug}/machines`,
+        `${this.apiUrl}/apps/lightfast-worker-instances/machines`,
         {
           method: 'GET',
           headers: this.headers,
@@ -166,7 +156,7 @@ export class FlyService {
   async destroyMachine(machineId: string): Promise<void> {
     try {
       const response = await fetch(
-        `${this.apiUrl}/apps/${config.flyOrgSlug}/machines/${machineId}`,
+        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}`,
         {
           method: 'DELETE',
           headers: this.headers,
@@ -188,7 +178,7 @@ export class FlyService {
   async stopMachine(machineId: string): Promise<void> {
     try {
       const response = await fetch(
-        `${this.apiUrl}/apps/${config.flyOrgSlug}/machines/${machineId}/stop`,
+        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}/stop`,
         {
           method: 'POST',
           headers: this.headers,
@@ -210,7 +200,7 @@ export class FlyService {
   async startMachine(machineId: string): Promise<void> {
     try {
       const response = await fetch(
-        `${this.apiUrl}/apps/${config.flyOrgSlug}/machines/${machineId}/start`,
+        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}/start`,
         {
           method: 'POST',
           headers: this.headers,
@@ -233,20 +223,20 @@ export class FlyService {
   private async waitForMachineReady(machineId: string, maxAttempts = 30): Promise<void> {
     for (let i = 0; i < maxAttempts; i++) {
       const machine = await this.getMachine(machineId);
-      
+
       if (machine.state === 'started') {
         log.info(`Machine ${machineId} is ready`);
         return;
       }
-      
+
       if (machine.state === 'failed' || machine.state === 'destroyed') {
         throw new AppError(`Machine ${machineId} failed to start: ${machine.state}`);
       }
-      
+
       log.debug(`Waiting for machine ${machineId}, current state: ${machine.state}`);
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
-    
+
     throw new AppError(`Machine ${machineId} failed to become ready in time`);
   }
 
