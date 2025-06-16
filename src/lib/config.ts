@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
 dotenv.config();
 
@@ -8,23 +8,23 @@ const configSchema = z.object({
   port: z.coerce.number().default(3000),
   nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
   logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  
+
   // Fly.io
   flyApiToken: z.string(),
   flyOrgSlug: z.string(),
-  
+
   // SSH
   sshKeyPath: z.string().default('~/.ssh/id_rsa'),
   sshTimeout: z.coerce.number().default(30000),
-  
+
   // Database
   databaseUrl: z.string().default('sqlite://./data.db'),
-  
+
   // API
   apiKey: z.string().optional(),
   rateLimitWindow: z.coerce.number().default(60000),
   rateLimitMax: z.coerce.number().default(100),
-  
+
   // Instance defaults
   defaultRegion: z.string().default('sea'),
   defaultMachineSize: z.string().default('shared-cpu-1x'),

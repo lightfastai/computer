@@ -1,5 +1,5 @@
-import { inngest } from '../lib/inngest';
-import { instanceService } from '../services';
+import { inngest } from '@/lib/inngest';
+import { instanceService } from '@/services/index';
 import pino from 'pino';
 
 const log = pino();
@@ -56,7 +56,7 @@ export const createInstance = inngest.createFunction(
       status: verifiedInstance.status,
       privateIp: verifiedInstance.privateIpAddress,
     };
-  }
+  },
 );
 
 // Destroy instance with cleanup
@@ -92,5 +92,5 @@ export const destroyInstance = inngest.createFunction(
     });
 
     return { instanceId, destroyed: true };
-  }
+  },
 );

@@ -1,6 +1,6 @@
-import { inngest } from '../lib/inngest';
-import { workflowService, instanceService } from '../services';
-import { WorkflowStep, StepType, WorkflowStatus } from '../types';
+import { inngest } from '@/lib/inngest';
+import { instanceService, workflowService } from '@/services/index';
+import { StepType, WorkflowStatus, type WorkflowStep } from '@/types/index';
 import pino from 'pino';
 
 const log = pino();
@@ -45,7 +45,7 @@ export const executeWorkflow = inngest.createFunction(
           return true;
         }
 
-        return workflowStep.dependsOn.every(depId => results[depId] !== undefined);
+        return workflowStep.dependsOn.every((depId) => results[depId] !== undefined);
       });
 
       if (!canExecute) {
@@ -101,14 +101,11 @@ export const executeWorkflow = inngest.createFunction(
       status: 'completed',
       results,
     };
-  }
+  },
 );
 
 // Helper functions for step execution
-async function executeCreateInstanceStep(
-  step: WorkflowStep,
-  context: Record<string, any>
-): Promise<any> {
+async function executeCreateInstanceStep(step: WorkflowStep, context: Record<string, any>): Promise<any> {
   const instance = await instanceService.createInstance(step.config);
 
   // Store instance ID in context
@@ -118,21 +115,16 @@ async function executeCreateInstanceStep(
   return { instanceId: instance.id };
 }
 
-async function executeCommandStep(
-  step: WorkflowStep,
-  context: Record<string, any>
-): Promise<any> {
+async function executeCommandStep(step: WorkflowStep, context: Record<string, any>): Promise<any> {
   const instanceId = context[step.config.instanceKey || 'instanceId'];
 
   if (!instanceId) {
     throw new Error('No instance ID found in context');
   }
 
-  const result = await instanceService.executeCommand(
-    instanceId,
-    step.config.command,
-    { timeout: step.config.timeout }
-  );
+  const result = await instanceService.executeCommand(instanceId, step.config.command, {
+    timeout: step.config.timeout,
+  });
 
   return {
     output: result.output,
@@ -143,14 +135,11 @@ async function executeCommandStep(
 
 async function executeWaitStep(step: WorkflowStep): Promise<any> {
   const duration = step.config.duration || 1000;
-  await new Promise(resolve => setTimeout(resolve, duration));
+  await new Promise((resolve) => setTimeout(resolve, duration));
   return { waited: duration };
 }
 
-async function executeDestroyInstanceStep(
-  step: WorkflowStep,
-  context: Record<string, any>
-): Promise<any> {
+async function executeDestroyInstanceStep(step: WorkflowStep, context: Record<string, any>): Promise<any> {
   const instanceId = context[step.config.instanceKey || 'instanceId'];
 
   if (!instanceId) {

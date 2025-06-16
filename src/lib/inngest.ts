@@ -1,4 +1,4 @@
-import { Inngest, EventSchemas } from 'inngest';
+import { type EventSchemas, Inngest } from 'inngest';
 import { z } from 'zod';
 
 // Define event schemas for type safety
@@ -53,9 +53,9 @@ export const inngest = new Inngest({
 
 // Type exports for events
 export type InngestEvents = {
-  'instance/create': z.infer<typeof eventSchemas['instance/create']['data']>;
-  'instance/destroy': z.infer<typeof eventSchemas['instance/destroy']['data']>;
-  'command/execute': z.infer<typeof eventSchemas['command/execute']['data']>;
-  'workflow/execute': z.infer<typeof eventSchemas['workflow/execute']['data']>;
-  'workflow/step': z.infer<typeof eventSchemas['workflow/step']['data']>;
+  'instance/create': z.infer<(typeof eventSchemas)['instance/create']['data']>;
+  'instance/destroy': z.infer<(typeof eventSchemas)['instance/destroy']['data']>;
+  'command/execute': z.infer<(typeof eventSchemas)['command/execute']['data']>;
+  'workflow/execute': z.infer<(typeof eventSchemas)['workflow/execute']['data']>;
+  'workflow/step': z.infer<(typeof eventSchemas)['workflow/step']['data']>;
 };

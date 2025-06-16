@@ -1,8 +1,8 @@
+import { workflowService } from '@/services/index';
+import { StepType } from '@/types/index';
+import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { zValidator } from '@hono/zod-validator';
-import { workflowService } from '../services';
-import { StepType } from '../types';
 
 export const workflowRoutes = new Hono();
 
@@ -51,10 +51,7 @@ workflowRoutes.post('/:id/execute', zValidator('json', executeWorkflowSchema), a
   const workflowId = c.req.param('id');
   const body = c.req.valid('json');
 
-  const execution = await workflowService.executeWorkflow(
-    workflowId,
-    body.context || {}
-  );
+  const execution = await workflowService.executeWorkflow(workflowId, body.context || {});
 
   return c.json(execution, 202); // 202 Accepted - async operation
 });
@@ -66,15 +63,15 @@ workflowRoutes.get('/:id/executions', async (c) => {
   return c.json(executions);
 });
 
+// List all executions (must come before specific execution route)
+workflowRoutes.get('/executions', async (c) => {
+  const executions = await workflowService.listExecutions();
+  return c.json(executions);
+});
+
 // Get workflow execution
 workflowRoutes.get('/executions/:executionId', async (c) => {
   const executionId = c.req.param('executionId');
   const execution = await workflowService.getExecution(executionId);
   return c.json(execution);
-});
-
-// List all executions
-workflowRoutes.get('/executions', async (c) => {
-  const executions = await workflowService.listExecutions();
-  return c.json(executions);
 });

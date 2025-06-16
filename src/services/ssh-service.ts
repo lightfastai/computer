@@ -1,10 +1,10 @@
-import { Client, ConnectConfig } from 'ssh2';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import { config } from '@/lib/config';
+import { AppError } from '@/lib/error-handler';
 import pino from 'pino';
-import { config } from '../lib/config';
-import { AppError } from '../lib/error-handler';
+import { Client, type ConnectConfig } from 'ssh2';
 
 const log = pino();
 
@@ -65,13 +65,9 @@ export class SSHService {
     });
   }
 
-  async executeCommand(
-    instanceId: string,
-    command: string,
-    options?: { timeout?: number }
-  ): Promise<CommandResult> {
+  async executeCommand(instanceId: string, command: string, options?: { timeout?: number }): Promise<CommandResult> {
     const client = this.connections.get(instanceId);
-    
+
     if (!client) {
       throw new AppError(`No SSH connection for instance ${instanceId}`);
     }
@@ -99,7 +95,7 @@ export class SSHService {
           if (timeoutHandle) {
             clearTimeout(timeoutHandle);
           }
-          
+
           resolve({
             stdout: stdout.trim(),
             stderr: stderr.trim(),
@@ -120,7 +116,7 @@ export class SSHService {
 
   async createShellSession(instanceId: string): Promise<NodeJS.ReadWriteStream> {
     const client = this.connections.get(instanceId);
-    
+
     if (!client) {
       throw new AppError(`No SSH connection for instance ${instanceId}`);
     }
@@ -138,13 +134,9 @@ export class SSHService {
     });
   }
 
-  async uploadFile(
-    instanceId: string,
-    localPath: string,
-    remotePath: string
-  ): Promise<void> {
+  async uploadFile(instanceId: string, localPath: string, remotePath: string): Promise<void> {
     const client = this.connections.get(instanceId);
-    
+
     if (!client) {
       throw new AppError(`No SSH connection for instance ${instanceId}`);
     }
@@ -174,13 +166,9 @@ export class SSHService {
     });
   }
 
-  async downloadFile(
-    instanceId: string,
-    remotePath: string,
-    localPath: string
-  ): Promise<void> {
+  async downloadFile(instanceId: string, remotePath: string, localPath: string): Promise<void> {
     const client = this.connections.get(instanceId);
-    
+
     if (!client) {
       throw new AppError(`No SSH connection for instance ${instanceId}`);
     }
@@ -208,7 +196,7 @@ export class SSHService {
 
   disconnect(instanceId: string): void {
     const client = this.connections.get(instanceId);
-    
+
     if (client) {
       client.end();
       this.connections.delete(instanceId);
@@ -229,9 +217,7 @@ export class SSHService {
       const keyPath = config.sshKeyPath.replace('~', homedir());
       return readFileSync(keyPath, 'utf8');
     } catch (error) {
-      throw new AppError(
-        `Failed to load SSH private key from ${config.sshKeyPath}: ${error.message}`
-      );
+      throw new AppError(`Failed to load SSH private key from ${config.sshKeyPath}: ${error.message}`);
     }
   }
 }

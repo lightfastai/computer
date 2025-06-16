@@ -1,15 +1,17 @@
+import { apiRoutes } from '@/api/routes';
+import { executeCommand, executeLongCommand } from '@/inngest/command-functions';
+import { createInstance, destroyInstance } from '@/inngest/instance-functions';
+import { executeWorkflow } from '@/inngest/workflow-functions';
+import { config } from '@/lib/config';
+import { errorHandler } from '@/lib/error-handler';
+import { inngest } from '@/lib/inngest';
+import { initializeServices } from '@/services/index';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { serve as serveInngest } from 'inngest/hono';
-import { config } from './lib/config';
-import { errorHandler } from './lib/error-handler';
-import { apiRoutes } from './api/routes';
-import { initializeServices } from './services';
-import { inngest } from './lib/inngest';
-import { inngestFunctions } from './inngest';
 import pino from 'pino';
 
 const log = pino({
@@ -51,8 +53,8 @@ app.use(
   '/api/inngest',
   serveInngest({
     client: inngest,
-    functions: inngestFunctions,
-  })
+    functions: [createInstance, destroyInstance, executeWorkflow, executeCommand, executeLongCommand],
+  }),
 );
 
 // 404 handler

@@ -1,7 +1,7 @@
+import { instanceService } from '@/services/index';
+import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { zValidator } from '@hono/zod-validator';
-import { instanceService } from '../services';
 
 export const instanceRoutes = new Hono();
 
@@ -66,13 +66,9 @@ instanceRoutes.delete('/:id', async (c) => {
 instanceRoutes.post('/:id/exec', zValidator('json', executeCommandSchema), async (c) => {
   const instanceId = c.req.param('id');
   const body = c.req.valid('json');
-  
-  const execution = await instanceService.executeCommand(
-    instanceId,
-    body.command,
-    { timeout: body.timeout }
-  );
-  
+
+  const execution = await instanceService.executeCommand(instanceId, body.command, { timeout: body.timeout });
+
   return c.json(execution);
 });
 

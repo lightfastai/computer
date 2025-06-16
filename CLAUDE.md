@@ -206,25 +206,41 @@ When stuck:
 
 ### Import Guidelines
 
+**Always use the @/* path alias for imports** - we have configured TypeScript path mapping in tsconfig.json:
+
 ```typescript
-// ❌ BAD: Don't create index.ts files that re-export
+// ❌ BAD: Don't use relative imports
+import { UserService } from '../services/user-service';
+import { config } from './lib/config';
+
+// ✅ GOOD: Use @/* path alias for all imports
+import { UserService } from '@/services/user-service';
+import { config } from '@/lib/config';
+```
+
+**Avoid index.ts re-export pattern**:
+
+```typescript
+// ❌ BAD: Don't create index.ts files that just re-export
 // src/services/index.ts
 export * from './user-service';
 export * from './post-service';
 
 // ❌ BAD: Don't import from index files
-import { UserService, PostService } from './services';
+import { UserService, PostService } from '@/services';
 
 // ✅ GOOD: Import directly from source files
-import { UserService } from './services/user-service';
-import { PostService } from './services/post-service';
+import { UserService } from '@/services/user-service';
+import { PostService } from '@/services/post-service';
 
 // ✅ GOOD: Group related imports
-import { createInstance, destroyInstance } from './inngest/instance-functions';
-import { executeWorkflow } from './inngest/workflow-functions';
+import { createInstance, destroyInstance } from '@/inngest/instance-functions';
+import { executeWorkflow } from '@/inngest/workflow-functions';
 ```
 
-The only exception is when creating a public API for a library/package where you need to control the exported interface.
+Exceptions:
+- When an index.ts file contains actual logic (like services/index.ts with initializeServices)
+- When creating a public API for a library/package where you need to control the exported interface
 
 ## Important Commands
 

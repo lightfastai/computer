@@ -1,7 +1,7 @@
-import { config } from '../lib/config';
+import { config } from '@/lib/config';
+import { AppError } from '@/lib/error-handler';
+import type { CreateInstanceOptions } from '@/types/index';
 import pino from 'pino';
-import { AppError } from '../lib/error-handler';
-import { CreateInstanceOptions } from '../types';
 
 const log = pino();
 
@@ -37,7 +37,7 @@ export class FlyService {
 
   constructor() {
     this.headers = {
-      'Authorization': `Bearer ${config.flyApiToken}`,
+      Authorization: `Bearer ${config.flyApiToken}`,
       'Content-Type': 'application/json',
     };
   }
@@ -82,14 +82,11 @@ export class FlyService {
     }
 
     try {
-      const response = await fetch(
-        `${this.apiUrl}/apps/lightfast-worker-instances/machines`,
-        {
-          method: 'POST',
-          headers: this.headers,
-          body: JSON.stringify(machineConfig),
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/apps/lightfast-worker-instances/machines`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(machineConfig),
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -111,13 +108,10 @@ export class FlyService {
 
   async getMachine(machineId: string): Promise<FlyMachine> {
     try {
-      const response = await fetch(
-        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}`,
-        {
-          method: 'GET',
-          headers: this.headers,
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}`, {
+        method: 'GET',
+        headers: this.headers,
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -133,13 +127,10 @@ export class FlyService {
 
   async listMachines(): Promise<FlyMachine[]> {
     try {
-      const response = await fetch(
-        `${this.apiUrl}/apps/lightfast-worker-instances/machines`,
-        {
-          method: 'GET',
-          headers: this.headers,
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/apps/lightfast-worker-instances/machines`, {
+        method: 'GET',
+        headers: this.headers,
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -155,13 +146,10 @@ export class FlyService {
 
   async destroyMachine(machineId: string): Promise<void> {
     try {
-      const response = await fetch(
-        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}`,
-        {
-          method: 'DELETE',
-          headers: this.headers,
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}`, {
+        method: 'DELETE',
+        headers: this.headers,
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -177,13 +165,10 @@ export class FlyService {
 
   async stopMachine(machineId: string): Promise<void> {
     try {
-      const response = await fetch(
-        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}/stop`,
-        {
-          method: 'POST',
-          headers: this.headers,
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}/stop`, {
+        method: 'POST',
+        headers: this.headers,
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -199,13 +184,10 @@ export class FlyService {
 
   async startMachine(machineId: string): Promise<void> {
     try {
-      const response = await fetch(
-        `${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}/start`,
-        {
-          method: 'POST',
-          headers: this.headers,
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/apps/lightfast-worker-instances/machines/${machineId}/start`, {
+        method: 'POST',
+        headers: this.headers,
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -234,7 +216,7 @@ export class FlyService {
       }
 
       log.debug(`Waiting for machine ${machineId}, current state: ${machine.state}`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
     throw new AppError(`Machine ${machineId} failed to become ready in time`);

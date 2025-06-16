@@ -1,6 +1,6 @@
-import { inngest } from '../lib/inngest';
-import { instanceService } from '../services';
-import { CommandStatus } from '../types';
+import { inngest } from '@/lib/inngest';
+import { instanceService } from '@/services/index';
+import { CommandStatus } from '@/types/index';
 import pino from 'pino';
 
 const log = pino();
@@ -35,11 +35,7 @@ export const executeCommand = inngest.createFunction(
       log.info(`Executing command on instance ${instanceId}: ${command}`);
 
       try {
-        const execution = await instanceService.executeCommand(
-          instanceId,
-          command,
-          { timeout: timeout || 30000 }
-        );
+        const execution = await instanceService.executeCommand(instanceId, command, { timeout: timeout || 30000 });
 
         return {
           executionId: execution.id,
@@ -70,7 +66,7 @@ export const executeCommand = inngest.createFunction(
     }
 
     return result;
-  }
+  },
 );
 
 // Long-running command with progress updates
@@ -99,11 +95,7 @@ export const executeLongCommand = inngest.createFunction(
 
       // TODO: Implement async command execution
       // For now, we'll use the sync version
-      const execution = await instanceService.executeCommand(
-        instanceId,
-        command,
-        { timeout }
-      );
+      const execution = await instanceService.executeCommand(instanceId, command, { timeout });
 
       return execution.id;
     });
@@ -115,8 +107,7 @@ export const executeLongCommand = inngest.createFunction(
       const status = await step.run(`check-status-${i}`, async () => {
         const execution = await instanceService.getCommandExecution(executionId);
 
-        if (execution.status === CommandStatus.COMPLETED ||
-            execution.status === CommandStatus.FAILED) {
+        if (execution.status === CommandStatus.COMPLETED || execution.status === CommandStatus.FAILED) {
           return {
             completed: true,
             execution,
@@ -136,5 +127,5 @@ export const executeLongCommand = inngest.createFunction(
 
     // Timeout reached
     throw new Error(`Command timed out after ${timeout}ms`);
-  }
+  },
 );

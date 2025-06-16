@@ -1,8 +1,8 @@
+import { instanceRoutes } from '@/api/instances';
+import { authMiddleware } from '@/api/middleware/auth';
+import { monitoringRoutes } from '@/api/monitoring';
+import { workflowRoutes } from '@/api/workflows';
 import { Hono } from 'hono';
-import { instanceRoutes } from './instances';
-import { workflowRoutes } from './workflows';
-import { monitoringRoutes } from './monitoring';
-import { authMiddleware } from './middleware/auth';
 
 export const apiRoutes = new Hono();
 

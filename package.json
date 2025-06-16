@@ -8,7 +8,9 @@
     "build": "bun build src/index.ts --target node --outdir dist",
     "start": "NODE_ENV=production bun run dist/index.js",
     "test": "bun test",
-    "lint": "eslint src --ext .ts",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
     "typecheck": "tsc --noEmit",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:seed": "bun run src/db/seed.ts"
@@ -26,12 +28,10 @@
     "zod": "^3.25.64"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/bun": "^1.2.16",
     "@types/node": "^24.0.1",
     "@types/ssh2": "^1.15.5",
-    "@typescript-eslint/eslint-plugin": "^8.34.0",
-    "@typescript-eslint/parser": "^8.34.0",
-    "eslint": "^9.29.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"
   }

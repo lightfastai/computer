@@ -1,15 +1,15 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { ZodError } from 'zod';
 import pino from 'pino';
+import { ZodError } from 'zod';
 
 const log = pino();
 
 export class AppError extends Error {
   constructor(
     message: string,
-    public statusCode: number = 500,
-    public code?: string
+    public statusCode = 500,
+    public code?: string,
   ) {
     super(message);
     this.name = 'AppError';
@@ -29,13 +29,13 @@ export class ValidationError extends AppError {
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message: string = 'Authentication required') {
+  constructor(message = 'Authentication required') {
     super(message, 401, 'AUTHENTICATION_ERROR');
   }
 }
 
 export class AuthorizationError extends AppError {
-  constructor(message: string = 'Insufficient permissions') {
+  constructor(message = 'Insufficient permissions') {
     super(message, 403, 'AUTHORIZATION_ERROR');
   }
 }
@@ -54,7 +54,7 @@ export async function errorHandler(err: Error, c: Context) {
         error: err.message,
         code: 'HTTP_EXCEPTION',
       },
-      err.status
+      err.status,
     );
   }
 
@@ -66,7 +66,7 @@ export async function errorHandler(err: Error, c: Context) {
         code: 'VALIDATION_ERROR',
         details: err.errors,
       },
-      400
+      400,
     );
   }
 
@@ -77,7 +77,7 @@ export async function errorHandler(err: Error, c: Context) {
         error: err.message,
         code: err.code,
       },
-      err.statusCode
+      err.statusCode,
     );
   }
 
@@ -90,6 +90,6 @@ export async function errorHandler(err: Error, c: Context) {
       error: 'Internal server error',
       code: 'INTERNAL_ERROR',
     },
-    500
+    500,
   );
 }

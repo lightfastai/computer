@@ -1,14 +1,8 @@
+import { NotFoundError } from '@/lib/error-handler';
+import type { InstanceService } from '@/services/instance-service';
+import { StepType, type Workflow, type WorkflowExecution, WorkflowStatus, type WorkflowStep } from '@/types/index';
 import { nanoid } from 'nanoid';
 import pino from 'pino';
-import { InstanceService } from './instance-service';
-import {
-  Workflow,
-  WorkflowStep,
-  WorkflowExecution,
-  WorkflowStatus,
-  StepType,
-} from '../types';
-import { NotFoundError } from '../lib/error-handler';
 
 const log = pino();
 
@@ -51,10 +45,7 @@ export class WorkflowService {
     return Array.from(this.workflows.values());
   }
 
-  async executeWorkflow(
-    workflowId: string,
-    context: Record<string, any> = {}
-  ): Promise<WorkflowExecution> {
+  async executeWorkflow(workflowId: string, context: Record<string, any> = {}): Promise<WorkflowExecution> {
     const workflow = await this.getWorkflow(workflowId);
     const executionId = nanoid();
 
@@ -72,7 +63,7 @@ export class WorkflowService {
     if (process.env.INNGEST_ENABLED === 'true') {
       try {
         // Import dynamically to avoid circular dependency
-        const { inngest } = await import('../lib/inngest');
+        const { inngest } = await import('@/lib/inngest');
 
         await inngest.send({
           name: 'workflow/execute',
@@ -111,20 +102,27 @@ export class WorkflowService {
     return execution;
   }
 
+  async getExecution(executionId: string): Promise<WorkflowExecution> {
+    const execution = this.executions.get(executionId);
+
+    if (!execution) {
+      throw new NotFoundError('WorkflowExecution', executionId);
+    }
+
+    return execution;
+  }
+
   async listExecutions(workflowId?: string): Promise<WorkflowExecution[]> {
     const executions = Array.from(this.executions.values());
 
     if (workflowId) {
-      return executions.filter(exec => exec.workflowId === workflowId);
+      return executions.filter((exec) => exec.workflowId === workflowId);
     }
 
     return executions;
   }
 
-  private async runWorkflow(
-    execution: WorkflowExecution,
-    workflow: Workflow
-  ): Promise<void> {
+  private async runWorkflow(execution: WorkflowExecution, workflow: Workflow): Promise<void> {
     execution.status = WorkflowStatus.RUNNING;
     this.executions.set(execution.id, execution);
 
@@ -133,14 +131,13 @@ export class WorkflowService {
       const executedSteps = new Set<string>();
 
       while (executedSteps.size < workflow.steps.length) {
-        const readySteps = workflow.steps.filter(step => {
+        const readySteps = workflow.steps.filter((step) => {
           // Check if all dependencies are executed
           if (!step.dependsOn || step.dependsOn.length === 0) {
             return !executedSteps.has(step.id);
           }
 
-          return step.dependsOn.every(depId => executedSteps.has(depId)) &&
-                 !executedSteps.has(step.id);
+          return step.dependsOn.every((depId) => executedSteps.has(depId)) && !executedSteps.has(step.id);
         });
 
         if (readySteps.length === 0) {
@@ -148,11 +145,9 @@ export class WorkflowService {
         }
 
         // Execute ready steps in parallel
-        await Promise.all(
-          readySteps.map(step => this.executeStep(step, execution.context))
-        );
+        await Promise.all(readySteps.map((step) => this.executeStep(step, execution.context)));
 
-        readySteps.forEach(step => executedSteps.add(step.id));
+        readySteps.forEach((step) => executedSteps.add(step.id));
       }
 
       execution.status = WorkflowStatus.COMPLETED;
@@ -166,10 +161,7 @@ export class WorkflowService {
     this.executions.set(execution.id, execution);
   }
 
-  private async executeStep(
-    step: WorkflowStep,
-    context: Record<string, any>
-  ): Promise<void> {
+  private async executeStep(step: WorkflowStep, context: Record<string, any>): Promise<void> {
     log.info(`Executing workflow step: ${step.name} (${step.type})`);
 
     switch (step.type) {
@@ -198,10 +190,7 @@ export class WorkflowService {
     }
   }
 
-  private async executeCreateInstanceStep(
-    step: WorkflowStep,
-    context: Record<string, any>
-  ): Promise<void> {
+  private async executeCreateInstanceStep(step: WorkflowStep, context: Record<string, any>): Promise<void> {
     const instance = await this.instanceService.createInstance(step.config);
 
     // Store instance ID in context
@@ -211,21 +200,16 @@ export class WorkflowService {
     log.info(`Instance created: ${instance.id}`);
   }
 
-  private async executeCommandStep(
-    step: WorkflowStep,
-    context: Record<string, any>
-  ): Promise<void> {
+  private async executeCommandStep(step: WorkflowStep, context: Record<string, any>): Promise<void> {
     const instanceId = context[step.config.instanceKey || 'instanceId'];
 
     if (!instanceId) {
       throw new Error('No instance ID found in context');
     }
 
-    const result = await this.instanceService.executeCommand(
-      instanceId,
-      step.config.command,
-      { timeout: step.config.timeout }
-    );
+    const result = await this.instanceService.executeCommand(instanceId, step.config.command, {
+      timeout: step.config.timeout,
+    });
 
     // Store command result in context
     if (step.config.resultKey) {
@@ -242,18 +226,12 @@ export class WorkflowService {
     }
   }
 
-  private async executeWaitStep(
-    step: WorkflowStep,
-    context: Record<string, any>
-  ): Promise<void> {
+  private async executeWaitStep(step: WorkflowStep, context: Record<string, any>): Promise<void> {
     const duration = step.config.duration || 1000;
-    await new Promise(resolve => setTimeout(resolve, duration));
+    await new Promise((resolve) => setTimeout(resolve, duration));
   }
 
-  private async executeDestroyInstanceStep(
-    step: WorkflowStep,
-    context: Record<string, any>
-  ): Promise<void> {
+  private async executeDestroyInstanceStep(step: WorkflowStep, context: Record<string, any>): Promise<void> {
     const instanceId = context[step.config.instanceKey || 'instanceId'];
 
     if (!instanceId) {
@@ -266,10 +244,7 @@ export class WorkflowService {
     delete context[step.config.instanceKey || 'instanceId'];
   }
 
-  private async executeConditionalStep(
-    step: WorkflowStep,
-    context: Record<string, any>
-  ): Promise<void> {
+  private async executeConditionalStep(step: WorkflowStep, context: Record<string, any>): Promise<void> {
     const condition = step.config.condition;
     const contextValue = context[step.config.contextKey];
 
