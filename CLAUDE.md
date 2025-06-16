@@ -202,6 +202,29 @@ When stuck:
 - Keep functions small and focused
 - Document complex logic with comments
 - Use meaningful variable names
+- **AVOID index.ts re-export pattern**: Do not create files like `src/inngest/index.ts` that just re-export everything from other files. Import directly from the source files instead. This pattern makes it harder to track dependencies and understand the codebase.
+
+### Import Guidelines
+
+```typescript
+// ❌ BAD: Don't create index.ts files that re-export
+// src/services/index.ts
+export * from './user-service';
+export * from './post-service';
+
+// ❌ BAD: Don't import from index files
+import { UserService, PostService } from './services';
+
+// ✅ GOOD: Import directly from source files
+import { UserService } from './services/user-service';
+import { PostService } from './services/post-service';
+
+// ✅ GOOD: Group related imports
+import { createInstance, destroyInstance } from './inngest/instance-functions';
+import { executeWorkflow } from './inngest/workflow-functions';
+```
+
+The only exception is when creating a public API for a library/package where you need to control the exported interface.
 
 ## Important Commands
 
