@@ -198,7 +198,7 @@ When stuck:
 ## Code Style
 
 - Use TypeScript strict mode
-- Prefer functional programming patterns
+- **Use functional programming exclusively**: No classes, only pure functions and modules
 - Keep functions small and focused
 - Document complex logic with comments
 - Use meaningful variable names
@@ -241,6 +241,168 @@ import { executeWorkflow } from '@/inngest/workflow-functions';
 Exceptions:
 - When an index.ts file contains actual logic (like services/index.ts with initializeServices)
 - When creating a public API for a library/package where you need to control the exported interface
+
+## Functional Programming Guidelines
+
+**We strictly follow functional programming principles - NO CLASSES**:
+
+```typescript
+// ❌ BAD: Don't use classes
+export class UserService {
+  private users: Map<string, User> = new Map();
+  
+  async createUser(data: CreateUserDto): Promise<User> {
+    // ...
+  }
+}
+
+// ✅ GOOD: Use pure functions and module-level state
+const users = new Map<string, User>();
+
+export const createUser = async (data: CreateUserDto): Promise<User> => {
+  // ...
+};
+
+// ✅ GOOD: Export related functions together
+export const userService = {
+  createUser,
+  getUser,
+  updateUser,
+  deleteUser,
+};
+```
+
+### State Management in Functional Modules
+
+When you need to maintain state, use module-level variables:
+
+```typescript
+// State stores
+const instances = new Map<string, Instance>();
+const commandExecutions = new Map<string, CommandExecution>();
+
+// Clear functions for testing
+export const clearAllInstances = (): void => {
+  instances.clear();
+  commandExecutions.clear();
+};
+
+// Pure functions that interact with state
+export const createInstance = async (options: CreateInstanceOptions): Promise<Instance> => {
+  const instance = { /* ... */ };
+  instances.set(instance.id, instance);
+  return instance;
+};
+```
+
+## Test-Driven Development
+
+**Always write tests in the `tests/` folder and continuously run them during development**:
+
+### Test Structure
+
+```
+tests/
+├── services/           # Service function tests
+│   ├── fly-service.test.ts
+│   ├── ssh-service.test.ts
+│   ├── instance-service.test.ts
+│   └── workflow-service.test.ts
+├── api/               # API endpoint tests
+│   ├── instances.test.ts
+│   └── workflows.test.ts
+└── integration/       # Integration tests
+    └── workflow-execution.test.ts
+```
+
+### Development Workflow
+
+1. **Write tests first** (TDD approach):
+   ```bash
+   # Create test file
+   touch tests/services/new-feature.test.ts
+   
+   # Write failing tests
+   # Implement feature
+   # Make tests pass
+   ```
+
+2. **Run tests continuously** during development:
+   ```bash
+   # In one terminal, run tests in watch mode
+   bun test --watch
+   
+   # In another terminal, develop your feature
+   # Tests will re-run automatically on file changes
+   ```
+
+3. **Fix failing tests immediately**:
+   - Don't commit code with failing tests
+   - If a test fails, stop and fix it before continuing
+   - Update tests when requirements change
+
+### Testing Best Practices
+
+```typescript
+import { describe, expect, it, beforeEach, vi } from 'vitest';
+import * as serviceModule from '@/services/service-module';
+
+// Mock external dependencies
+vi.mock('@/external/dependency');
+
+describe('service-module', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    serviceModule.clearAllState(); // Clear module state
+  });
+
+  describe('functionName', () => {
+    it('should handle the happy path', async () => {
+      // Arrange
+      const input = { /* ... */ };
+      
+      // Act
+      const result = await serviceModule.functionName(input);
+      
+      // Assert
+      expect(result).toMatchObject({ /* ... */ });
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Test error cases
+      await expect(
+        serviceModule.functionName(invalidInput)
+      ).rejects.toThrow(ExpectedError);
+    });
+  });
+});
+```
+
+### Continuous Testing Commands
+
+```bash
+# Run all tests
+bun test
+
+# Run tests in watch mode (recommended during development)
+bun test --watch
+
+# Run tests for a specific file
+bun test services/fly-service
+
+# Run tests with coverage
+bun test --coverage
+
+# Update snapshots if needed
+bun test -u
+```
+
+**IMPORTANT**: Always ensure all tests pass before committing. The development cycle should be:
+1. Write/update tests
+2. Run `bun test --watch`
+3. Implement/fix code
+4. Ensure all tests pass
+5. Commit changes
 
 ## Important Commands
 
