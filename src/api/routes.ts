@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { instanceRoutes } from './instances';
 import { workflowRoutes } from './workflows';
+import { monitoringRoutes } from './monitoring';
 import { authMiddleware } from './middleware/auth';
 
 export const apiRoutes = new Hono();
@@ -11,6 +12,7 @@ apiRoutes.use('*', authMiddleware);
 // Mount route handlers
 apiRoutes.route('/instances', instanceRoutes);
 apiRoutes.route('/workflows', workflowRoutes);
+apiRoutes.route('/monitoring', monitoringRoutes);
 
 // API info endpoint
 apiRoutes.get('/', (c) => {
@@ -20,6 +22,11 @@ apiRoutes.get('/', (c) => {
     endpoints: {
       instances: '/api/instances',
       workflows: '/api/workflows',
+      monitoring: '/api/monitoring',
+      inngest: '/api/inngest',
+    },
+    features: {
+      inngest: process.env.INNGEST_ENABLED === 'true' ? 'enabled' : 'disabled',
     },
   });
 });

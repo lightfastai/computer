@@ -98,6 +98,7 @@ The system consists of:
 - **Infrastructure**: Fly.io machines
 - **Language**: TypeScript/Node.js
 - **SSH**: Node SSH libraries for secure connections
+- **Job Queue**: Inngest for reliable workflow execution
 - **Database**: SQLite/PostgreSQL for workflow state (TBD)
 
 ## Getting Started
@@ -133,6 +134,23 @@ fly apps create lightfast-worker-instances --org lightfast
 
 # Run development server
 bun dev
+
+# (Optional) Run Inngest dev server for local testing
+npx inngest-cli@latest dev
+```
+
+### Inngest Configuration
+
+Inngest provides reliable background job processing with automatic retries, monitoring, and observability.
+
+```bash
+# Enable Inngest in .env
+INNGEST_ENABLED=true
+
+# For local development, run the Inngest dev server
+npx inngest-cli@latest dev
+
+# Access the Inngest dashboard at http://localhost:8288
 ```
 
 ### Testing the API
@@ -258,6 +276,9 @@ See [CLAUDE.md](./CLAUDE.md) for development guidelines and AI assistant instruc
 - Workflow template system with pre-built workflows
 - Error handling and logging
 - Development environment setup
+- Inngest integration for reliable background jobs
+- Retry logic and failure handling
+- Workflow orchestration with step dependencies
 
 ### 🚧 In Progress
 - SSH command execution on instances

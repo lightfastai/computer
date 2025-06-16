@@ -96,6 +96,13 @@ try {
 - Implement proper state management
 - Enable workflow persistence for long-running tasks
 
+### 4. Inngest Integration
+- Background job processing with automatic retries
+- Step-by-step workflow execution with checkpoints
+- Built-in monitoring and observability
+- Failure handling and alerting
+- Rate limiting and throttling
+
 ## Testing Requirements
 
 Run tests before committing:
@@ -239,6 +246,7 @@ All dependencies use latest versions. Key packages:
 - **ssh2** (v1.16+): SSH client implementation
 - **pino** (v9.7+): Structured logging
 - **zod** (v3.25+): Schema validation
+- **inngest** (v3.39+): Reliable background job processing
 
 ## Common Issues & Solutions
 

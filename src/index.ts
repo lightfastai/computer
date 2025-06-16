@@ -3,10 +3,13 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
+import { serve as serveInngest } from 'inngest/hono';
 import { config } from './lib/config';
 import { errorHandler } from './lib/error-handler';
 import { apiRoutes } from './api/routes';
 import { initializeServices } from './services';
+import { inngest } from './lib/inngest';
+import { inngestFunctions } from './inngest';
 import pino from 'pino';
 
 const log = pino({
@@ -43,6 +46,15 @@ app.get('/health', (c) => {
 // API routes
 app.route('/api', apiRoutes);
 
+// Inngest endpoint for receiving events and running functions
+app.use(
+  '/api/inngest',
+  serveInngest({
+    client: inngest,
+    functions: inngestFunctions,
+  })
+);
+
 // 404 handler
 app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404);
@@ -52,15 +64,15 @@ app.notFound((c) => {
 async function start() {
   try {
     await initializeServices();
-    
+
     const port = config.port;
     log.info(`Starting server on port ${port}`);
-    
+
     serve({
       fetch: app.fetch,
       port,
     });
-    
+
     log.info(`Server running at http://localhost:${port}`);
   } catch (error) {
     log.error('Failed to start server:', error);
