@@ -28,7 +28,6 @@ export class ValidationError extends AppError {
   }
 }
 
-
 export class ConflictError extends AppError {
   constructor(message: string) {
     super(message, 409, 'CONFLICT_ERROR');
@@ -66,7 +65,7 @@ export async function errorHandler(err: Error, c: Context) {
         error: err.message,
         code: err.code,
       },
-      err.statusCode as any,
+      err.statusCode as 200 | 201 | 400 | 401 | 403 | 404 | 409 | 500,
     );
   }
 

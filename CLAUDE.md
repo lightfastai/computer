@@ -1,14 +1,28 @@
-# AI Assistant Development Guide
+# Claude AI Assistant Guide
 
-This guide provides instructions for AI assistants working on the Fly.io Workflow Orchestrator project.
+This guide provides instructions for Claude AI assistants working on the Lightfast Computer project - a Fly.io instance management system with Inngest-powered background processing.
+
+## Quick Start Commands
+
+```bash
+# Development workflow
+bun test --watch        # Run tests continuously during development
+bun run build         # Check for TypeScript compilation errors
+bun run lint          # Check code style with Biome
+bun run typecheck     # Verify TypeScript types
+bun dev               # Start development server
+
+# Testing the API
+curl http://localhost:3000/health
+curl http://localhost:3000/api/instances
+```
 
 ## Project Context
 
-This system enables users to create and manage Ubuntu instances on Fly.io, execute SSH commands, and build complex workflows. Think of it as "Infrastructure as Code" meets "Workflow Automation" with a focus on developer productivity.
+This system enables users to create and manage Ubuntu instances on Fly.io using reliable background processing with Inngest. The focus is on instance lifecycle management without SSH or workflow capabilities.
 
 ### Fly.io Deployment Details
-- **Orchestrator App**: `lightfast-workflow-orchestrator` (the API server)
-- **Worker App**: `lightfast-worker-instances` (where Ubuntu instances run)
+- **App**: `lightfast-worker-instances` (where Ubuntu instances run)
 - **Organization**: `lightfast`
 - **Primary Region**: `iad` (US East)
 - **Configuration**: See `fly.toml` for deployment configuration
@@ -16,141 +30,150 @@ This system enables users to create and manage Ubuntu instances on Fly.io, execu
 ### Important Implementation Notes
 - The Fly.io app name is hardcoded in `fly-service.ts` as `lightfast-worker-instances`
 - Instances are created without public IPs (only private IPv6 addresses)
-- SSH connections require public IP allocation (not yet implemented)
+- No SSH functionality - instances are managed through Fly.io Machines API only
+
+## Claude AI Best Practices
+
+### Communication Guidelines
+- **Be concise**: Keep responses short (fewer than 4 lines) unless detail is requested
+- **Be direct**: Answer the user's question without unnecessary preamble
+- **Be proactive**: Take actions when asked, but don't surprise users with unexpected changes
+- **Use tools effectively**: Batch tool calls when possible for better performance
+
+### Development Approach
+- **Read first**: Always use Read tool before editing files to understand context
+- **Follow conventions**: Mimic existing code style and patterns in the codebase
+- **Test continuously**: Run tests frequently during development
+- **Verify changes**: Use build/lint commands to catch errors early
 
 ## Key Architecture Decisions
 
 ### Technology Stack
-- **Hono**: Chosen for its lightweight nature and excellent TypeScript support
-- **Bun**: Fast runtime with built-in TypeScript support
-- **Fly.io Machines API**: For on-demand compute instances
-- **SSH2**: For secure command execution
+- **Hono**: Lightweight web framework with excellent TypeScript support
+- **Bun**: Fast runtime with built-in TypeScript support and testing
+- **Fly.io Machines API**: For on-demand Ubuntu compute instances
+- **Inngest**: Reliable background job processing with retries
 
 ### Project Structure
 ```
 /
 ├── src/
-│   ├── api/           # API routes and handlers
-│   ├── services/      # Business logic
-│   ├── lib/           # Shared utilities
-│   ├── workflows/     # Workflow definitions
-│   └── index.ts       # Entry point
-├── tests/             # Test files
-├── scripts/           # Build and deployment scripts
-└── config/            # Configuration files
+│   ├── api/           # API routes and handlers (instances, monitoring)
+│   ├── services/      # Business logic (fly-service, instance-service)
+│   ├── lib/           # Shared utilities (config, error-handler)
+│   ├── inngest/       # Background job functions
+│   ├── schemas/       # Zod validation schemas
+│   └── index.ts       # Entry point with Hono app and Inngest
+├── tests/             # Test files (using bun:test)
+└── config files       # biome.json, tsconfig.json, fly.toml
 ```
 
 ## Development Patterns
 
 ### API Design
-- RESTful endpoints with clear resource naming
-- Consistent error handling with proper HTTP status codes
+- RESTful endpoints for instance management (`/api/instances`)
+- No authentication required (open for development)
 - Request validation using Zod schemas
+- Consistent error handling with proper HTTP status codes
 - Response typing with TypeScript interfaces
 
 ### Error Handling
 ```typescript
-// Always use typed errors
-class InstanceNotFoundError extends Error {
-  constructor(id: string) {
-    super(`Instance ${id} not found`);
-    this.name = 'InstanceNotFoundError';
-  }
-}
+// Use custom error classes from error-handler.ts
+import { AppError, NotFoundError, ValidationError } from '@/lib/error-handler';
 
-// Handle errors consistently
-try {
-  // operation
-} catch (error) {
-  if (error instanceof InstanceNotFoundError) {
-    return c.json({ error: error.message }, 404);
+export const getInstance = async (id: string) => {
+  const instance = instances.get(id);
+  if (!instance) {
+    throw new NotFoundError('Instance', id);
   }
-  // log unexpected errors
-  console.error('Unexpected error:', error);
-  return c.json({ error: 'Internal server error' }, 500);
-}
+  return instance;
+};
+
+// Errors are handled by the global errorHandler middleware
 ```
 
-### Service Layer Pattern
-- Keep API routes thin
-- Business logic in service classes
-- Dependency injection for testability
+### Functional Programming Pattern
+- **No classes allowed** - use pure functions and module-level state
+- Keep functions small and focused
+- Business logic in service modules with exported functions
+- Module-level state for data persistence
 
 ## Key Implementation Areas
 
-### 1. Fly.io Integration
-- Use Machines API v2
+### 1. Instance Management (`src/services/instance-service.ts`)
+- Create, start, stop, restart, destroy instances
+- Module-level Map for in-memory state storage
+- Sync instance status with Fly.io API
+- Health checking and statistics
+
+### 2. Fly.io Integration (`src/services/fly-service.ts`)
+- Use Machines API v2 for Ubuntu instances
 - Implement proper error handling for API failures
-- Cache machine states to reduce API calls
-- Handle region selection intelligently
+- Machine size parsing and configuration
+- Region selection (defaults to `iad`)
 
-### 2. SSH Management
-- Store SSH keys securely (never in code)
-- Implement connection pooling
-- Handle connection timeouts gracefully
-- Support both exec and interactive shell modes
-
-### 3. Workflow Engine
-- Design workflows as composable steps
-- Support async operations
-- Implement proper state management
-- Enable workflow persistence for long-running tasks
-
-### 4. Inngest Integration
-- Background job processing with automatic retries
-- Step-by-step workflow execution with checkpoints
+### 3. Inngest Background Processing (`src/inngest/`)
+- Instance lifecycle functions with automatic retries
+- Reliable background job processing
 - Built-in monitoring and observability
-- Failure handling and alerting
-- Rate limiting and throttling
+- Failure handling with step functions
 
 ## Testing Requirements
 
-Run these commands iteratively during development to ensure no errors occur:
+**Claude should run these commands frequently during development:**
+
 ```bash
-bun test            # Run all tests
-bun run build       # Build for production to catch compilation errors
-bun run lint        # Check code style and quality
-bun run typecheck   # Verify TypeScript types
+# Test-Driven Development workflow
+bun test --watch    # Run tests continuously (recommended during development)
+bun test           # Run all tests once
+bun run build      # Check for TypeScript compilation errors
+bun run lint       # Check code style with Biome
+bun run typecheck  # Verify TypeScript types
 ```
 
-**Important**: Run `bun run build` frequently during development to catch TypeScript compilation errors early. Build errors often reveal type issues that might not be caught by the TypeScript language server.
+**Important**: Claude must run `bun run build` frequently to catch TypeScript compilation errors early. Build errors often reveal type issues that might not be caught by the language server.
+
+### Test Framework: Bun Test
+- All tests use `bun:test` (not vitest)
+- Import syntax: `import { describe, expect, it, beforeEach, spyOn } from 'bun:test';`
+- Mock external dependencies with `spyOn` from bun:test
+- Test files in `tests/` directory mirroring `src/` structure
 
 ### Test Coverage Areas
-- API endpoint integration tests
-- Service unit tests
-- Workflow execution tests
-- Error handling scenarios
+- API endpoint integration tests (`tests/api/`)
+- Service unit tests (`tests/services/`)
+- Instance lifecycle and error handling scenarios
 
 ## Security Considerations
 
-1. **Authentication**: Implement API key authentication for all endpoints
-2. **SSH Keys**: Use environment variables, never hardcode
-3. **Input Validation**: Sanitize all user inputs, especially for SSH commands
-4. **Rate Limiting**: Implement to prevent abuse
-5. **Instance Isolation**: Ensure users can only access their own instances
+1. **Open API**: Currently no authentication required (development mode)
+2. **Input Validation**: All inputs validated with Zod schemas
+3. **Environment Variables**: Store sensitive tokens in `.env` (never commit)
+4. **Instance Isolation**: Fly.io provides natural isolation between machines
 
 ## Common Development Tasks
 
 ### Adding a New API Endpoint
-1. Define route in `src/api/routes.ts`
-2. Create handler in appropriate controller
-3. Add service method if needed
-4. Write tests for the endpoint
-5. Update OpenAPI documentation
+1. **Write tests first** in `tests/api/`
+2. Define route in `src/api/routes.ts`
+3. Create handler function in appropriate API file
+4. Add service function if needed in `src/services/`
+5. Run `bun test` and `bun run build` to verify
 
-### Creating a Workflow Template
-1. Define workflow in `src/workflows/templates/`
-2. Implement step handlers
-3. Add workflow to registry
-4. Create example usage
-5. Document workflow parameters
+### Adding Instance Functionality
+1. **Write tests first** in `tests/services/instance-service.test.ts`
+2. Add function to `src/services/instance-service.ts`
+3. Create Inngest function in `src/inngest/instance-functions.ts` if background processing needed
+4. Update API routes to expose functionality
+5. Run tests continuously with `bun test --watch`
 
 ### Implementing a New Feature
-1. Start with the API design
-2. Implement service layer
-3. Add necessary database migrations
-4. Write comprehensive tests
-5. Update documentation
+1. **Start with tests** (TDD approach)
+2. Implement service layer functions (no classes)
+3. Add API endpoints
+4. Write comprehensive tests for all scenarios
+5. Ensure `bun run build` passes without errors
 
 ## Environment Variables
 
@@ -158,105 +181,51 @@ bun run typecheck   # Verify TypeScript types
 # Required
 FLY_API_TOKEN=your_fly_api_token
 FLY_ORG_SLUG=lightfast
+INNGEST_EVENT_KEY=your_inngest_event_key
 
 # Optional
-PORT=8080
+PORT=3000
 NODE_ENV=development
 LOG_LEVEL=info
-SSH_KEY_PATH=~/.ssh/id_rsa
-DATABASE_URL=sqlite://./data.db
 ```
 
 ## Debugging Tips
 
-1. Use structured logging with context
-2. Implement request ID tracking
-3. Add timing metrics for performance debugging
-4. Use Fly.io logs for production debugging
+1. Use structured logging with Pino (`src/lib/error-handler.ts`)
+2. Check Fly.io machine states with `fly machines list`
+3. Monitor Inngest function execution in dashboard
+4. Use `bun run build` to catch TypeScript errors
 
 ## Performance Considerations
 
-1. Implement connection pooling for SSH
-2. Cache Fly.io API responses where appropriate
-3. Use streaming for large command outputs
-4. Implement pagination for list endpoints
+1. In-memory state storage with Map (no database)
+2. Fly.io API calls are cached at service level
+3. Inngest provides automatic retries and rate limiting
+4. Instances auto-sleep when idle (Fly.io feature)
 
-## Deployment Checklist
+## Deployment
 
-- [ ] All tests passing
-- [ ] Environment variables configured
-- [ ] Database migrations run
-- [ ] API documentation updated
-- [ ] Security audit completed
-- [ ] Performance testing done
+```bash
+# Deploy to Fly.io
+fly deploy
 
-## Getting Help
+# Check status
+fly status
+fly logs
 
-When stuck:
-1. Check Fly.io Machines API documentation
-2. Review Hono framework docs
-3. Look for similar patterns in the codebase
-4. Consider security and performance implications
-
-## Code Style
-
-- Use TypeScript strict mode
-- **Use functional programming exclusively**: No classes, only pure functions and modules
-- Keep functions small and focused
-- Document complex logic with comments
-- Use meaningful variable names
-- **AVOID index.ts re-export pattern**: Do not create files like `src/inngest/index.ts` that just re-export everything from other files. Import directly from the source files instead. This pattern makes it harder to track dependencies and understand the codebase.
-
-### Import Guidelines
-
-**Always use the @/* path alias for imports** - we have configured TypeScript path mapping in tsconfig.json:
-
-```typescript
-// ❌ BAD: Don't use relative imports
-import { UserService } from '../services/user-service';
-import { config } from './lib/config';
-
-// ✅ GOOD: Use @/* path alias for all imports
-import { UserService } from '@/services/user-service';
-import { config } from '@/lib/config';
+# List instances
+fly machines list -a lightfast-worker-instances
 ```
-
-**Avoid index.ts re-export pattern**:
-
-```typescript
-// ❌ BAD: Don't create index.ts files that just re-export
-// src/services/index.ts
-export * from './user-service';
-export * from './post-service';
-
-// ❌ BAD: Don't import from index files
-import { UserService, PostService } from '@/services';
-
-// ✅ GOOD: Import directly from source files
-import { UserService } from '@/services/user-service';
-import { PostService } from '@/services/post-service';
-
-// ✅ GOOD: Group related imports
-import { createInstance, destroyInstance } from '@/inngest/instance-functions';
-import { executeWorkflow } from '@/inngest/workflow-functions';
-```
-
-Exceptions:
-- When an index.ts file contains actual logic (like services/index.ts with initializeServices)
-- When creating a public API for a library/package where you need to control the exported interface
 
 ## Functional Programming Guidelines
 
-**We strictly follow functional programming principles - NO CLASSES**:
+**Claude must strictly follow functional programming principles:**
 
 ```typescript
 // ❌ BAD: Don't use classes
 export class UserService {
   private users: Map<string, User> = new Map();
-  
-  async createUser(data: CreateUserDto): Promise<User> {
-    // ...
-  }
+  async createUser(data: CreateUserDto): Promise<User> { /* ... */ }
 }
 
 // ✅ GOOD: Use pure functions and module-level state
@@ -266,214 +235,132 @@ export const createUser = async (data: CreateUserDto): Promise<User> => {
   // ...
 };
 
-// ✅ GOOD: Export related functions together
-export const userService = {
-  createUser,
-  getUser,
-  updateUser,
-  deleteUser,
+export const clearAllUsers = (): void => {
+  users.clear(); // For testing
 };
 ```
 
-### State Management in Functional Modules
+### Code Style Requirements
+- **No classes allowed** - use pure functions and module-level state only
+- Use TypeScript strict mode with all strict options enabled
+- Keep functions small and focused (single responsibility)
+- Use meaningful variable names and function names
+- **No comments** unless complex logic requires explanation
 
-When you need to maintain state, use module-level variables:
+### Import Guidelines
+
+**Always use `@/*` path alias for imports:**
 
 ```typescript
-// State stores
-const instances = new Map<string, Instance>();
-const commandExecutions = new Map<string, CommandExecution>();
+// ❌ BAD: Don't use relative imports
+import { config } from '../lib/config';
 
-// Clear functions for testing
-export const clearAllInstances = (): void => {
-  instances.clear();
-  commandExecutions.clear();
-};
+// ✅ GOOD: Use @/* path alias
+import { config } from '@/lib/config';
+import { createInstance } from '@/services/instance-service';
+```
 
-// Pure functions that interact with state
-export const createInstance = async (options: CreateInstanceOptions): Promise<Instance> => {
-  const instance = { /* ... */ };
-  instances.set(instance.id, instance);
-  return instance;
-};
+**Import directly from source files (no index.ts re-exports):**
+
+```typescript
+// ✅ GOOD: Direct imports
+import { createInstance, destroyInstance } from '@/inngest/instance-functions';
+import { NotFoundError } from '@/lib/error-handler';
 ```
 
 ## Test-Driven Development
 
-**Always write tests in the `tests/` folder and continuously run them during development**:
+**Claude must write tests first and run them continuously:**
 
-### Test Structure
+### TDD Workflow for Claude
+1. **Write failing tests first** in `tests/` directory
+2. **Run `bun test --watch`** to see tests fail
+3. **Implement code** to make tests pass
+4. **Run `bun run build`** to check TypeScript compilation
+5. **All tests pass before moving to next task**
 
-```
-tests/
-├── services/           # Service function tests
-│   ├── fly-service.test.ts
-│   ├── ssh-service.test.ts
-│   ├── instance-service.test.ts
-│   └── workflow-service.test.ts
-├── api/               # API endpoint tests
-│   ├── instances.test.ts
-│   └── workflows.test.ts
-└── integration/       # Integration tests
-    └── workflow-execution.test.ts
-```
-
-### Development Workflow
-
-1. **Write tests first** (TDD approach):
-   ```bash
-   # Create test file
-   touch tests/services/new-feature.test.ts
-   
-   # Write failing tests
-   # Implement feature
-   # Make tests pass
-   ```
-
-2. **Run tests continuously** during development:
-   ```bash
-   # In one terminal, run tests in watch mode
-   bun test --watch
-   
-   # In another terminal, develop your feature
-   # Tests will re-run automatically on file changes
-   ```
-
-3. **Fix failing tests immediately**:
-   - Don't commit code with failing tests
-   - If a test fails, stop and fix it before continuing
-   - Update tests when requirements change
-
-### Testing Best Practices
-
+### Test Framework: Bun Test
 ```typescript
-import { describe, expect, it, beforeEach, vi } from 'vitest';
-import * as serviceModule from '@/services/service-module';
+import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
+import * as flyService from '@/services/fly-service';
+import * as instanceService from '@/services/instance-service';
 
-// Mock external dependencies
-vi.mock('@/external/dependency');
-
-describe('service-module', () => {
+describe('instance-service', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    serviceModule.clearAllState(); // Clear module state
+    // Clear module state for clean tests
+    instanceService.clearAllInstances();
   });
 
-  describe('functionName', () => {
-    it('should handle the happy path', async () => {
-      // Arrange
-      const input = { /* ... */ };
-      
-      // Act
-      const result = await serviceModule.functionName(input);
-      
-      // Assert
-      expect(result).toMatchObject({ /* ... */ });
-    });
+  it('should create instance successfully', async () => {
+    const mockMachine = { id: 'fly-123', state: 'started' };
+    const mockCreateMachine = spyOn(flyService, 'createMachine');
+    mockCreateMachine.mockResolvedValue(mockMachine);
 
-    it('should handle errors gracefully', async () => {
-      // Test error cases
-      await expect(
-        serviceModule.functionName(invalidInput)
-      ).rejects.toThrow(ExpectedError);
-    });
+    const instance = await instanceService.createInstance({ name: 'test' });
+
+    expect(instance.flyMachineId).toBe('fly-123');
+    expect(flyService.createMachine).toHaveBeenCalled();
   });
 });
 ```
 
-### Continuous Testing Commands
-
+### Essential Commands
 ```bash
-# Run all tests
-bun test
-
-# Run tests in watch mode (recommended during development)
-bun test --watch
-
-# Run tests for a specific file
-bun test services/fly-service
-
-# Run tests with coverage
-bun test --coverage
-
-# Update snapshots if needed
-bun test -u
-
-# Build to catch compilation errors
-bun run build
+bun test --watch    # Run continuously (Claude should use this)
+bun test           # Run all tests once
+bun run build      # Check TypeScript errors (run frequently)
 ```
 
-**IMPORTANT**: Always ensure all tests pass and the project builds successfully before committing. The development cycle should be:
-1. Write/update tests
-2. Run `bun test --watch`
-3. Implement/fix code
-4. Run `bun run build` to check for compilation errors
-5. Ensure all tests pass and build succeeds
-6. Commit changes
-
-## Important Commands
+## Essential Commands for Claude
 
 ```bash
-# Development
-bun dev              # Start dev server (port 3000 by default)
-bun test            # Run tests
-bun run build       # Build for production
+# Development Workflow
+bun test --watch        # Run tests continuously (primary command)
+bun test               # Run all tests once
+bun run build          # Check TypeScript compilation (run frequently)
+bun run lint           # Check code style with Biome
+bun run typecheck      # Verify TypeScript types
+bun dev                # Start development server (port 3000)
 
-# Testing the API
-curl http://localhost:3000/health  # Health check
-curl http://localhost:3000/api/workflows  # List workflows
-curl -X POST http://localhost:3000/api/instances -H "Content-Type: application/json" -d '{"name":"test"}'
+# API Testing
+curl http://localhost:3000/health
+curl http://localhost:3000/api/instances
+curl -X POST http://localhost:3000/api/instances \
+  -H "Content-Type: application/json" \
+  -d '{"name":"test-instance","region":"iad"}'
 
-# Dependency Management
-bun add <package>    # Add a production dependency (latest version)
-bun add -d <package> # Add a dev dependency (latest version)
-bun install          # Install all dependencies from lockfile
-bun update           # Update all dependencies
-
-# Fly.io Setup
-fly auth token       # Get your API token for .env
-fly apps create lightfast-worker-instances --org lightfast  # Create worker app
+# Dependencies
+bun add <package>      # Add production dependency
+bun add -d <package>   # Add dev dependency
+bun install            # Install from lockfile
 
 # Deployment
-fly deploy          # Deploy to Fly.io (lightfast org)
-fly logs            # View production logs
-fly ssh console     # SSH into production
-fly status          # Check app status
-fly machines list -a lightfast-worker-instances  # List worker instances
-
-# Database (future)
-bun run db:migrate  # Run migrations
-bun run db:seed     # Seed test data
+fly deploy             # Deploy to Fly.io
+fly logs               # View logs
+fly machines list -a lightfast-worker-instances
 ```
 
-## Dependencies
+## Key Dependencies
 
-All dependencies use latest versions. Key packages:
-- **hono** (v4.7+): Lightweight web framework
-- **@hono/zod-validator** (v0.7+): Request validation
-- **ssh2** (v1.16+): SSH client implementation
-- **pino** (v9.7+): Structured logging
-- **zod** (v3.25+): Schema validation
-- **inngest** (v3.39+): Reliable background job processing
+- **hono**: Lightweight web framework with TypeScript support
+- **@hono/zod-validator**: Request validation middleware
+- **pino**: Structured logging
+- **zod**: Schema validation and TypeScript type inference
+- **inngest**: Reliable background job processing with retries
+- **@anthropic-ai/sdk**: (MCP server functionality)
 
 ## Common Issues & Solutions
 
-### Authentication Errors
-- If you get "Authorization header required", check that `API_KEY` is not set in `.env`
-- For production, generate an API key and include it in requests
-
 ### Fly.io Errors
 - "app not found": Run `fly apps create lightfast-worker-instances --org lightfast`
-- "invalid token": Get a fresh token with `fly auth token`
-- Instances stop immediately: This is normal - Fly.io stops idle machines
+- "invalid token": Get fresh token with `fly auth token`
+- Instances stop when idle: This is normal Fly.io behavior
 
-### SSH Connection Issues
-- Currently, instances only have private IPs
-- Public IP allocation needs to be implemented for SSH access
-- Consider using Fly.io's proxy or wireguard for connectivity
+### Development Issues
+- **Port conflicts**: Default port is 3000, kill existing: `kill -9 $(lsof -ti:3000)`
+- **TypeScript errors**: Run `bun run build` frequently to catch compilation issues
+- **Test failures**: Fix immediately, don't proceed with failing tests
 
-### Port Conflicts
-- Default port is 3000, change in `.env` if needed
-- Kill existing process: `kill -9 $(lsof -ti:3000)`
-
-Remember: This is a tool for developers. Prioritize developer experience, clear error messages, and robust documentation.
+### API Issues
+- **No authentication**: API is open for development (no auth middleware)
+- **Validation errors**: All inputs validated with Zod schemas in `src/schemas/`

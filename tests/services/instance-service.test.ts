@@ -4,7 +4,28 @@ import * as flyService from '@/services/fly-service';
 import * as instanceService from '@/services/instance-service';
 
 // Helper to create proper FlyMachine mock objects
-const createMockFlyMachine = (overrides: Partial<any> = {}) => ({
+type MockFlyMachine = {
+  id?: string;
+  name?: string;
+  state?: string;
+  region?: string;
+  image?: string;
+  instance_id?: string;
+  private_ip?: string;
+  config?: {
+    image: string;
+    guest: {
+      cpu_kind: string;
+      cpus: number;
+      memory_mb: number;
+    };
+    services: Array<any>;
+    env: Record<string, string>;
+  };
+  created_at?: string;
+};
+
+const createMockFlyMachine = (overrides: MockFlyMachine = {}) => ({
   id: 'fly-123',
   name: 'test-instance',
   state: 'started',
@@ -194,14 +215,7 @@ describe('instance-service', () => {
     });
 
     it('should return false for unhealthy instance', async () => {
-      const mockFlyMachine = {
-        id: 'fly-123',
-        name: 'test-instance',
-        state: 'stopped',
-        region: 'iad',
-        image: 'ubuntu-22.04',
-        private_ip: 'fdaa:0:1234::5',
-      };
+      const mockFlyMachine = createMockFlyMachine({ state: 'stopped' });
 
       mockCreateMachine.mockResolvedValue(mockFlyMachine);
       mockGetMachine.mockResolvedValue(mockFlyMachine);
@@ -238,9 +252,9 @@ describe('instance-service', () => {
   describe('getInstanceStats', () => {
     it('should return correct statistics', async () => {
       const mockFlyMachines = [
-        { id: 'fly-1', name: 'test-1', state: 'started', region: 'iad', image: 'ubuntu-22.04', private_ip: 'ip1' },
-        { id: 'fly-2', name: 'test-2', state: 'stopped', region: 'iad', image: 'ubuntu-22.04', private_ip: 'ip2' },
-        { id: 'fly-3', name: 'test-3', state: 'started', region: 'iad', image: 'ubuntu-22.04', private_ip: 'ip3' },
+        createMockFlyMachine({ id: 'fly-1', name: 'test-1', state: 'started', private_ip: 'ip1' }),
+        createMockFlyMachine({ id: 'fly-2', name: 'test-2', state: 'stopped', private_ip: 'ip2' }),
+        createMockFlyMachine({ id: 'fly-3', name: 'test-3', state: 'started', private_ip: 'ip3' }),
       ];
 
       mockCreateMachine

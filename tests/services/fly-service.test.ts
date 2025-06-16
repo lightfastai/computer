@@ -4,10 +4,35 @@ import * as flyService from '@/services/fly-service';
 
 // Mock fetch globally
 const mockFetch = mock() as Mock<typeof fetch>;
-global.fetch = mockFetch;
+// Create a proper mock that satisfies the fetch interface
+const mockFetchWithProperties = Object.assign(mockFetch, {
+  preconnect: mock(),
+});
+global.fetch = mockFetchWithProperties;
 
 // Helper to create proper FlyMachine mock objects
-const createMockFlyMachine = (overrides: Partial<any> = {}) => ({
+type MockFlyMachine = {
+  id?: string;
+  name?: string;
+  state?: string;
+  region?: string;
+  image?: string;
+  instance_id?: string;
+  private_ip?: string;
+  config?: {
+    image: string;
+    guest: {
+      cpu_kind: string;
+      cpus: number;
+      memory_mb: number;
+    };
+    services: Array<any>;
+    env: Record<string, string>;
+  };
+  created_at?: string;
+};
+
+const createMockFlyMachine = (overrides: MockFlyMachine = {}) => ({
   id: 'machine-123',
   name: 'test-machine',
   state: 'started',
