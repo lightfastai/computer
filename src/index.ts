@@ -3,7 +3,6 @@ import { createInstance, destroyInstance, healthCheckInstance, restartInstance }
 import { config } from '@/lib/config';
 import { errorHandler } from '@/lib/error-handler';
 import { inngest } from '@/lib/inngest';
-import { initializeServices } from '@/services/index';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -60,11 +59,9 @@ app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404);
 });
 
-// Initialize services and start server
+// Start server
 async function start() {
   try {
-    await initializeServices();
-
     const port = config.port;
     log.info(`Starting server on port ${port}`);
 

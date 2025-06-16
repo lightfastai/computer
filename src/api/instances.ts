@@ -1,4 +1,4 @@
-import { instanceService } from '@/services/index';
+import * as instanceService from '@/services/instance-service';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -18,8 +18,13 @@ const createInstanceSchema = z.object({
 // Create instance
 instanceRoutes.post('/', zValidator('json', createInstanceSchema), async (c) => {
   const body = c.req.valid('json');
-  const instance = await instanceService.createInstance(body);
-  return c.json(instance, 201);
+  const result = await instanceService.createInstance(body);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
+  return c.json(result.value, 201);
 });
 
 // List instances
@@ -31,38 +36,63 @@ instanceRoutes.get('/', async (c) => {
 // Get instance
 instanceRoutes.get('/:id', async (c) => {
   const instanceId = c.req.param('id');
-  const instance = await instanceService.getInstance(instanceId);
-  return c.json(instance);
+  const result = await instanceService.getInstance(instanceId);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
+  return c.json(result.value);
 });
 
 // Stop instance
 instanceRoutes.post('/:id/stop', async (c) => {
   const instanceId = c.req.param('id');
-  const instance = await instanceService.stopInstance(instanceId);
-  return c.json(instance);
+  const result = await instanceService.stopInstance(instanceId);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
+  return c.json(result.value);
 });
 
 // Start instance
 instanceRoutes.post('/:id/start', async (c) => {
   const instanceId = c.req.param('id');
-  const instance = await instanceService.startInstance(instanceId);
-  return c.json(instance);
+  const result = await instanceService.startInstance(instanceId);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
+  return c.json(result.value);
 });
 
 // Restart instance
 instanceRoutes.post('/:id/restart', async (c) => {
   const instanceId = c.req.param('id');
-  const instance = await instanceService.restartInstance(instanceId);
-  return c.json(instance);
+  const result = await instanceService.restartInstance(instanceId);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
+  return c.json(result.value);
 });
 
 // Health check instance
 instanceRoutes.get('/:id/health', async (c) => {
   const instanceId = c.req.param('id');
-  const healthy = await instanceService.healthCheckInstance(instanceId);
+  const result = await instanceService.healthCheckInstance(instanceId);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
   return c.json({
     instanceId,
-    healthy,
+    healthy: result.value,
     timestamp: new Date().toISOString(),
   });
 });
@@ -70,7 +100,12 @@ instanceRoutes.get('/:id/health', async (c) => {
 // Destroy instance
 instanceRoutes.delete('/:id', async (c) => {
   const instanceId = c.req.param('id');
-  await instanceService.destroyInstance(instanceId);
+  const result = await instanceService.destroyInstance(instanceId);
+
+  if (result.isErr()) {
+    throw result.error;
+  }
+
   return c.json({ message: 'Instance destroyed successfully' });
 });
 

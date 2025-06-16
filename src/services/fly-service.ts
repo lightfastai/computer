@@ -1,6 +1,7 @@
 import { config } from '@/lib/config';
-import { AppError } from '@/lib/error-handler';
+import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
 import type { CreateInstanceOptions } from '@/types/index';
+import { type Result, err, ok } from 'neverthrow';
 import pino from 'pino';
 
 const log = pino();
@@ -114,7 +115,9 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
 };
 
 // Create a new Fly machine
-export const createMachine = async (options: CreateInstanceOptions): Promise<FlyMachine> => {
+export const createMachine = async (
+  options: CreateInstanceOptions,
+): Promise<Result<FlyMachine, InstanceCreationError | InfrastructureError>> => {
   const machineConfig = createMachineConfig(options);
 
   try {
@@ -125,25 +128,55 @@ export const createMachine = async (options: CreateInstanceOptions): Promise<Fly
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new AppError(`Failed to create Fly machine: ${error}`, response.status);
+      const errorText = await response.text();
+
+      // Log technical details for debugging
+      log.error('Fly.io machine creation failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        config: machineConfig,
+      });
+
+      // Return user-friendly error based on status code
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform'));
+      }
+      if (response.status === 422) {
+        return err(new InstanceCreationError('invalid configuration'));
+      }
+      if (response.status === 429) {
+        return err(new InstanceCreationError('rate limit exceeded'));
+      }
+      return err(new InstanceCreationError());
     }
 
     const machine = await response.json();
     log.info(`Created Fly machine: ${machine.id}`);
 
     // Wait for machine to be ready
-    await waitForMachineReady(machine.id);
+    const readyResult = await waitForMachineReady(machine.id);
+    if (readyResult.isErr()) {
+      return err(readyResult.error);
+    }
 
-    return machine;
+    return ok(machine);
   } catch (error) {
-    log.error('Failed to create Fly machine:', error);
-    throw error;
+    // Log technical error with full details
+    log.error('Unexpected error creating Fly machine:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      config: machineConfig,
+    });
+
+    return err(new InfrastructureError('compute platform'));
   }
 };
 
 // Get machine details
-export const getMachine = async (machineId: string): Promise<FlyMachine> => {
+export const getMachine = async (
+  machineId: string,
+): Promise<Result<FlyMachine, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}`, {
       method: 'GET',
@@ -151,19 +184,42 @@ export const getMachine = async (machineId: string): Promise<FlyMachine> => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new AppError(`Failed to get Fly machine: ${error}`, response.status);
+      const errorText = await response.text();
+
+      // Log technical details for debugging
+      log.error('Failed to get Fly machine:', {
+        machineId,
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+
+      // Return user-friendly error based on status code
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform'));
+      }
+      if (response.status === 404) {
+        return err(new InstanceOperationError('retrieve', 'instance not found'));
+      }
+      return err(new InstanceOperationError('retrieve'));
     }
 
-    return await response.json();
+    const machine = await response.json();
+    return ok(machine);
   } catch (error) {
-    log.error(`Failed to get Fly machine ${machineId}:`, error);
-    throw error;
+    // Log technical error with full details
+    log.error('Unexpected error getting Fly machine:', {
+      machineId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return err(new InfrastructureError('compute platform'));
   }
 };
 
 // List all machines
-export const listMachines = async (): Promise<FlyMachine[]> => {
+export const listMachines = async (): Promise<Result<FlyMachine[], InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines`, {
       method: 'GET',
@@ -171,19 +227,39 @@ export const listMachines = async (): Promise<FlyMachine[]> => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new AppError(`Failed to list Fly machines: ${error}`, response.status);
+      const errorText = await response.text();
+
+      // Log technical details for debugging
+      log.error('Failed to list Fly machines:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+
+      // Return user-friendly error based on status code
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform'));
+      }
+      return err(new InstanceOperationError('list'));
     }
 
-    return await response.json();
+    const machines = await response.json();
+    return ok(machines);
   } catch (error) {
-    log.error('Failed to list Fly machines:', error);
-    throw error;
+    // Log technical error with full details
+    log.error('Unexpected error listing Fly machines:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return err(new InfrastructureError('compute platform'));
   }
 };
 
 // Destroy a machine
-export const destroyMachine = async (machineId: string): Promise<void> => {
+export const destroyMachine = async (
+  machineId: string,
+): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}`, {
       method: 'DELETE',
@@ -191,19 +267,44 @@ export const destroyMachine = async (machineId: string): Promise<void> => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new AppError(`Failed to destroy Fly machine: ${error}`, response.status);
+      const errorText = await response.text();
+
+      // Log technical details for debugging
+      log.error('Failed to destroy Fly machine:', {
+        machineId,
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+
+      // Return user-friendly error based on status code
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform'));
+      }
+      if (response.status === 404) {
+        return err(new InstanceOperationError('destroy', 'instance not found'));
+      }
+      return err(new InstanceOperationError('destroy'));
     }
 
     log.info(`Destroyed Fly machine: ${machineId}`);
+    return ok(undefined);
   } catch (error) {
-    log.error(`Failed to destroy Fly machine ${machineId}:`, error);
-    throw error;
+    // Log technical error with full details
+    log.error('Unexpected error destroying Fly machine:', {
+      machineId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return err(new InfrastructureError('compute platform'));
   }
 };
 
 // Stop a machine
-export const stopMachine = async (machineId: string): Promise<void> => {
+export const stopMachine = async (
+  machineId: string,
+): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}/stop`, {
       method: 'POST',
@@ -211,19 +312,44 @@ export const stopMachine = async (machineId: string): Promise<void> => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new AppError(`Failed to stop Fly machine: ${error}`, response.status);
+      const errorText = await response.text();
+
+      // Log technical details for debugging
+      log.error('Failed to stop Fly machine:', {
+        machineId,
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+
+      // Return user-friendly error based on status code
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform'));
+      }
+      if (response.status === 404) {
+        return err(new InstanceOperationError('stop', 'instance not found'));
+      }
+      return err(new InstanceOperationError('stop'));
     }
 
     log.info(`Stopped Fly machine: ${machineId}`);
+    return ok(undefined);
   } catch (error) {
-    log.error(`Failed to stop Fly machine ${machineId}:`, error);
-    throw error;
+    // Log technical error with full details
+    log.error('Unexpected error stopping Fly machine:', {
+      machineId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return err(new InfrastructureError('compute platform'));
   }
 };
 
 // Start a machine
-export const startMachine = async (machineId: string): Promise<void> => {
+export const startMachine = async (
+  machineId: string,
+): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}/start`, {
       method: 'POST',
@@ -231,37 +357,89 @@ export const startMachine = async (machineId: string): Promise<void> => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new AppError(`Failed to start Fly machine: ${error}`, response.status);
+      const errorText = await response.text();
+
+      // Log technical details for debugging
+      log.error('Failed to start Fly machine:', {
+        machineId,
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+
+      // Return user-friendly error based on status code
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform'));
+      }
+      if (response.status === 404) {
+        return err(new InstanceOperationError('start', 'instance not found'));
+      }
+      return err(new InstanceOperationError('start'));
     }
 
     log.info(`Started Fly machine: ${machineId}`);
-    await waitForMachineReady(machineId);
+
+    const readyResult = await waitForMachineReady(machineId);
+    if (readyResult.isErr()) {
+      return err(readyResult.error);
+    }
+
+    return ok(undefined);
   } catch (error) {
-    log.error(`Failed to start Fly machine ${machineId}:`, error);
-    throw error;
+    // Log technical error with full details
+    log.error('Unexpected error starting Fly machine:', {
+      machineId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return err(new InfrastructureError('compute platform'));
   }
 };
 
 // Wait for machine to be ready
-export const waitForMachineReady = async (machineId: string, maxAttempts = 30): Promise<void> => {
+export const waitForMachineReady = async (
+  machineId: string,
+  maxAttempts = 30,
+): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   log.info(`Waiting for machine ${machineId} to be ready...`);
 
   for (let i = 0; i < maxAttempts; i++) {
-    const machine = await getMachine(machineId);
+    const machineResult = await getMachine(machineId);
+
+    if (machineResult.isErr()) {
+      return err(machineResult.error);
+    }
+
+    const machine = machineResult.value;
 
     if (machine.state === 'started') {
       log.info(`Machine ${machineId} is ready`);
-      return;
+      return ok(undefined);
     }
 
     if (machine.state === 'failed' || machine.state === 'destroyed') {
-      throw new AppError(`Machine ${machineId} failed to start: ${machine.state}`);
+      // Log technical details for debugging
+      log.error('Machine failed to start:', {
+        machineId,
+        state: machine.state,
+        attempt: i + 1,
+        maxAttempts,
+      });
+
+      return err(new InstanceOperationError('start', `instance entered ${machine.state} state`));
     }
 
     log.debug(`Waiting for machine ${machineId}, current state: ${machine.state}`);
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
-  throw new AppError(`Machine ${machineId} failed to become ready in time`);
+  // Log timeout details for debugging
+  log.error('Machine failed to become ready in time:', {
+    machineId,
+    maxAttempts,
+    timeoutSeconds: maxAttempts * 2,
+  });
+
+  return err(new InstanceOperationError('start', 'timeout waiting for instance to become ready'));
 };

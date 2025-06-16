@@ -1,5 +1,5 @@
 import { inngest } from '@/lib/inngest';
-import { instanceService } from '@/services/index';
+import * as instanceService from '@/services/instance-service';
 import pino from 'pino';
 
 const log = pino();
@@ -22,13 +22,14 @@ export const createInstance = inngest.createFunction(
     const instance = await step.run('create-fly-machine', async () => {
       log.info(`Creating instance ${instanceId} with options:`, options);
 
-      try {
-        const result = await instanceService.createInstance(options);
-        return result;
-      } catch (error) {
-        log.error(`Failed to create instance ${instanceId}:`, error);
-        throw error;
+      const result = await instanceService.createInstance(options);
+      
+      if (result.isErr()) {
+        log.error(`Failed to create instance ${instanceId}:`, result.error);
+        throw result.error;
       }
+      
+      return result.value;
     });
 
     // Step 2: Wait for instance to be ready
@@ -36,7 +37,13 @@ export const createInstance = inngest.createFunction(
 
     // Step 3: Verify instance is running
     const verifiedInstance = await step.run('verify-instance', async () => {
-      const inst = await instanceService.getInstance(instance.id);
+      const result = await instanceService.getInstance(instance.id);
+      
+      if (result.isErr()) {
+        throw result.error;
+      }
+      
+      const inst = result.value;
 
       if (inst.status !== 'running') {
         throw new Error(`Instance ${instance.id} is not running: ${inst.status}`);
@@ -47,7 +54,14 @@ export const createInstance = inngest.createFunction(
 
     // Step 4: Initial health check
     const isHealthy = await step.run('initial-health-check', async () => {
-      const healthy = await instanceService.healthCheckInstance(instance.id);
+      const result = await instanceService.healthCheckInstance(instance.id);
+      
+      if (result.isErr()) {
+        log.error(`Health check error for instance ${instance.id}:`, result.error);
+        return false;
+      }
+      
+      const healthy = result.value;
 
       if (!healthy) {
         log.warn(`Instance ${instance.id} failed initial health check`);
@@ -79,16 +93,23 @@ export const destroyInstance = inngest.createFunction(
     await step.run('stop-instance', async () => {
       log.info(`Preparing to destroy instance ${instanceId}`);
 
-      try {
-        const instance = await instanceService.getInstance(instanceId);
-
+      const instanceResult = await instanceService.getInstance(instanceId);
+      
+      if (instanceResult.isOk()) {
+        const instance = instanceResult.value;
+        
         if (instance.status === 'running') {
-          await instanceService.stopInstance(instanceId);
-          log.info(`Stopped instance ${instanceId} before destruction`);
+          const stopResult = await instanceService.stopInstance(instanceId);
+          
+          if (stopResult.isOk()) {
+            log.info(`Stopped instance ${instanceId} before destruction`);
+          } else {
+            log.warn(`Error stopping instance ${instanceId}:`, stopResult.error);
+          }
         }
-      } catch (error) {
-        log.warn(`Error stopping instance ${instanceId}:`, error);
-        // Continue with destruction even if stop fails
+      } else {
+        log.warn(`Could not get instance ${instanceId}:`, instanceResult.error);
+        // Continue with destruction even if getInstance fails
       }
     });
 
@@ -97,13 +118,14 @@ export const destroyInstance = inngest.createFunction(
 
     // Step 3: Destroy the instance
     await step.run('destroy-fly-machine', async () => {
-      try {
-        await instanceService.destroyInstance(instanceId);
-        log.info(`Instance ${instanceId} destroyed successfully`);
-      } catch (error) {
-        log.error(`Failed to destroy instance ${instanceId}:`, error);
-        throw error;
+      const result = await instanceService.destroyInstance(instanceId);
+      
+      if (result.isErr()) {
+        log.error(`Failed to destroy instance ${instanceId}:`, result.error);
+        throw result.error;
       }
+      
+      log.info(`Instance ${instanceId} destroyed successfully`);
     });
 
     return { instanceId, destroyed: true };
@@ -123,22 +145,26 @@ export const healthCheckInstance = inngest.createFunction(
     const healthy = await step.run('check-health', async () => {
       log.info(`Performing health check for instance ${instanceId}`);
 
-      try {
-        const isHealthy = await instanceService.healthCheckInstance(instanceId);
-
-        if (!isHealthy) {
-          log.warn(`Instance ${instanceId} is unhealthy`);
-
-          // Get instance details for debugging
-          const instance = await instanceService.getInstance(instanceId);
-          log.info(`Instance ${instanceId} status: ${instance.status}`);
-        }
-
-        return isHealthy;
-      } catch (error) {
-        log.error(`Health check failed for instance ${instanceId}:`, error);
+      const result = await instanceService.healthCheckInstance(instanceId);
+      
+      if (result.isErr()) {
+        log.error(`Health check failed for instance ${instanceId}:`, result.error);
         return false;
       }
+      
+      const isHealthy = result.value;
+
+      if (!isHealthy) {
+        log.warn(`Instance ${instanceId} is unhealthy`);
+
+        // Get instance details for debugging
+        const instanceResult = await instanceService.getInstance(instanceId);
+        if (instanceResult.isOk()) {
+          log.info(`Instance ${instanceId} status: ${instanceResult.value.status}`);
+        }
+      }
+
+      return isHealthy;
     });
 
     // If unhealthy, trigger restart
@@ -167,7 +193,13 @@ export const restartInstance = inngest.createFunction(
 
     // Step 1: Get current instance state
     const originalState = await step.run('get-instance-state', async () => {
-      const instance = await instanceService.getInstance(instanceId);
+      const result = await instanceService.getInstance(instanceId);
+      
+      if (result.isErr()) {
+        throw result.error;
+      }
+      
+      const instance = result.value;
       return {
         status: instance.status,
         flyMachineId: instance.flyMachineId,
@@ -177,7 +209,12 @@ export const restartInstance = inngest.createFunction(
     // Step 2: Stop the instance if running
     if (originalState.status === 'running') {
       await step.run('stop-instance', async () => {
-        await instanceService.stopInstance(instanceId);
+        const result = await instanceService.stopInstance(instanceId);
+        
+        if (result.isErr()) {
+          throw result.error;
+        }
+        
         log.info(`Stopped instance ${instanceId}`);
       });
 
@@ -187,9 +224,14 @@ export const restartInstance = inngest.createFunction(
 
     // Step 3: Start the instance
     const restartedInstance = await step.run('start-instance', async () => {
-      const instance = await instanceService.startInstance(instanceId);
+      const result = await instanceService.startInstance(instanceId);
+      
+      if (result.isErr()) {
+        throw result.error;
+      }
+      
       log.info(`Started instance ${instanceId}`);
-      return instance;
+      return result.value;
     });
 
     // Step 4: Wait for instance to be ready
@@ -197,7 +239,13 @@ export const restartInstance = inngest.createFunction(
 
     // Step 5: Verify instance is healthy
     const healthy = await step.run('verify-health', async () => {
-      const isHealthy = await instanceService.healthCheckInstance(instanceId);
+      const result = await instanceService.healthCheckInstance(instanceId);
+      
+      if (result.isErr()) {
+        throw result.error;
+      }
+      
+      const isHealthy = result.value;
 
       if (!isHealthy) {
         throw new Error(`Instance ${instanceId} is not healthy after restart`);

@@ -1,5 +1,5 @@
 import { type Mock, beforeEach, describe, expect, it, mock } from 'bun:test';
-import { AppError } from '@/lib/error-handler';
+import { InstanceCreationError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
 
 // Mock fetch globally
@@ -80,7 +80,10 @@ describe('fly-service', () => {
         region: 'iad',
       });
 
-      expect(result).toEqual(mockMachine);
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toEqual(mockMachine);
+      }
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/machines'),
         expect.objectContaining({
@@ -92,14 +95,19 @@ describe('fly-service', () => {
       );
     });
 
-    it('should throw AppError when API returns error', async () => {
+    it('should return error when API returns error', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 422,
         text: async () => 'Invalid machine configuration',
       } as Response);
 
-      await expect(flyService.createMachine({ name: 'test' })).rejects.toThrow(AppError);
+      const result = await flyService.createMachine({ name: 'test' });
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(InstanceCreationError);
+      }
     });
   });
 
@@ -114,7 +122,10 @@ describe('fly-service', () => {
 
       const result = await flyService.getMachine('machine-123');
 
-      expect(result).toEqual(mockMachine);
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toEqual(mockMachine);
+      }
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/machines/machine-123'),
         expect.objectContaining({

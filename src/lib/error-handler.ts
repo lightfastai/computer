@@ -34,6 +34,39 @@ export class ConflictError extends AppError {
   }
 }
 
+// User-friendly instance-specific errors
+export class InstanceCreationError extends AppError {
+  constructor(reason?: string) {
+    const message = reason
+      ? `Failed to create instance: ${reason}`
+      : 'Failed to create instance due to infrastructure issues';
+    super(message, 500, 'INSTANCE_CREATION_FAILED');
+  }
+}
+
+export class InstanceOperationError extends AppError {
+  constructor(operation: string, reason?: string) {
+    const message = reason ? `Failed to ${operation} instance: ${reason}` : `Failed to ${operation} instance`;
+    super(message, 500, 'INSTANCE_OPERATION_FAILED');
+  }
+}
+
+export class InstanceStateError extends AppError {
+  constructor(currentState: string, requiredState: string, operation: string) {
+    super(
+      `Cannot ${operation} instance. Instance is ${currentState}, but must be ${requiredState}`,
+      409,
+      'INVALID_INSTANCE_STATE',
+    );
+  }
+}
+
+export class InfrastructureError extends AppError {
+  constructor(service = 'infrastructure') {
+    super(`Temporary ${service} issue. Please try again in a few moments`, 503, 'INFRASTRUCTURE_ERROR');
+  }
+}
+
 export async function errorHandler(err: Error, c: Context) {
   // Handle HTTPException from Hono
   if (err instanceof HTTPException) {

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { NotFoundError } from '@/lib/error-handler';
+import { NotFoundError, InstanceCreationError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
 import * as instanceService from '@/services/instance-service';
+import { err, ok } from 'neverthrow';
 
 // Helper to create proper FlyMachine mock objects
 type MockFlyMachine = {
@@ -68,21 +69,24 @@ describe('instance-service', () => {
     it('should create an instance successfully', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const instance = await instanceService.createInstance({
+      const result = await instanceService.createInstance({
         name: 'test-instance',
         region: 'iad',
       });
 
-      expect(instance).toMatchObject({
-        name: 'test-instance',
-        region: 'iad',
-        status: 'running',
-        flyMachineId: 'fly-123',
-        privateIpAddress: 'fdaa:0:1234::5',
-      });
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toMatchObject({
+          name: 'test-instance',
+          region: 'iad',
+          status: 'running',
+          flyMachineId: 'fly-123',
+          privateIpAddress: 'fdaa:0:1234::5',
+        });
+      }
 
       expect(flyService.createMachine).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -93,9 +97,15 @@ describe('instance-service', () => {
     });
 
     it('should handle fly machine creation failure', async () => {
-      mockCreateMachine.mockRejectedValue(new Error('Failed to create machine'));
+      const mockError = new InstanceCreationError('Failed to create machine');
+      mockCreateMachine.mockResolvedValue(err(mockError));
 
-      await expect(instanceService.createInstance({ name: 'test' })).rejects.toThrow('Failed to create machine');
+      const result = await instanceService.createInstance({ name: 'test' });
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBe(mockError);
+      }
 
       const instances = await instanceService.listInstances();
       expect(instances).toHaveLength(1);
@@ -107,30 +117,49 @@ describe('instance-service', () => {
     it('should get an instance by id', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const created = await instanceService.createInstance({ name: 'test' });
-      const instance = await instanceService.getInstance(created.id);
+      const createdResult = await instanceService.createInstance({ name: 'test' });
+      expect(createdResult.isOk()).toBe(true);
 
-      expect(instance.id).toBe(created.id);
+      if (createdResult.isOk()) {
+        const instanceResult = await instanceService.getInstance(createdResult.value.id);
+        expect(instanceResult.isOk()).toBe(true);
+
+        if (instanceResult.isOk()) {
+          expect(instanceResult.value.id).toBe(createdResult.value.id);
+        }
+      }
     });
 
-    it('should throw NotFoundError for non-existent instance', async () => {
-      await expect(instanceService.getInstance('non-existent')).rejects.toThrow(NotFoundError);
+    it('should return NotFoundError for non-existent instance', async () => {
+      const result = await instanceService.getInstance('non-existent');
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(NotFoundError);
+      }
     });
 
     it('should update instance status from Fly API', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue({ ...mockFlyMachine, state: 'stopped' });
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok({ ...mockFlyMachine, state: 'stopped' }));
 
-      const created = await instanceService.createInstance({ name: 'test' });
+      const createdResult = await instanceService.createInstance({ name: 'test' });
+      expect(createdResult.isOk()).toBe(true);
 
-      // Get instance again, should update status
-      const instance = await instanceService.getInstance(created.id);
-      expect(instance.status).toBe('stopped');
+      if (createdResult.isOk()) {
+        // Get instance again, should update status
+        const instanceResult = await instanceService.getInstance(createdResult.value.id);
+        expect(instanceResult.isOk()).toBe(true);
+
+        if (instanceResult.isOk()) {
+          expect(instanceResult.value.status).toBe('stopped');
+        }
+      }
     });
   });
 
@@ -138,29 +167,44 @@ describe('instance-service', () => {
     it('should stop a running instance', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
-      mockStopMachine.mockResolvedValue(undefined);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockStopMachine.mockResolvedValue(ok(undefined));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
-      const stopped = await instanceService.stopInstance(instance.id);
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      expect(stopped.status).toBe('stopped');
-      expect(mockStopMachine).toHaveBeenCalledWith('fly-123');
+      if (createResult.isOk()) {
+        const stopResult = await instanceService.stopInstance(createResult.value.id);
+        expect(stopResult.isOk()).toBe(true);
+
+        if (stopResult.isOk()) {
+          expect(stopResult.value.status).toBe('stopped');
+        }
+        expect(mockStopMachine).toHaveBeenCalledWith('fly-123');
+      }
     });
 
-    it('should throw error if instance is not running', async () => {
+    it('should return error if instance is not running', async () => {
       const mockFlyMachine = createMockFlyMachine({ state: 'stopped' });
 
-      mockCreateMachine.mockResolvedValue(createMockFlyMachine({ state: 'started' }));
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
+      mockCreateMachine.mockResolvedValue(ok(createMockFlyMachine({ state: 'started' })));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      // Force update status by calling getInstance which syncs with fly
-      await instanceService.getInstance(instance.id);
+      if (createResult.isOk()) {
+        // Force update status by calling getInstance which syncs with fly
+        await instanceService.getInstance(createResult.value.id);
 
-      await expect(instanceService.stopInstance(instance.id)).rejects.toThrow('is not running');
+        const stopResult = await instanceService.stopInstance(createResult.value.id);
+        expect(stopResult.isErr()).toBe(true);
+
+        if (stopResult.isErr()) {
+          expect(stopResult.error.message).toContain('is not running');
+        }
+      }
     });
   });
 
@@ -168,18 +212,25 @@ describe('instance-service', () => {
     it('should start a stopped instance', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue({ ...mockFlyMachine, state: 'stopped' });
-      mockStartMachine.mockResolvedValue(undefined);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok({ ...mockFlyMachine, state: 'stopped' }));
+      mockStartMachine.mockResolvedValue(ok(undefined));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
-      // getInstance will update status to stopped due to mock
-      await instanceService.getInstance(instance.id);
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      const started = await instanceService.startInstance(instance.id);
+      if (createResult.isOk()) {
+        // getInstance will update status to stopped due to mock
+        await instanceService.getInstance(createResult.value.id);
 
-      expect(started.status).toBe('running');
-      expect(mockStartMachine).toHaveBeenCalledWith('fly-123');
+        const startResult = await instanceService.startInstance(createResult.value.id);
+        expect(startResult.isOk()).toBe(true);
+
+        if (startResult.isOk()) {
+          expect(startResult.value.status).toBe('running');
+        }
+        expect(mockStartMachine).toHaveBeenCalledWith('fly-123');
+      }
     });
   });
 
@@ -187,17 +238,26 @@ describe('instance-service', () => {
     it('should destroy an instance', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
-      mockDestroyMachine.mockResolvedValue(undefined);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockDestroyMachine.mockResolvedValue(ok(undefined));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
-      await instanceService.destroyInstance(instance.id);
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      expect(mockDestroyMachine).toHaveBeenCalledWith('fly-123');
+      if (createResult.isOk()) {
+        const destroyResult = await instanceService.destroyInstance(createResult.value.id);
+        expect(destroyResult.isOk()).toBe(true);
 
-      const updatedInstance = await instanceService.getInstance(instance.id);
-      expect(updatedInstance.status).toBe('destroyed');
+        expect(mockDestroyMachine).toHaveBeenCalledWith('fly-123');
+
+        const instanceResult = await instanceService.getInstance(createResult.value.id);
+        expect(instanceResult.isOk()).toBe(true);
+
+        if (instanceResult.isOk()) {
+          expect(instanceResult.value.status).toBe('destroyed');
+        }
+      }
     });
   });
 
@@ -205,25 +265,39 @@ describe('instance-service', () => {
     it('should return true for healthy instance', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
-      const healthy = await instanceService.healthCheckInstance(instance.id);
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      expect(healthy).toBe(true);
+      if (createResult.isOk()) {
+        const healthResult = await instanceService.healthCheckInstance(createResult.value.id);
+        expect(healthResult.isOk()).toBe(true);
+
+        if (healthResult.isOk()) {
+          expect(healthResult.value).toBe(true);
+        }
+      }
     });
 
     it('should return false for unhealthy instance', async () => {
       const mockFlyMachine = createMockFlyMachine({ state: 'stopped' });
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
-      mockGetMachine.mockResolvedValue(mockFlyMachine);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
+      mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
-      const healthy = await instanceService.healthCheckInstance(instance.id);
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      expect(healthy).toBe(false);
+      if (createResult.isOk()) {
+        const healthResult = await instanceService.healthCheckInstance(createResult.value.id);
+        expect(healthResult.isOk()).toBe(true);
+
+        if (healthResult.isOk()) {
+          expect(healthResult.value).toBe(false);
+        }
+      }
     });
   });
 
@@ -231,21 +305,29 @@ describe('instance-service', () => {
     it('should restart a running instance', async () => {
       const mockFlyMachine = createMockFlyMachine();
 
-      mockCreateMachine.mockResolvedValue(mockFlyMachine);
+      mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
       // Keep returning running state until we explicitly stop it
       mockGetMachine
-        .mockResolvedValueOnce(mockFlyMachine) // For restart check
-        .mockResolvedValueOnce(mockFlyMachine) // For stop check
-        .mockResolvedValueOnce({ ...mockFlyMachine, state: 'stopped' }); // For start check
-      mockStopMachine.mockResolvedValue(undefined);
-      mockStartMachine.mockResolvedValue(undefined);
+        .mockResolvedValueOnce(ok(mockFlyMachine)) // For restart check
+        .mockResolvedValueOnce(ok(mockFlyMachine)) // For stop check
+        .mockResolvedValueOnce(ok({ ...mockFlyMachine, state: 'stopped' })); // For start check
+      mockStopMachine.mockResolvedValue(ok(undefined));
+      mockStartMachine.mockResolvedValue(ok(undefined));
 
-      const instance = await instanceService.createInstance({ name: 'test' });
-      const restarted = await instanceService.restartInstance(instance.id);
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isOk()).toBe(true);
 
-      expect(mockStopMachine).toHaveBeenCalledWith('fly-123');
-      expect(mockStartMachine).toHaveBeenCalledWith('fly-123');
-      expect(restarted.status).toBe('running');
+      if (createResult.isOk()) {
+        const restartResult = await instanceService.restartInstance(createResult.value.id);
+        expect(restartResult.isOk()).toBe(true);
+
+        expect(mockStopMachine).toHaveBeenCalledWith('fly-123');
+        expect(mockStartMachine).toHaveBeenCalledWith('fly-123');
+
+        if (restartResult.isOk()) {
+          expect(restartResult.value.status).toBe('running');
+        }
+      }
     });
   });
 
@@ -258,10 +340,10 @@ describe('instance-service', () => {
       ];
 
       mockCreateMachine
-        .mockResolvedValueOnce(mockFlyMachines[0])
-        .mockResolvedValueOnce(mockFlyMachines[1])
-        .mockResolvedValueOnce(mockFlyMachines[2])
-        .mockRejectedValueOnce(new Error('Failed'));
+        .mockResolvedValueOnce(ok(mockFlyMachines[0]))
+        .mockResolvedValueOnce(ok(mockFlyMachines[1]))
+        .mockResolvedValueOnce(ok(mockFlyMachines[2]))
+        .mockResolvedValueOnce(err(new InstanceCreationError('Failed')));
 
       // Create instances - they will have initial running status from createMachine
       await instanceService.createInstance({ name: 'test-1' }); // running
@@ -269,7 +351,8 @@ describe('instance-service', () => {
       await instanceService.createInstance({ name: 'test-3' }); // running
 
       // One will fail
-      await instanceService.createInstance({ name: 'test-4' }).catch(() => {}); // failed
+      const failResult = await instanceService.createInstance({ name: 'test-4' });
+      expect(failResult.isErr()).toBe(true); // failed
 
       const stats = instanceService.getInstanceStats();
 
