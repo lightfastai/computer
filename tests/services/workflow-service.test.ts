@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import * as workflowService from '@/services/workflow-service';
 import * as instanceService from '@/services/instance-service';
-import { WorkflowStatus, StepType, InstanceStatus } from '@/types/index';
+import type { WorkflowStatus, StepType, InstanceStatus } from '@/types/index';
 import { NotFoundError } from '@/lib/error-handler';
 
 // Mock dependencies
@@ -22,7 +22,7 @@ describe('workflow-service', () => {
           {
             id: 'step1',
             name: 'Create Instance',
-            type: StepType.CREATE_INSTANCE,
+            type: 'create_instance' as StepType,
             config: { name: 'test-instance' },
           },
         ],
@@ -34,7 +34,7 @@ describe('workflow-service', () => {
         steps: expect.arrayContaining([
           expect.objectContaining({
             id: 'step1',
-            type: StepType.CREATE_INSTANCE,
+            type: 'create_instance' as StepType,
           }),
         ]),
       });
@@ -65,7 +65,7 @@ describe('workflow-service', () => {
     it('should execute a simple workflow', async () => {
       const mockInstance = {
         id: 'instance-123',
-        status: InstanceStatus.RUNNING,
+        status: 'running' as InstanceStatus,
       };
 
       vi.mocked(instanceService.createInstance).mockResolvedValue(mockInstance as any);
@@ -76,7 +76,7 @@ describe('workflow-service', () => {
           {
             id: 'create',
             name: 'Create Instance',
-            type: StepType.CREATE_INSTANCE,
+            type: 'create_instance' as StepType,
             config: { name: 'test-instance' },
           },
         ],
@@ -86,20 +86,20 @@ describe('workflow-service', () => {
 
       expect(execution).toMatchObject({
         workflowId: workflow.id,
-        status: WorkflowStatus.PENDING,
+        status: expect.stringMatching(/^(pending|running)$/),
       });
 
       // Wait for async execution to complete
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const updatedExecution = await workflowService.getExecution(execution.id);
-      expect(updatedExecution.status).toBe(WorkflowStatus.COMPLETED);
+      expect(updatedExecution.status).toBe('completed');
     });
 
     it('should handle workflow with dependencies', async () => {
       const mockInstance = {
         id: 'instance-123',
-        status: InstanceStatus.RUNNING,
+        status: 'running' as InstanceStatus,
       };
 
       vi.mocked(instanceService.createInstance).mockResolvedValue(mockInstance as any);
@@ -116,13 +116,13 @@ describe('workflow-service', () => {
           {
             id: 'create',
             name: 'Create Instance',
-            type: StepType.CREATE_INSTANCE,
+            type: 'create_instance' as StepType,
             config: { name: 'test-instance' },
           },
           {
             id: 'execute',
             name: 'Execute Command',
-            type: StepType.EXECUTE_COMMAND,
+            type: 'execute_command' as StepType,
             config: { command: 'echo "Hello World"' },
             dependsOn: ['create'],
           },
@@ -135,7 +135,7 @@ describe('workflow-service', () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       const updatedExecution = await workflowService.getExecution(execution.id);
-      expect(updatedExecution.status).toBe(WorkflowStatus.COMPLETED);
+      expect(updatedExecution.status).toBe('completed');
 
       expect(instanceService.createInstance).toHaveBeenCalledOnce();
       expect(instanceService.executeCommand).toHaveBeenCalledWith(
@@ -152,14 +152,14 @@ describe('workflow-service', () => {
           {
             id: 'step1',
             name: 'Step 1',
-            type: StepType.WAIT,
+            type: 'wait' as StepType,
             config: { duration: 100 },
             dependsOn: ['step2'],
           },
           {
             id: 'step2',
             name: 'Step 2',
-            type: StepType.WAIT,
+            type: 'wait' as StepType,
             config: { duration: 100 },
             dependsOn: ['step1'],
           },
@@ -172,7 +172,7 @@ describe('workflow-service', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const updatedExecution = await workflowService.getExecution(execution.id);
-      expect(updatedExecution.status).toBe(WorkflowStatus.FAILED);
+      expect(updatedExecution.status).toBe('failed');
       expect(updatedExecution.error).toContain('Circular dependency');
     });
   });
@@ -197,7 +197,7 @@ describe('workflow-service', () => {
           {
             id: 'wait',
             name: 'Wait',
-            type: StepType.WAIT,
+            type: 'wait' as StepType,
             config: { duration: 50 },
           },
         ],

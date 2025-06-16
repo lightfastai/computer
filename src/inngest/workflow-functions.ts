@@ -1,6 +1,6 @@
 import { inngest } from '@/lib/inngest';
 import { instanceService, workflowService } from '@/services/index';
-import { StepType, WorkflowStatus, type WorkflowStep } from '@/types/index';
+import type { WorkflowStatus, WorkflowStep } from '@/types/index';
 import pino from 'pino';
 
 const log = pino();
@@ -29,7 +29,7 @@ export const executeWorkflow = inngest.createFunction(
     // Update execution status to running
     await step.run('update-status-running', async () => {
       const execution = await workflowService.getExecution(executionId);
-      execution.status = WorkflowStatus.RUNNING;
+      execution.status = 'running' as WorkflowStatus;
       // TODO: Implement execution update method
     });
 
@@ -58,16 +58,16 @@ export const executeWorkflow = inngest.createFunction(
 
         try {
           switch (workflowStep.type) {
-            case StepType.CREATE_INSTANCE:
+            case 'create_instance':
               return await executeCreateInstanceStep(workflowStep, context);
 
-            case StepType.EXECUTE_COMMAND:
+            case 'execute_command':
               return await executeCommandStep(workflowStep, context);
 
-            case StepType.WAIT:
+            case 'wait':
               return await executeWaitStep(workflowStep);
 
-            case StepType.DESTROY_INSTANCE:
+            case 'destroy_instance':
               return await executeDestroyInstanceStep(workflowStep, context);
 
             default:
@@ -90,7 +90,7 @@ export const executeWorkflow = inngest.createFunction(
     // Update execution status to completed
     await step.run('update-status-completed', async () => {
       const execution = await workflowService.getExecution(executionId);
-      execution.status = WorkflowStatus.COMPLETED;
+      execution.status = 'completed' as WorkflowStatus;
       execution.completedAt = new Date();
       // TODO: Implement execution update method
     });
@@ -106,6 +106,10 @@ export const executeWorkflow = inngest.createFunction(
 
 // Helper functions for step execution
 async function executeCreateInstanceStep(step: WorkflowStep, context: Record<string, any>): Promise<any> {
+  if (step.type !== 'create_instance') {
+    throw new Error(`Invalid step type: expected create_instance, got ${step.type}`);
+  }
+
   const instance = await instanceService.createInstance(step.config);
 
   // Store instance ID in context
@@ -116,6 +120,10 @@ async function executeCreateInstanceStep(step: WorkflowStep, context: Record<str
 }
 
 async function executeCommandStep(step: WorkflowStep, context: Record<string, any>): Promise<any> {
+  if (step.type !== 'execute_command') {
+    throw new Error(`Invalid step type: expected execute_command, got ${step.type}`);
+  }
+
   const instanceId = context[step.config.instanceKey || 'instanceId'];
 
   if (!instanceId) {
@@ -134,12 +142,20 @@ async function executeCommandStep(step: WorkflowStep, context: Record<string, an
 }
 
 async function executeWaitStep(step: WorkflowStep): Promise<any> {
+  if (step.type !== 'wait') {
+    throw new Error(`Invalid step type: expected wait, got ${step.type}`);
+  }
+
   const duration = step.config.duration || 1000;
   await new Promise((resolve) => setTimeout(resolve, duration));
   return { waited: duration };
 }
 
 async function executeDestroyInstanceStep(step: WorkflowStep, context: Record<string, any>): Promise<any> {
+  if (step.type !== 'destroy_instance') {
+    throw new Error(`Invalid step type: expected destroy_instance, got ${step.type}`);
+  }
+
   const instanceId = context[step.config.instanceKey || 'instanceId'];
 
   if (!instanceId) {

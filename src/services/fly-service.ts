@@ -29,6 +29,9 @@ interface FlyMachine {
       internal_port: number;
     }>;
     env: Record<string, string>;
+    init?: {
+      exec: string[];
+    };
   };
   created_at: string;
 }
@@ -59,12 +62,38 @@ export const parseMachineSize = (size: string): { kind: string; cpus: number } =
   return sizeMap[size] || { kind: 'shared', cpus: 1 };
 };
 
+// Machine config type
+interface MachineConfig {
+  name: string;
+  region: string;
+  config: {
+    image: string;
+    guest: {
+      cpu_kind: string;
+      cpus: number;
+      memory_mb: number;
+    };
+    services: Array<{
+      ports: Array<{
+        port: number;
+        handlers: string[];
+      }>;
+      protocol: string;
+      internal_port: number;
+    }>;
+    env: Record<string, unknown>;
+    init?: {
+      exec: string[];
+    };
+  };
+}
+
 // Create machine configuration
-const createMachineConfig = (options: CreateInstanceOptions) => {
+const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
   const { name, region, image, size, memoryMb, metadata, sshKeyContent } = options;
   const cpuConfig = parseMachineSize(size || 'shared-cpu-1x');
 
-  const machineConfig = {
+  const machineConfig: MachineConfig = {
     name: name || `instance-${Date.now()}`,
     region: region || 'iad',
     config: {
@@ -95,7 +124,7 @@ const createMachineConfig = (options: CreateInstanceOptions) => {
   if (sshKeyContent) {
     machineConfig.config.env.SSH_PUBLIC_KEY = sshKeyContent;
     // Add init script to set up SSH key
-    (machineConfig.config as any).init = {
+    machineConfig.config.init = {
       exec: [
         'sh',
         '-c',

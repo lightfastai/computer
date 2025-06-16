@@ -21,7 +21,14 @@ describe('fly-service', () => {
         private_ip: 'fdaa:0:1234::5',
       };
 
+      // Mock the createMachine call
       (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockMachine,
+      });
+
+      // Mock the waitForMachineReady calls (getMachine)
+      (global.fetch as any).mockResolvedValue({
         ok: true,
         json: async () => mockMachine,
       });

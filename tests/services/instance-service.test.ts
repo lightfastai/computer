@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
-import * as instanceService from '@/services/instance-service';
-import * as flyService from '@/services/fly-service';
-import * as sshService from '@/services/ssh-service';
-import { InstanceStatus, CommandStatus } from '@/types/index';
 import { NotFoundError } from '@/lib/error-handler';
+import * as flyService from '@/services/fly-service';
+import * as instanceService from '@/services/instance-service';
+import * as sshService from '@/services/ssh-service';
+import type { CommandStatus, InstanceStatus } from '@/types/index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
 vi.mock('@/services/fly-service');
@@ -35,7 +35,7 @@ describe('instance-service', () => {
       expect(instance).toMatchObject({
         name: 'test-instance',
         region: 'iad',
-        status: InstanceStatus.RUNNING,
+        status: 'running',
         flyMachineId: 'fly-123',
         privateIpAddress: 'fdaa:0:1234::5',
       });
@@ -44,22 +44,18 @@ describe('instance-service', () => {
         expect.objectContaining({
           name: 'test-instance',
           region: 'iad',
-        })
+        }),
       );
     });
 
     it('should handle fly machine creation failure', async () => {
-      vi.mocked(flyService.createMachine).mockRejectedValue(
-        new Error('Failed to create machine')
-      );
+      vi.mocked(flyService.createMachine).mockRejectedValue(new Error('Failed to create machine'));
 
-      await expect(
-        instanceService.createInstance({ name: 'test' })
-      ).rejects.toThrow('Failed to create machine');
+      await expect(instanceService.createInstance({ name: 'test' })).rejects.toThrow('Failed to create machine');
 
       const instances = await instanceService.listInstances();
       expect(instances).toHaveLength(1);
-      expect(instances[0].status).toBe(InstanceStatus.FAILED);
+      expect(instances[0].status).toBe('failed');
     });
   });
 
@@ -82,9 +78,7 @@ describe('instance-service', () => {
     });
 
     it('should throw NotFoundError for non-existent instance', async () => {
-      await expect(
-        instanceService.getInstance('non-existent')
-      ).rejects.toThrow(NotFoundError);
+      await expect(instanceService.getInstance('non-existent')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -108,7 +102,7 @@ describe('instance-service', () => {
       expect(sshService.disconnect).toHaveBeenCalledWith(instance.id);
 
       const updatedInstance = await instanceService.getInstance(instance.id);
-      expect(updatedInstance.status).toBe(InstanceStatus.DESTROYED);
+      expect(updatedInstance.status).toBe('destroyed');
     });
   });
 
@@ -136,7 +130,7 @@ describe('instance-service', () => {
       expect(result).toMatchObject({
         instanceId: instance.id,
         command: 'ls -la',
-        status: CommandStatus.COMPLETED,
+        status: 'completed',
         output: 'command output',
         exitCode: 0,
       });
@@ -168,7 +162,7 @@ describe('instance-service', () => {
         expect.objectContaining({
           host: 'fdaa:0:1234::5',
           username: 'root',
-        })
+        }),
       );
     });
 
@@ -188,13 +182,11 @@ describe('instance-service', () => {
       });
 
       const instance = await instanceService.createInstance({ name: 'test' });
-      
+
       // Force update status
       await instanceService.getInstance(instance.id);
 
-      await expect(
-        instanceService.executeCommand(instance.id, 'ls')
-      ).rejects.toThrow('Instance');
+      await expect(instanceService.executeCommand(instance.id, 'ls')).rejects.toThrow('Instance');
     });
   });
 });

@@ -77,7 +77,7 @@ export async function errorHandler(err: Error, c: Context) {
         error: err.message,
         code: err.code,
       },
-      err.statusCode,
+      err.statusCode as any,
     );
   }
 

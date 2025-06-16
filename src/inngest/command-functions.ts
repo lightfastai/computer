@@ -1,6 +1,5 @@
 import { inngest } from '@/lib/inngest';
 import { instanceService } from '@/services/index';
-import { CommandStatus } from '@/types/index';
 import pino from 'pino';
 
 const log = pino();
@@ -17,10 +16,10 @@ export const executeCommand = inngest.createFunction(
   },
   { event: 'command/execute' },
   async ({ event, step }) => {
-    const { instanceId, command, timeout, executionId } = event.data;
+    const { instanceId, command, timeout } = event.data;
 
     // Step 1: Verify instance is running
-    const instance = await step.run('verify-instance', async () => {
+    await step.run('verify-instance', async () => {
       const inst = await instanceService.getInstance(instanceId);
 
       if (inst.status !== 'running') {
@@ -48,7 +47,7 @@ export const executeCommand = inngest.createFunction(
         log.error(`Command execution failed on instance ${instanceId}:`, error);
 
         // Check if it's a timeout
-        if (error.message.includes('timeout')) {
+        if (error instanceof Error && error.message.includes('timeout')) {
           throw new Error(`Command timed out after ${timeout}ms`);
         }
 
@@ -87,10 +86,8 @@ export const executeLongCommand = inngest.createFunction(
     const checkInterval = 10000; // Check every 10 seconds
     const maxChecks = Math.floor(timeout / checkInterval);
 
-    let executionId: string;
-
     // Start the command
-    executionId = await step.run('start-command', async () => {
+    const executionId = await step.run('start-command', async () => {
       log.info(`Starting long-running command on instance ${instanceId}: ${command}`);
 
       // TODO: Implement async command execution
@@ -107,7 +104,7 @@ export const executeLongCommand = inngest.createFunction(
       const status = await step.run(`check-status-${i}`, async () => {
         const execution = await instanceService.getCommandExecution(executionId);
 
-        if (execution.status === CommandStatus.COMPLETED || execution.status === CommandStatus.FAILED) {
+        if (execution.status === 'completed' || execution.status === 'failed') {
           return {
             completed: true,
             execution,
@@ -120,7 +117,7 @@ export const executeLongCommand = inngest.createFunction(
         };
       });
 
-      if (status.completed) {
+      if (status.completed && 'execution' in status) {
         return status.execution;
       }
     }

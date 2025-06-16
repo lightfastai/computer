@@ -1,5 +1,5 @@
 import { workflowService } from '@/services/index';
-import { StepType } from '@/types/index';
+import { WorkflowStepSchema } from '@/types/index';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -7,18 +7,10 @@ import { z } from 'zod';
 export const workflowRoutes = new Hono();
 
 // Validation schemas
-const workflowStepSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.nativeEnum(StepType),
-  config: z.record(z.any()),
-  dependsOn: z.array(z.string()).optional(),
-});
-
 const createWorkflowSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  steps: z.array(workflowStepSchema),
+  steps: z.array(WorkflowStepSchema),
   userId: z.string().optional(),
 });
 

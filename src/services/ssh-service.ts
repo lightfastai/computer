@@ -29,7 +29,9 @@ const loadDefaultPrivateKey = (): string => {
     const keyPath = config.sshKeyPath.replace('~', homedir());
     return readFileSync(keyPath, 'utf8');
   } catch (error) {
-    throw new AppError(`Failed to load SSH private key from ${config.sshKeyPath}: ${error.message}`);
+    throw new AppError(
+      `Failed to load SSH private key from ${config.sshKeyPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 };
 
@@ -163,7 +165,7 @@ export const uploadFile = async (instanceId: string, localPath: string, remotePa
       const readStream = createReadStream(localPath);
       const writeStream = sftp.createWriteStream(remotePath);
 
-      writeStream.on('error', (err) => {
+      writeStream.on('error', (err: Error) => {
         reject(new AppError(`Failed to upload file: ${err.message}`));
       });
 
@@ -196,11 +198,11 @@ export const downloadFile = async (instanceId: string, remotePath: string, local
       const readStream = sftp.createReadStream(remotePath);
       const writeStream = createWriteStream(localPath);
 
-      readStream.on('error', (err) => {
+      readStream.on('error', (err: Error) => {
         reject(new AppError(`Failed to download file: ${err.message}`));
       });
 
-      writeStream.on('error', (err) => {
+      writeStream.on('error', (err: Error) => {
         reject(new AppError(`Failed to write file: ${err.message}`));
       });
 
@@ -230,7 +232,7 @@ export const disconnect = (instanceId: string): void => {
 export const disconnectAll = (): void => {
   log.info('Closing all SSH connections...');
 
-  for (const [instanceId, client] of connections) {
+  for (const [, client] of connections) {
     client.end();
   }
 
