@@ -1,6 +1,6 @@
 import { NotFoundError } from '@/lib/error-handler';
-import type { FlyService } from '@/services/fly-service';
-import type { SSHService } from '@/services/ssh-service';
+import * as flyService from '@/services/fly-service';
+import * as sshService from '@/services/ssh-service';
 import {
   type CommandExecution,
   CommandStatus,
@@ -13,260 +13,297 @@ import pino from 'pino';
 
 const log = pino();
 
-export class InstanceService {
-  private instances: Map<string, Instance> = new Map();
-  private commandExecutions: Map<string, CommandExecution> = new Map();
+// State stores
+const instances = new Map<string, Instance>();
+const commandExecutions = new Map<string, CommandExecution>();
 
-  constructor(
-    private flyService: FlyService,
-    private sshService: SSHService,
-  ) {}
+// Clear all instances (for testing)
+export const clearAllInstances = (): void => {
+  instances.clear();
+  commandExecutions.clear();
+};
 
-  async createInstance(options: CreateInstanceOptions): Promise<Instance> {
-    const instanceId = nanoid();
+// Create a new instance
+export const createInstance = async (options: CreateInstanceOptions): Promise<Instance> => {
+  const instanceId = nanoid();
 
-    // Create instance record
-    const instance: Instance = {
-      id: instanceId,
-      flyMachineId: '',
-      name: options.name || `instance-${instanceId}`,
-      region: options.region || 'sea',
-      image: options.image || 'ubuntu:22.04',
-      size: options.size || 'shared-cpu-1x',
-      memoryMb: options.memoryMb || 512,
-      status: InstanceStatus.CREATING,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      metadata: options.metadata,
-    };
+  // Create instance record
+  const instance: Instance = {
+    id: instanceId,
+    flyMachineId: '',
+    name: options.name || `instance-${Date.now()}`,
+    region: options.region || 'iad',
+    image: options.image || 'ubuntu-22.04',
+    size: options.size || 'shared-cpu-1x',
+    memoryMb: options.memoryMb || 512,
+    status: InstanceStatus.CREATING,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    metadata: options.metadata,
+  };
 
-    this.instances.set(instanceId, instance);
+  instances.set(instanceId, instance);
 
-    try {
-      // Create Fly machine
-      const flyMachine = await this.flyService.createMachine(options);
+  try {
+    // Create Fly.io machine
+    log.info(`Creating Fly machine for instance ${instanceId}...`);
+    const flyMachine = await flyService.createMachine(options);
 
-      // Update instance with Fly machine details
-      instance.flyMachineId = flyMachine.id;
-      instance.privateIpAddress = flyMachine.private_ip;
-      instance.status = InstanceStatus.RUNNING;
-      instance.updatedAt = new Date();
+    // Update instance with Fly machine details
+    instance.flyMachineId = flyMachine.id;
+    instance.privateIpAddress = flyMachine.private_ip;
+    instance.status = InstanceStatus.RUNNING;
+    instance.updatedAt = new Date();
 
-      // Get public IP (if available)
-      // Note: Fly.io machines might not have public IPs by default
-      // You might need to allocate one separately
+    instances.set(instanceId, instance);
 
-      this.instances.set(instanceId, instance);
-
-      log.info(`Instance ${instanceId} created successfully`);
-      return instance;
-    } catch (error) {
-      instance.status = InstanceStatus.FAILED;
-      instance.updatedAt = new Date();
-      this.instances.set(instanceId, instance);
-      throw error;
-    }
-  }
-
-  async getInstance(instanceId: string): Promise<Instance> {
-    const instance = this.instances.get(instanceId);
-
-    if (!instance) {
-      throw new NotFoundError('Instance', instanceId);
-    }
-
-    // Update status from Fly.io
-    if (instance.flyMachineId && instance.status === InstanceStatus.RUNNING) {
-      try {
-        const flyMachine = await this.flyService.getMachine(instance.flyMachineId);
-
-        // Map Fly machine state to instance status
-        switch (flyMachine.state) {
-          case 'started':
-            instance.status = InstanceStatus.RUNNING;
-            break;
-          case 'stopped':
-            instance.status = InstanceStatus.STOPPED;
-            break;
-          case 'destroyed':
-            instance.status = InstanceStatus.DESTROYED;
-            break;
-          default:
-          // Keep current status
-        }
-
-        instance.updatedAt = new Date();
-        this.instances.set(instanceId, instance);
-      } catch (error) {
-        log.error(`Failed to update instance ${instanceId} status:`, error);
-      }
-    }
-
+    log.info(`Instance ${instanceId} created successfully`);
     return instance;
+  } catch (error) {
+    // Mark instance as failed
+    instance.status = InstanceStatus.FAILED;
+    instance.updatedAt = new Date();
+    instances.set(instanceId, instance);
+
+    log.error(`Failed to create instance ${instanceId}:`, error);
+    throw error;
+  }
+};
+
+// Get an instance by ID
+export const getInstance = async (instanceId: string): Promise<Instance> => {
+  const instance = instances.get(instanceId);
+
+  if (!instance) {
+    throw new NotFoundError('Instance', instanceId);
   }
 
-  async listInstances(): Promise<Instance[]> {
-    // Update all instance statuses
-    const instances = Array.from(this.instances.values());
+  // Update instance status from Fly.io if needed
+  if (instance.flyMachineId && instance.status !== InstanceStatus.DESTROYED) {
+    try {
+      const flyMachine = await flyService.getMachine(instance.flyMachineId);
 
-    // Filter out destroyed instances older than 1 hour
-    const activeInstances = instances.filter((instance) => {
-      if (instance.status === InstanceStatus.DESTROYED) {
-        const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        return instance.updatedAt > hourAgo;
+      // Update status based on Fly machine state
+      switch (flyMachine.state) {
+        case 'started':
+        case 'running':
+          instance.status = InstanceStatus.RUNNING;
+          break;
+        case 'stopped':
+          instance.status = InstanceStatus.STOPPED;
+          break;
+        case 'destroyed':
+          instance.status = InstanceStatus.DESTROYED;
+          break;
+        default:
+        // Keep current status
       }
-      return true;
-    });
 
-    return activeInstances;
+      instance.updatedAt = new Date();
+      instances.set(instanceId, instance);
+    } catch (error) {
+      log.error(`Failed to update instance ${instanceId} status:`, error);
+    }
   }
 
-  async stopInstance(instanceId: string): Promise<Instance> {
-    const instance = await this.getInstance(instanceId);
+  return instance;
+};
 
-    if (instance.status !== InstanceStatus.RUNNING) {
-      throw new Error(`Instance ${instanceId} is not running`);
+// List all instances
+export const listInstances = async (): Promise<Instance[]> => {
+  // Update all instance statuses
+  const instanceArray = Array.from(instances.values());
+
+  // Filter out destroyed instances older than 1 hour
+  const activeInstances = instanceArray.filter((instance) => {
+    if (instance.status === InstanceStatus.DESTROYED) {
+      const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      return instance.updatedAt > hourAgo;
     }
+    return true;
+  });
 
-    await this.flyService.stopMachine(instance.flyMachineId);
+  return activeInstances;
+};
+
+// Stop an instance
+export const stopInstance = async (instanceId: string): Promise<Instance> => {
+  const instance = await getInstance(instanceId);
+
+  if (instance.status !== InstanceStatus.RUNNING) {
+    throw new Error(`Instance ${instanceId} is not running`);
+  }
+
+  try {
+    await flyService.stopMachine(instance.flyMachineId);
 
     instance.status = InstanceStatus.STOPPED;
     instance.updatedAt = new Date();
-    this.instances.set(instanceId, instance);
+    instances.set(instanceId, instance);
 
     // Disconnect SSH
-    this.sshService.disconnect(instanceId);
+    sshService.disconnect(instanceId);
 
+    log.info(`Instance ${instanceId} stopped successfully`);
     return instance;
+  } catch (error) {
+    log.error(`Failed to stop instance ${instanceId}:`, error);
+    throw error;
+  }
+};
+
+// Start an instance
+export const startInstance = async (instanceId: string): Promise<Instance> => {
+  const instance = await getInstance(instanceId);
+
+  if (instance.status !== InstanceStatus.STOPPED) {
+    throw new Error(`Instance ${instanceId} is not stopped`);
   }
 
-  async startInstance(instanceId: string): Promise<Instance> {
-    const instance = await this.getInstance(instanceId);
-
-    if (instance.status !== InstanceStatus.STOPPED) {
-      throw new Error(`Instance ${instanceId} is not stopped`);
-    }
-
-    await this.flyService.startMachine(instance.flyMachineId);
+  try {
+    await flyService.startMachine(instance.flyMachineId);
 
     instance.status = InstanceStatus.RUNNING;
     instance.updatedAt = new Date();
-    this.instances.set(instanceId, instance);
+    instances.set(instanceId, instance);
 
+    log.info(`Instance ${instanceId} started successfully`);
     return instance;
+  } catch (error) {
+    log.error(`Failed to start instance ${instanceId}:`, error);
+    throw error;
+  }
+};
+
+// Destroy an instance
+export const destroyInstance = async (instanceId: string): Promise<void> => {
+  const instance = await getInstance(instanceId);
+
+  if (instance.status === InstanceStatus.DESTROYED) {
+    return;
   }
 
-  async destroyInstance(instanceId: string): Promise<void> {
-    const instance = await this.getInstance(instanceId);
-
-    if (instance.status === InstanceStatus.DESTROYED) {
-      return;
-    }
-
+  try {
     instance.status = InstanceStatus.DESTROYING;
     instance.updatedAt = new Date();
-    this.instances.set(instanceId, instance);
+    instances.set(instanceId, instance);
 
-    try {
-      // Disconnect SSH first
-      this.sshService.disconnect(instanceId);
+    // Disconnect SSH
+    sshService.disconnect(instanceId);
 
-      // Destroy Fly machine
-      await this.flyService.destroyMachine(instance.flyMachineId);
+    // Destroy Fly machine
+    await flyService.destroyMachine(instance.flyMachineId);
 
-      instance.status = InstanceStatus.DESTROYED;
-      instance.updatedAt = new Date();
-      this.instances.set(instanceId, instance);
+    instance.status = InstanceStatus.DESTROYED;
+    instance.updatedAt = new Date();
+    instances.set(instanceId, instance);
 
-      log.info(`Instance ${instanceId} destroyed successfully`);
-    } catch (error) {
-      instance.status = InstanceStatus.FAILED;
-      instance.updatedAt = new Date();
-      this.instances.set(instanceId, instance);
-      throw error;
-    }
+    log.info(`Instance ${instanceId} destroyed successfully`);
+  } catch (error) {
+    instance.status = InstanceStatus.FAILED;
+    instance.updatedAt = new Date();
+    instances.set(instanceId, instance);
+    throw error;
+  }
+};
+
+// Execute a command on an instance
+export const executeCommand = async (
+  instanceId: string,
+  command: string,
+  options?: { timeout?: number }
+): Promise<CommandExecution> => {
+  const instance = await getInstance(instanceId);
+
+  if (instance.status !== InstanceStatus.RUNNING) {
+    throw new Error(`Instance ${instanceId} is not running`);
   }
 
-  async executeCommand(instanceId: string, command: string, options?: { timeout?: number }): Promise<CommandExecution> {
-    const instance = await this.getInstance(instanceId);
+  const executionId = nanoid();
+  const execution: CommandExecution = {
+    id: executionId,
+    instanceId,
+    command,
+    status: CommandStatus.PENDING,
+    startedAt: new Date(),
+  };
 
-    if (instance.status !== InstanceStatus.RUNNING) {
-      throw new Error(`Instance ${instanceId} is not running`);
-    }
+  commandExecutions.set(executionId, execution);
 
-    const executionId = nanoid();
-    const execution: CommandExecution = {
-      id: executionId,
-      instanceId,
-      command,
-      status: CommandStatus.PENDING,
-      startedAt: new Date(),
-    };
+  try {
+    // Ensure SSH connection
+    await ensureSSHConnection(instance);
 
-    this.commandExecutions.set(executionId, execution);
+    execution.status = CommandStatus.RUNNING;
+    commandExecutions.set(executionId, execution);
 
-    try {
-      // Ensure SSH connection
-      await this.ensureSSHConnection(instance);
+    // Execute command
+    const result = await sshService.executeCommand(instanceId, command, options);
 
-      execution.status = CommandStatus.RUNNING;
-      this.commandExecutions.set(executionId, execution);
+    execution.status = CommandStatus.COMPLETED;
+    execution.output = result.stdout;
+    execution.error = result.stderr;
+    execution.exitCode = result.exitCode;
+    execution.completedAt = new Date();
 
-      // Execute command
-      const result = await this.sshService.executeCommand(instanceId, command, options);
+    commandExecutions.set(executionId, execution);
 
-      execution.status = CommandStatus.COMPLETED;
-      execution.output = result.stdout;
-      execution.error = result.stderr;
-      execution.exitCode = result.exitCode;
-      execution.completedAt = new Date();
-
-      this.commandExecutions.set(executionId, execution);
-
-      log.info(`Command executed on instance ${instanceId}: ${command}`);
-      return execution;
-    } catch (error) {
-      execution.status = CommandStatus.FAILED;
-      execution.error = error.message;
-      execution.completedAt = new Date();
-
-      this.commandExecutions.set(executionId, execution);
-      throw error;
-    }
-  }
-
-  async getCommandExecution(executionId: string): Promise<CommandExecution> {
-    const execution = this.commandExecutions.get(executionId);
-
-    if (!execution) {
-      throw new NotFoundError('CommandExecution', executionId);
-    }
-
+    log.info(`Command execution ${executionId} completed successfully`);
     return execution;
+  } catch (error) {
+    execution.status = CommandStatus.FAILED;
+    execution.error = error.message;
+    execution.completedAt = new Date();
+    commandExecutions.set(executionId, execution);
+
+    log.error(`Command execution ${executionId} failed:`, error);
+    throw error;
+  }
+};
+
+// Get command execution details
+export const getCommandExecution = async (executionId: string): Promise<CommandExecution> => {
+  const execution = commandExecutions.get(executionId);
+
+  if (!execution) {
+    throw new NotFoundError('CommandExecution', executionId);
   }
 
-  async createShellSession(instanceId: string): Promise<NodeJS.ReadWriteStream> {
-    const instance = await this.getInstance(instanceId);
+  return execution;
+};
 
-    if (instance.status !== InstanceStatus.RUNNING) {
-      throw new Error(`Instance ${instanceId} is not running`);
-    }
-
-    await this.ensureSSHConnection(instance);
-
-    return this.sshService.createShellSession(instanceId);
+// Ensure SSH connection to instance
+const ensureSSHConnection = async (instance: Instance): Promise<void> => {
+  if (sshService.isConnected(instance.id)) {
+    return;
   }
 
-  private async ensureSSHConnection(instance: Instance): Promise<void> {
-    // Try to connect if not already connected
-    try {
-      await this.sshService.connect(instance.id, {
-        host: instance.ipAddress || instance.privateIpAddress!,
-        username: 'root',
-      });
-    } catch (error) {
-      // Connection might already exist, which is fine
-      log.debug(`SSH connection check for instance ${instance.id}:`, error.message);
-    }
+  log.info(`Establishing SSH connection to instance ${instance.id}...`);
+
+  try {
+    await sshService.connect(instance.id, {
+      host: instance.ipAddress || instance.privateIpAddress!,
+      username: 'root',
+    });
+  } catch (error) {
+    log.error(`Failed to establish SSH connection to instance ${instance.id}:`, error);
+    throw new Error(`SSH connection failed: ${error.message}`);
   }
-}
+};
+
+// Get instance statistics
+export const getInstanceStats = (): {
+  total: number;
+  running: number;
+  stopped: number;
+  failed: number;
+} => {
+  const instanceArray = Array.from(instances.values());
+
+  return {
+    total: instanceArray.length,
+    running: instanceArray.filter((i) => i.status === InstanceStatus.RUNNING).length,
+    stopped: instanceArray.filter((i) => i.status === InstanceStatus.STOPPED).length,
+    failed: instanceArray.filter((i) => i.status === InstanceStatus.FAILED).length,
+  };
+};
