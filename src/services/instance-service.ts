@@ -1,7 +1,6 @@
 import { NotFoundError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
-import * as sshService from '@/services/ssh-service';
-import type { CommandExecution, CommandStatus, CreateInstanceOptions, Instance, InstanceStatus } from '@/types/index';
+import type { CreateInstanceOptions, Instance, InstanceStatus } from '@/types/index';
 import { nanoid } from 'nanoid';
 import pino from 'pino';
 
@@ -9,12 +8,10 @@ const log = pino();
 
 // State stores
 const instances = new Map<string, Instance>();
-const commandExecutions = new Map<string, CommandExecution>();
 
 // Clear all instances (for testing)
 export const clearAllInstances = (): void => {
   instances.clear();
-  commandExecutions.clear();
 };
 
 // Create a new instance
@@ -135,9 +132,6 @@ export const stopInstance = async (instanceId: string): Promise<Instance> => {
     instance.updatedAt = new Date();
     instances.set(instanceId, instance);
 
-    // Disconnect SSH
-    sshService.disconnect(instanceId);
-
     log.info(`Instance ${instanceId} stopped successfully`);
     return instance;
   } catch (error) {
@@ -182,9 +176,6 @@ export const destroyInstance = async (instanceId: string): Promise<void> => {
     instance.updatedAt = new Date();
     instances.set(instanceId, instance);
 
-    // Disconnect SSH
-    sshService.disconnect(instanceId);
-
     // Destroy Fly machine
     await flyService.destroyMachine(instance.flyMachineId);
 
@@ -198,90 +189,6 @@ export const destroyInstance = async (instanceId: string): Promise<void> => {
     instance.updatedAt = new Date();
     instances.set(instanceId, instance);
     throw error;
-  }
-};
-
-// Execute a command on an instance
-export const executeCommand = async (
-  instanceId: string,
-  command: string,
-  options?: { timeout?: number },
-): Promise<CommandExecution> => {
-  const instance = await getInstance(instanceId);
-
-  if (instance.status !== 'running') {
-    throw new Error(`Instance ${instanceId} is not running`);
-  }
-
-  const executionId = nanoid();
-  const execution: CommandExecution = {
-    id: executionId,
-    instanceId,
-    command,
-    status: 'pending' as CommandStatus,
-    startedAt: new Date(),
-  };
-
-  commandExecutions.set(executionId, execution);
-
-  try {
-    // Ensure SSH connection
-    await ensureSSHConnection(instance);
-
-    execution.status = 'running' as CommandStatus;
-    commandExecutions.set(executionId, execution);
-
-    // Execute command
-    const result = await sshService.executeCommand(instanceId, command, options);
-
-    execution.status = 'completed' as CommandStatus;
-    execution.output = result.stdout;
-    execution.error = result.stderr;
-    execution.exitCode = result.exitCode;
-    execution.completedAt = new Date();
-
-    commandExecutions.set(executionId, execution);
-
-    log.info(`Command execution ${executionId} completed successfully`);
-    return execution;
-  } catch (error) {
-    execution.status = 'failed' as CommandStatus;
-    execution.error = error instanceof Error ? error.message : String(error);
-    execution.completedAt = new Date();
-    commandExecutions.set(executionId, execution);
-
-    log.error(`Command execution ${executionId} failed:`, error);
-    throw error;
-  }
-};
-
-// Get command execution details
-export const getCommandExecution = async (executionId: string): Promise<CommandExecution> => {
-  const execution = commandExecutions.get(executionId);
-
-  if (!execution) {
-    throw new NotFoundError('CommandExecution', executionId);
-  }
-
-  return execution;
-};
-
-// Ensure SSH connection to instance
-const ensureSSHConnection = async (instance: Instance): Promise<void> => {
-  if (sshService.isConnected(instance.id)) {
-    return;
-  }
-
-  log.info(`Establishing SSH connection to instance ${instance.id}...`);
-
-  try {
-    await sshService.connect(instance.id, {
-      host: instance.ipAddress || instance.privateIpAddress!,
-      username: 'root',
-    });
-  } catch (error) {
-    log.error(`Failed to establish SSH connection to instance ${instance.id}:`, error);
-    throw new Error(`SSH connection failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -300,4 +207,38 @@ export const getInstanceStats = (): {
     stopped: instanceArray.filter((i) => i.status === 'stopped').length,
     failed: instanceArray.filter((i) => i.status === 'failed').length,
   };
+};
+
+// Health check an instance
+export const healthCheckInstance = async (instanceId: string): Promise<boolean> => {
+  try {
+    const instance = await getInstance(instanceId);
+
+    if (!instance.flyMachineId) {
+      return false;
+    }
+
+    const flyMachine = await flyService.getMachine(instance.flyMachineId);
+    return flyMachine.state === 'started' || flyMachine.state === 'running';
+  } catch (error) {
+    log.error(`Health check failed for instance ${instanceId}:`, error);
+    return false;
+  }
+};
+
+// Restart an instance
+export const restartInstance = async (instanceId: string): Promise<Instance> => {
+  const instance = await getInstance(instanceId);
+
+  log.info(`Restarting instance ${instanceId}...`);
+
+  // Stop the instance if running
+  if (instance.status === 'running') {
+    await stopInstance(instanceId);
+    // Wait a bit for stop to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  // Start the instance
+  return startInstance(instanceId);
 };

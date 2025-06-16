@@ -90,7 +90,7 @@ interface MachineConfig {
 
 // Create machine configuration
 const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
-  const { name, region, image, size, memoryMb, metadata, sshKeyContent } = options;
+  const { name, region, image, size, memoryMb, metadata } = options;
   const cpuConfig = parseMachineSize(size || 'shared-cpu-1x');
 
   const machineConfig: MachineConfig = {
@@ -103,35 +103,12 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
         cpus: cpuConfig.cpus,
         memory_mb: memoryMb || 512,
       },
-      services: [
-        {
-          ports: [
-            {
-              port: 22,
-              handlers: ['tls'],
-            },
-          ],
-          protocol: 'tcp',
-          internal_port: 22,
-        },
-      ],
+      services: [],
       env: {
         ...metadata,
       },
     },
   };
-
-  if (sshKeyContent) {
-    machineConfig.config.env.SSH_PUBLIC_KEY = sshKeyContent;
-    // Add init script to set up SSH key
-    machineConfig.config.init = {
-      exec: [
-        'sh',
-        '-c',
-        'mkdir -p /root/.ssh && echo "$SSH_PUBLIC_KEY" > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys',
-      ],
-    };
-  }
 
   return machineConfig;
 };

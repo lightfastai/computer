@@ -105,12 +105,15 @@ try {
 
 ## Testing Requirements
 
-Run tests before committing:
+Run these commands iteratively during development to ensure no errors occur:
 ```bash
-bun test
-bun run lint
-bun run typecheck
+bun test            # Run all tests
+bun run build       # Build for production to catch compilation errors
+bun run lint        # Check code style and quality
+bun run typecheck   # Verify TypeScript types
 ```
+
+**Important**: Run `bun run build` frequently during development to catch TypeScript compilation errors early. Build errors often reveal type issues that might not be caught by the TypeScript language server.
 
 ### Test Coverage Areas
 - API endpoint integration tests
@@ -395,14 +398,18 @@ bun test --coverage
 
 # Update snapshots if needed
 bun test -u
+
+# Build to catch compilation errors
+bun run build
 ```
 
-**IMPORTANT**: Always ensure all tests pass before committing. The development cycle should be:
+**IMPORTANT**: Always ensure all tests pass and the project builds successfully before committing. The development cycle should be:
 1. Write/update tests
 2. Run `bun test --watch`
 3. Implement/fix code
-4. Ensure all tests pass
-5. Commit changes
+4. Run `bun run build` to check for compilation errors
+5. Ensure all tests pass and build succeeds
+6. Commit changes
 
 ## Important Commands
 

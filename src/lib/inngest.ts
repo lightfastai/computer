@@ -1,14 +1,14 @@
 import {
-  CommandExecuteEventSchema,
   InstanceCreateEventSchema,
   InstanceDestroyEventSchema,
-  WorkflowExecuteEventSchema,
+  InstanceHealthCheckEventSchema,
+  InstanceRestartEventSchema,
 } from '@/schemas/index';
 import { EventSchemas, Inngest } from 'inngest';
 
 // Create Inngest client
 export const inngest = new Inngest({
-  id: 'fly-workflow-orchestrator',
+  id: 'fly-machine-orchestrator',
   schemas: new EventSchemas().fromZod({
     'instance/create': {
       data: InstanceCreateEventSchema,
@@ -16,11 +16,11 @@ export const inngest = new Inngest({
     'instance/destroy': {
       data: InstanceDestroyEventSchema,
     },
-    'command/execute': {
-      data: CommandExecuteEventSchema,
+    'instance/health-check': {
+      data: InstanceHealthCheckEventSchema,
     },
-    'workflow/execute': {
-      data: WorkflowExecuteEventSchema,
+    'instance/restart': {
+      data: InstanceRestartEventSchema,
     },
   }),
 });

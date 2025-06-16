@@ -13,12 +13,6 @@ const createInstanceSchema = z.object({
   size: z.string().optional(),
   memoryMb: z.number().optional(),
   metadata: z.record(z.any()).optional(),
-  sshKeyContent: z.string().optional(),
-});
-
-const executeCommandSchema = z.object({
-  command: z.string(),
-  timeout: z.number().optional(),
 });
 
 // Create instance
@@ -55,6 +49,24 @@ instanceRoutes.post('/:id/start', async (c) => {
   return c.json(instance);
 });
 
+// Restart instance
+instanceRoutes.post('/:id/restart', async (c) => {
+  const instanceId = c.req.param('id');
+  const instance = await instanceService.restartInstance(instanceId);
+  return c.json(instance);
+});
+
+// Health check instance
+instanceRoutes.get('/:id/health', async (c) => {
+  const instanceId = c.req.param('id');
+  const healthy = await instanceService.healthCheckInstance(instanceId);
+  return c.json({
+    instanceId,
+    healthy,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Destroy instance
 instanceRoutes.delete('/:id', async (c) => {
   const instanceId = c.req.param('id');
@@ -62,19 +74,8 @@ instanceRoutes.delete('/:id', async (c) => {
   return c.json({ message: 'Instance destroyed successfully' });
 });
 
-// Execute command
-instanceRoutes.post('/:id/exec', zValidator('json', executeCommandSchema), async (c) => {
-  const instanceId = c.req.param('id');
-  const body = c.req.valid('json');
-
-  const execution = await instanceService.executeCommand(instanceId, body.command, { timeout: body.timeout });
-
-  return c.json(execution);
-});
-
-// Get command execution
-instanceRoutes.get('/executions/:executionId', async (c) => {
-  const executionId = c.req.param('executionId');
-  const execution = await instanceService.getCommandExecution(executionId);
-  return c.json(execution);
+// Get instance statistics
+instanceRoutes.get('/stats/summary', async (c) => {
+  const stats = instanceService.getInstanceStats();
+  return c.json(stats);
 });

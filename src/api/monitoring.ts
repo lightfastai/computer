@@ -35,7 +35,7 @@ monitoringRoutes.get('/inngest', (c) => {
       events: '/api/inngest',
       dashboard: process.env.NODE_ENV === 'development' ? 'http://localhost:8288' : 'https://app.inngest.com',
     },
-    functions: ['create-instance', 'destroy-instance', 'execute-workflow', 'execute-command', 'execute-long-command'],
+    functions: ['create-instance', 'destroy-instance', 'health-check-instance', 'restart-instance'],
     info: 'Inngest provides reliable background job processing with retries, monitoring, and observability.',
   });
 });

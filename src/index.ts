@@ -1,7 +1,5 @@
 import { apiRoutes } from '@/api/routes';
-import { executeCommand, executeLongCommand } from '@/inngest/command-functions';
-import { createInstance, destroyInstance } from '@/inngest/instance-functions';
-import { executeWorkflow } from '@/inngest/workflow-functions';
+import { createInstance, destroyInstance, healthCheckInstance, restartInstance } from '@/inngest/instance-functions';
 import { config } from '@/lib/config';
 import { errorHandler } from '@/lib/error-handler';
 import { inngest } from '@/lib/inngest';
@@ -53,7 +51,7 @@ app.use(
   '/api/inngest',
   serveInngest({
     client: inngest,
-    functions: [createInstance, destroyInstance, executeWorkflow, executeCommand, executeLongCommand],
+    functions: [createInstance, destroyInstance, healthCheckInstance, restartInstance],
   }),
 );
 

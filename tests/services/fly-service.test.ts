@@ -1,37 +1,54 @@
+import { type Mock, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { AppError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock fetch globally
-global.fetch = vi.fn();
+const mockFetch = mock() as Mock<typeof fetch>;
+global.fetch = mockFetch;
+
+// Helper to create proper FlyMachine mock objects
+const createMockFlyMachine = (overrides: Partial<any> = {}) => ({
+  id: 'machine-123',
+  name: 'test-machine',
+  state: 'started',
+  region: 'iad',
+  image: 'ubuntu-22.04',
+  instance_id: 'inst-123',
+  private_ip: 'fdaa:0:1234::5',
+  config: {
+    image: 'ubuntu-22.04',
+    guest: {
+      cpu_kind: 'shared',
+      cpus: 1,
+      memory_mb: 512,
+    },
+    services: [],
+    env: {},
+  },
+  created_at: '2024-01-01T00:00:00Z',
+  ...overrides,
+});
 
 describe('fly-service', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockFetch.mockClear();
   });
 
   describe('createMachine', () => {
     it('should create a machine successfully', async () => {
-      const mockMachine = {
-        id: 'machine-123',
-        name: 'test-machine',
-        state: 'started',
-        region: 'iad',
-        image: 'ubuntu-22.04',
-        private_ip: 'fdaa:0:1234::5',
-      };
+      const mockMachine = createMockFlyMachine();
 
       // Mock the createMachine call
-      (global.fetch as any).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockMachine,
-      });
+      } as Response);
 
       // Mock the waitForMachineReady calls (getMachine)
-      (global.fetch as any).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         json: async () => mockMachine,
-      });
+      } as Response);
 
       const result = await flyService.createMachine({
         name: 'test-machine',
@@ -51,11 +68,11 @@ describe('fly-service', () => {
     });
 
     it('should throw AppError when API returns error', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 422,
         text: async () => 'Invalid machine configuration',
-      });
+      } as Response);
 
       await expect(flyService.createMachine({ name: 'test' })).rejects.toThrow(AppError);
     });
@@ -63,15 +80,12 @@ describe('fly-service', () => {
 
   describe('getMachine', () => {
     it('should get a machine by id', async () => {
-      const mockMachine = {
-        id: 'machine-123',
-        state: 'started',
-      };
+      const mockMachine = createMockFlyMachine();
 
-      (global.fetch as any).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockMachine,
-      });
+      } as Response);
 
       const result = await flyService.getMachine('machine-123');
 
@@ -87,9 +101,9 @@ describe('fly-service', () => {
 
   describe('destroyMachine', () => {
     it('should destroy a machine', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
-      });
+      } as Response);
 
       await flyService.destroyMachine('machine-123');
 

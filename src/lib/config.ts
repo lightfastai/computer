@@ -13,15 +13,10 @@ const configSchema = z.object({
   flyApiToken: z.string(),
   flyOrgSlug: z.string(),
 
-  // SSH
-  sshKeyPath: z.string().default('~/.ssh/id_rsa'),
-  sshTimeout: z.coerce.number().default(30000),
-
   // Database
   databaseUrl: z.string().default('sqlite://./data.db'),
 
   // API
-  apiKey: z.string().optional(),
   rateLimitWindow: z.coerce.number().default(60000),
   rateLimitMax: z.coerce.number().default(100),
 
@@ -38,10 +33,7 @@ const env = {
   logLevel: process.env.LOG_LEVEL,
   flyApiToken: process.env.FLY_API_TOKEN,
   flyOrgSlug: process.env.FLY_ORG_SLUG,
-  sshKeyPath: process.env.SSH_KEY_PATH,
-  sshTimeout: process.env.SSH_TIMEOUT,
   databaseUrl: process.env.DATABASE_URL,
-  apiKey: process.env.API_KEY,
   rateLimitWindow: process.env.RATE_LIMIT_WINDOW,
   rateLimitMax: process.env.RATE_LIMIT_MAX,
   defaultRegion: process.env.DEFAULT_REGION,

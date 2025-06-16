@@ -28,17 +28,6 @@ export class ValidationError extends AppError {
   }
 }
 
-export class AuthenticationError extends AppError {
-  constructor(message = 'Authentication required') {
-    super(message, 401, 'AUTHENTICATION_ERROR');
-  }
-}
-
-export class AuthorizationError extends AppError {
-  constructor(message = 'Insufficient permissions') {
-    super(message, 403, 'AUTHORIZATION_ERROR');
-  }
-}
 
 export class ConflictError extends AppError {
   constructor(message: string) {
