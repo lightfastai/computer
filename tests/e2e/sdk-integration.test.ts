@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'bun:test';
-import { ok } from 'neverthrow';
-import { InMemoryStorage, setStorage } from '@/lib/storage';
+import { err, ok } from 'neverthrow';
+import { InstanceOperationError, NotFoundError } from '@/lib/error-handler';
 import type { LightfastComputerSDK } from '@/sdk';
 import createLightfastComputer from '@/sdk';
 import * as flyService from '@/services/fly-service';
@@ -8,44 +8,41 @@ import * as instanceService from '@/services/instance-service';
 
 describe('SDK E2E Integration Tests', () => {
   let sdk: LightfastComputerSDK;
-  let storage: InMemoryStorage;
 
   // Mock fly service to prevent actual API calls
   let mockCreateMachine: Mock<typeof flyService.createMachine>;
   let mockGetMachine: Mock<typeof flyService.getMachine>;
+  let mockListMachines: Mock<typeof flyService.listMachines>;
   let mockStopMachine: Mock<typeof flyService.stopMachine>;
   let mockStartMachine: Mock<typeof flyService.startMachine>;
   let mockDestroyMachine: Mock<typeof flyService.destroyMachine>;
   let mockRestartMachine: Mock<typeof flyService.restartMachine>;
 
   beforeEach(() => {
-    // Create completely fresh storage
-    storage = new InMemoryStorage();
-    setStorage(storage);
-
     // Clear any service-level state FIRST
     instanceService.clearAllInstances();
 
-    // Setup mocks after clearing state
+    // Setup mocks
     mockCreateMachine = spyOn(flyService, 'createMachine');
     mockGetMachine = spyOn(flyService, 'getMachine');
+    mockListMachines = spyOn(flyService, 'listMachines');
     mockStopMachine = spyOn(flyService, 'stopMachine');
     mockStartMachine = spyOn(flyService, 'startMachine');
     mockDestroyMachine = spyOn(flyService, 'destroyMachine');
     mockRestartMachine = spyOn(flyService, 'restartMachine');
+    
+    // Default to empty list
+    mockListMachines.mockResolvedValue(ok([]));
 
-    // Create SDK with fresh storage
-    sdk = createLightfastComputer({ storage: storage });
+    // Create SDK (no options needed for stateless)
+    sdk = createLightfastComputer();
   });
 
   afterEach(() => {
-    // Ensure cleanup after each test
-    storage.clearAllInstances();
-    instanceService.clearAllInstances();
-
     // Restore all mocks
     mockCreateMachine?.mockRestore();
     mockGetMachine?.mockRestore();
+    mockListMachines?.mockRestore();
     mockStopMachine?.mockRestore();
     mockStartMachine?.mockRestore();
     mockDestroyMachine?.mockRestore();
@@ -123,7 +120,9 @@ describe('SDK E2E Integration Tests', () => {
     });
 
     it('should handle instance not found errors gracefully', async () => {
-      // Don't mock anything - instance doesn't exist
+      // Mock 404 response
+      mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
+      
       const result = await sdk.instances.get('non-existent-id');
 
       expect(result.isErr()).toBe(true);
@@ -208,25 +207,13 @@ describe('SDK E2E Integration Tests', () => {
     });
   });
 
-  describe('Storage Configuration', () => {
-    it('should accept different storage configurations', () => {
-      // Memory storage
-      const sdk1 = createLightfastComputer({ storage: 'memory' });
+  describe('SDK Creation', () => {
+    it('should create SDK without any options', () => {
+      // Stateless SDK doesn't need storage configuration
+      const sdk1 = createLightfastComputer();
       expect(sdk1).toBeDefined();
       expect(sdk1.instances).toBeDefined();
       expect(sdk1.commands).toBeDefined();
-
-      // File storage
-      const sdk2 = createLightfastComputer({
-        storage: 'file',
-        dataDir: './test-data',
-      });
-      expect(sdk2).toBeDefined();
-
-      // Custom storage
-      const customStorage = new InMemoryStorage();
-      const sdk3 = createLightfastComputer({ storage: customStorage });
-      expect(sdk3).toBeDefined();
     });
   });
 

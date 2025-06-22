@@ -1,30 +1,29 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import * as child_process from 'node:child_process';
-import { InMemoryStorage, setStorage } from '@/lib/storage';
 import * as commandService from '@/services/command-service';
 
 describe('command-service', () => {
   beforeEach(() => {
-    // Reset to fresh in-memory storage for each test
-    setStorage(new InMemoryStorage());
+    // Clear command history (no-op in stateless SDK)
     commandService.clearAllCommandHistory();
   });
 
   describe('command history', () => {
     it('should return empty history for new instance', async () => {
+      // Stateless SDK always returns empty history
       const history = await commandService.getCommandHistory('test-instance');
       expect(history).toEqual([]);
     });
 
     it('should clear command history', async () => {
-      // For now, we just test the history management functions
-      // Actual command execution would require fly CLI to be installed
+      // Stateless SDK - clear is a no-op
       commandService.clearCommandHistory('test-instance');
       const history = await commandService.getCommandHistory('test-instance');
       expect(history.length).toBe(0);
     });
 
     it('should clear all command history', async () => {
+      // Stateless SDK - clear is a no-op
       commandService.clearAllCommandHistory();
       const history1 = await commandService.getCommandHistory('instance1');
       const history2 = await commandService.getCommandHistory('instance2');

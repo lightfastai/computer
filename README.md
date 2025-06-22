@@ -12,14 +12,14 @@ A powerful, open-source SDK for creating and managing Ubuntu instances on Fly.io
 
 ## About
 
-Lightfast Computer is a comprehensive SDK and HTTP API that transforms Fly.io into a developer-friendly compute platform. Whether you need isolated Ubuntu environments, automated testing infrastructure, or dynamic compute resources, this project provides the building blocks.
+Lightfast Computer is a stateless SDK and HTTP API that transforms Fly.io into a developer-friendly compute platform. With direct Fly.io API integration and no local state management, it provides isolated Ubuntu environments, automated testing infrastructure, and dynamic compute resources on demand.
 
 ### Why Lightfast Computer?
 
 - ⚡ **Dual Interface**: Use as SDK library or standalone HTTP service
 - 🐧 **Ubuntu Sandboxes**: Fresh, isolated instances with GitHub integration
 - 🔄 **Real-time Streaming**: Live command output via Server-Sent Events
-- 🗄️ **Pluggable Storage**: Memory, file-based, or custom storage backends
+- 🔄 **Stateless Architecture**: Direct Fly.io API integration without local storage
 - 🛡️ **Production Ready**: Robust error handling with Result types
 - 🏗️ **Developer First**: Full TypeScript support and comprehensive documentation
 - 🚀 **Fly.io Powered**: Leverage global edge compute infrastructure

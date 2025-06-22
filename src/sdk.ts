@@ -2,11 +2,11 @@ import type { Result } from 'neverthrow';
 import { err } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
-import { FileStorage, InMemoryStorage, type InstanceStorage, setStorage } from '@/lib/storage';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
+import type { CommandExecution, ExecuteCommandResult } from '@/services/command-service';
 
 export interface LightfastComputerSDK {
   instances: InstanceManager;
@@ -40,24 +40,8 @@ export interface ExecuteCommandOptions {
   onError?: (error: string) => void;
 }
 
-export interface ExecuteCommandResult {
-  output: string;
-  error: string;
-  exitCode: number | null;
-}
-
-export interface CommandExecution {
-  id: string;
-  instanceId: string;
-  command: string;
-  args: string[];
-  output: string;
-  error: string;
-  exitCode: number | null;
-  startedAt: Date;
-  completedAt?: Date;
-  status: 'running' | 'completed' | 'failed' | 'timeout';
-}
+// Re-export types from command service
+export type { CommandExecution, ExecuteCommandResult } from '@/services/command-service';
 
 const createInstanceManager = (): InstanceManager => ({
   create: async (options: CreateInstanceOptions) => {
@@ -202,33 +186,8 @@ const createCommandManager = (): CommandManager => ({
   },
 });
 
-export interface LightfastComputerOptions {
-  storage?: InstanceStorage | 'memory' | 'file';
-  dataDir?: string;
-}
-
-export const createLightfastComputer = (options: LightfastComputerOptions = {}): LightfastComputerSDK => {
-  // Configure storage
-  if (options.storage) {
-    if (typeof options.storage === 'string') {
-      switch (options.storage) {
-        case 'memory':
-          setStorage(new InMemoryStorage());
-          break;
-        case 'file': {
-          const fileStorage = new FileStorage(options.dataDir);
-          // Note: In a real implementation, you'd want to handle the async loadFromDisk
-          // For now, we'll load in the background
-          fileStorage.loadFromDisk().catch(console.error);
-          setStorage(fileStorage);
-          break;
-        }
-      }
-    } else {
-      setStorage(options.storage);
-    }
-  }
-
+// No options needed for stateless SDK
+export const createLightfastComputer = (): LightfastComputerSDK => {
   return {
     instances: createInstanceManager(),
     commands: createCommandManager(),

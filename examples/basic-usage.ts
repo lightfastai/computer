@@ -1,7 +1,7 @@
 import createLightfastComputer from '@lightfast/computer';
 
-// Initialize the SDK
-const sdk = createLightfastComputer({ storage: 'memory' });
+// Initialize the SDK (stateless - no storage needed)
+const sdk = createLightfastComputer();
 
 async function main() {
   // Create an instance

@@ -159,6 +159,7 @@ fi
 - **Bun**: Fast runtime with built-in TypeScript support and testing
 - **Fly.io Machines API**: For on-demand Ubuntu compute instances
 - **Vercel AI SDK**: For command streaming and AI integration
+- **Stateless SDK**: Direct Fly.io API integration without local storage
 
 ### Project Structure
 ```
@@ -217,9 +218,10 @@ return result.match(
 
 ### 1. Instance Management (`src/services/instance-service.ts`)
 - Create, start, stop, restart, destroy instances
-- Module-level Map for in-memory state storage
-- Sync instance status with Fly.io API
-- Health checking and statistics
+- Stateless operations - no local storage
+- Direct Fly.io API integration
+- Real-time status from Fly.io API
+- Health checking via Fly.io machine status
 
 ### 2. Fly.io Integration (`src/services/fly-service.ts`)
 - Use Machines API v2 for Ubuntu instances
@@ -230,8 +232,8 @@ return result.match(
 ### 3. Command Execution (`src/services/command-service.ts`)
 - Execute commands on instances via Fly.io exec
 - Stream output in real-time using SSE
-- Command history tracking
 - Security whitelist for allowed commands
+- No command history (stateless operation)
 
 ## Testing Requirements
 
@@ -338,8 +340,8 @@ LOG_LEVEL=info
 
 ## Performance Considerations
 
-1. In-memory state storage with Map (no database)
-2. Fly.io API calls are cached at service level
+1. Stateless architecture - no local storage
+2. Direct Fly.io API calls for all operations
 3. Instances auto-sleep when idle (Fly.io feature)
 4. Command execution is rate-limited by instance capacity
 

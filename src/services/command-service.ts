@@ -2,11 +2,22 @@ import { spawn } from 'node:child_process';
 import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
 import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
-import { type CommandExecution, getStorage } from '@/lib/storage';
 
 const log = pino();
 
-// Types - CommandExecution is now imported from storage
+// Types
+export interface CommandExecution {
+  id: string;
+  instanceId: string;
+  command: string;
+  args: string[];
+  output: string;
+  error: string;
+  exitCode: number | null;
+  startedAt: Date;
+  completedAt?: Date;
+  status: 'running' | 'completed' | 'failed' | 'timeout';
+}
 
 interface ExecuteCommandOptions {
   instanceId: string;
@@ -18,20 +29,17 @@ interface ExecuteCommandOptions {
   onError?: (error: string) => void;
 }
 
-interface ExecuteCommandResult {
+export interface ExecuteCommandResult {
   output: string;
   error: string;
   exitCode: number | null;
 }
-
-// Storage is now handled by the storage abstraction
 
 // Execute command using Fly.io exec (if available) or via SSH proxy
 export const executeCommand = async (
   options: ExecuteCommandOptions,
 ): Promise<Result<ExecuteCommandResult, InstanceOperationError | InfrastructureError>> => {
   const { instanceId, machineId, command, args, timeout, onData, onError } = options;
-  const startTime = Date.now();
 
   try {
     // For now, we'll use the Fly.io CLI as a proxy since the REST API exec endpoint
@@ -101,23 +109,7 @@ export const executeCommand = async (
       clearTimeout(timeoutHandle);
     }
 
-    // Record in history
-    const execution: CommandExecution = {
-      id: `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      instanceId,
-      command,
-      args,
-      output: result.output,
-      error: result.error,
-      exitCode: result.exitCode,
-      startedAt: new Date(startTime),
-      completedAt: new Date(),
-      status: result.exitCode === 0 ? 'completed' : 'failed',
-    };
-
-    const storage = getStorage();
-    await storage.saveCommandExecution(execution);
-
+    // Return result directly - no storage in stateless SDK
     return ok(result);
   } catch (error) {
     log.error('Failed to execute command:', {
@@ -127,23 +119,6 @@ export const executeCommand = async (
       args,
       error: error instanceof Error ? error.message : String(error),
     });
-
-    // Record failed execution in history
-    const execution: CommandExecution = {
-      id: `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      instanceId,
-      command,
-      args,
-      output: '',
-      error: error instanceof Error ? error.message : String(error),
-      exitCode: null,
-      startedAt: new Date(startTime),
-      completedAt: new Date(),
-      status: 'failed',
-    };
-
-    const storage = getStorage();
-    await storage.saveCommandExecution(execution);
 
     return err(new InstanceOperationError('execute', 'Command execution failed'));
   }
@@ -186,33 +161,18 @@ export const executeCommandViaHTTP = async (
   }
 };
 
-// Get command history for an instance
-export const getCommandHistory = async (instanceId: string): Promise<CommandExecution[]> => {
-  const storage = getStorage();
-  const historyResult = await storage.getCommandHistory(instanceId);
-
-  if (historyResult.isErr()) {
-    log.error('Failed to get command history:', historyResult.error);
-    return [];
-  }
-
-  return historyResult.value;
+// Get command history for an instance - no longer supported in stateless SDK
+export const getCommandHistory = async (_instanceId: string): Promise<CommandExecution[]> => {
+  // Stateless SDK doesn't maintain command history
+  return [];
 };
 
-// The addToHistory function is no longer needed - storage handles this
-
-// Clear command history for an instance
-export const clearCommandHistory = (instanceId: string): void => {
-  const storage = getStorage();
-  storage.clearCommandHistory(instanceId).catch((error) => {
-    log.error('Failed to clear command history:', error);
-  });
+// Clear command history for an instance - no-op in stateless SDK
+export const clearCommandHistory = (_instanceId: string): void => {
+  // No-op - stateless SDK doesn't maintain history
 };
 
-// Clear all command history (for testing)
+// Clear all command history (for testing) - no-op in stateless SDK
 export const clearAllCommandHistory = (): void => {
-  const storage = getStorage();
-  storage.clearAllCommandHistory().catch((error) => {
-    log.error('Failed to clear all command history:', error);
-  });
+  // No-op - stateless SDK doesn't maintain history
 };

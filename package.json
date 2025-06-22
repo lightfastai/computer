@@ -88,7 +88,6 @@
     "@hono/zod-validator": "^0.7.0",
     "@t3-oss/env-core": "^0.13.8",
     "hono": "^4.8.2",
-    "nanoid": "^5.1.5",
     "neverthrow": "^8.2.0",
     "pino": "^9.7.0",
     "zod": "^3.25.67"
