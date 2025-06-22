@@ -1,6 +1,6 @@
 # Lightfast Computer - Next.js Example
 
-This is a Next.js example application demonstrating how to use the **@lightfast/computer** SDK to create and manage Ubuntu instances on Fly.io.
+This is a Next.js example application demonstrating how to use the **@lightfastai/computer** SDK to create and manage Ubuntu instances on Fly.io.
 
 ## Features
 
@@ -27,7 +27,7 @@ This is a Next.js example application demonstrating how to use the **@lightfast/
 
 - Node.js 18+
 - A Fly.io account and API token
-- The parent `@lightfast/computer` package built locally
+- The parent `@lightfastai/computer` package built locally
 
 ### Installation
 
@@ -94,7 +94,7 @@ For each instance, you can:
 
 **Server-Side (API Routes)**:
 ```typescript
-import createLightfastComputer from '@lightfast/computer';
+import createLightfastComputer from '@lightfastai/computer';
 
 // Initialize the SDK (server-side only)
 const sdk = createLightfastComputer();
@@ -116,7 +116,7 @@ if (result.isOk()) {
 
 **Client-Side (React Components)**:
 ```typescript
-import type { Instance } from '@lightfast/computer';
+import type { Instance } from '@lightfastai/computer';
 
 // Use types for proper TypeScript support
 const [instances, setInstances] = useState<Instance[]>([]);
@@ -198,7 +198,7 @@ src/
 - **Lucide React** - Icon components
 
 ### SDK & Utilities
-- **@lightfast/computer** - Fly.io instance management SDK
+- **@lightfastai/computer** - Fly.io instance management SDK
 - **react-hot-toast** - Toast notifications
 - **clsx** - Conditional className utility
 

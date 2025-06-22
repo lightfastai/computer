@@ -1,4 +1,4 @@
-import createLightfastComputer from '@lightfast/computer';
+import createLightfastComputer from '@lightfastai/computer';
 import { type NextRequest, NextResponse } from 'next/server';
 
 const sdk = createLightfastComputer();
