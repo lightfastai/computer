@@ -1,5 +1,5 @@
 import type { Result } from 'neverthrow';
-import { err } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
@@ -16,13 +16,15 @@ export interface LightfastComputerSDK {
 export interface InstanceManager {
   create(options: CreateInstanceOptions): Promise<Result<Instance, AppError>>;
   get(id: string): Promise<Result<Instance, NotFoundError | AppError>>;
-  list(): Promise<Instance[]>;
+  list(): Promise<Result<Instance[], AppError>>;
   start(id: string): Promise<Result<Instance, NotFoundError | AppError>>;
   stop(id: string): Promise<Result<Instance, NotFoundError | AppError>>;
   restart(id: string): Promise<Result<Instance, NotFoundError | AppError>>;
   destroy(id: string): Promise<Result<void, NotFoundError | AppError>>;
   healthCheck(id: string): Promise<Result<boolean, NotFoundError | AppError>>;
-  getStats(): Promise<{ total: number; running: number; stopped: number; failed: number }>;
+  getStats(): Promise<Result<InstanceStats, AppError>>;
+  stopAll(): Promise<Result<Instance[], AppError>>;
+  destroyAll(): Promise<Result<void, AppError>>;
 }
 
 export interface CommandManager {
@@ -38,8 +40,27 @@ export interface ExecuteCommandOptions {
   onError?: (error: string) => void;
 }
 
+export interface InstanceStats {
+  total: number;
+  running: number;
+  stopped: number;
+  failed: number;
+}
+
 // Re-export types from command service
 export type { ExecuteCommandResult } from '@/services/command-service';
+
+// Helper function to reduce repetitive validation code
+const validateInstanceId = (id: string): Result<string, ValidationError> => {
+  try {
+    return ok(instanceIdSchema.parse(id));
+  } catch (error) {
+    if (error instanceof Error) {
+      return err(new ValidationError(error.message));
+    }
+    return err(new ValidationError('Invalid instance ID'));
+  }
+};
 
 const createInstanceManager = (): InstanceManager => ({
   create: async (options: CreateInstanceOptions) => {
@@ -58,80 +79,60 @@ const createInstanceManager = (): InstanceManager => ({
   },
 
   get: async (id: string) => {
-    try {
-      const validatedId = instanceIdSchema.parse(id);
-      return instanceService.getInstance(validatedId);
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(new ValidationError(error.message));
-      }
-      return err(new ValidationError('Invalid instance ID'));
+    const validation = validateInstanceId(id);
+    if (validation.isErr()) {
+      return err(validation.error);
     }
+    return instanceService.getInstance(validation.value);
   },
 
   list: () => instanceService.listInstances(),
 
   start: async (id: string) => {
-    try {
-      const validatedId = instanceIdSchema.parse(id);
-      return instanceService.startInstance(validatedId);
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(new ValidationError(error.message));
-      }
-      return err(new ValidationError('Invalid instance ID'));
+    const validation = validateInstanceId(id);
+    if (validation.isErr()) {
+      return err(validation.error);
     }
+    return instanceService.startInstance(validation.value);
   },
 
   stop: async (id: string) => {
-    try {
-      const validatedId = instanceIdSchema.parse(id);
-      return instanceService.stopInstance(validatedId);
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(new ValidationError(error.message));
-      }
-      return err(new ValidationError('Invalid instance ID'));
+    const validation = validateInstanceId(id);
+    if (validation.isErr()) {
+      return err(validation.error);
     }
+    return instanceService.stopInstance(validation.value);
   },
 
   restart: async (id: string) => {
-    try {
-      const validatedId = instanceIdSchema.parse(id);
-      return instanceService.restartInstance(validatedId);
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(new ValidationError(error.message));
-      }
-      return err(new ValidationError('Invalid instance ID'));
+    const validation = validateInstanceId(id);
+    if (validation.isErr()) {
+      return err(validation.error);
     }
+    return instanceService.restartInstance(validation.value);
   },
 
   destroy: async (id: string) => {
-    try {
-      const validatedId = instanceIdSchema.parse(id);
-      return instanceService.destroyInstance(validatedId);
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(new ValidationError(error.message));
-      }
-      return err(new ValidationError('Invalid instance ID'));
+    const validation = validateInstanceId(id);
+    if (validation.isErr()) {
+      return err(validation.error);
     }
+    return instanceService.destroyInstance(validation.value);
   },
 
   healthCheck: async (id: string) => {
-    try {
-      const validatedId = instanceIdSchema.parse(id);
-      return instanceService.healthCheckInstance(validatedId);
-    } catch (error) {
-      if (error instanceof Error) {
-        return err(new ValidationError(error.message));
-      }
-      return err(new ValidationError('Invalid instance ID'));
+    const validation = validateInstanceId(id);
+    if (validation.isErr()) {
+      return err(validation.error);
     }
+    return instanceService.healthCheckInstance(validation.value);
   },
 
   getStats: () => instanceService.getInstanceStats(),
+
+  stopAll: () => instanceService.stopAllInstances(),
+
+  destroyAll: () => instanceService.destroyAllInstances(),
 });
 
 const createCommandManager = (): CommandManager => ({
@@ -201,3 +202,5 @@ export type {
   CreateInstanceOptions,
   Instance,
 } from '@/types/index';
+
+// Export InstanceStats separately since it's defined in this file
