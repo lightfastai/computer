@@ -38,6 +38,7 @@ export interface ExecuteCommandResult {
 // Execute command using Fly.io exec (if available) or via SSH proxy
 export const executeCommand = async (
   options: ExecuteCommandOptions,
+  flyApiToken: string,
 ): Promise<Result<ExecuteCommandResult, InstanceOperationError | InfrastructureError>> => {
   const { instanceId, machineId, command, args, timeout, onData, onError } = options;
 
@@ -49,14 +50,16 @@ export const executeCommand = async (
     const fullCommand = [command, ...args].join(' ');
 
     // Use flyctl machine exec with proper argument format
-    const flyctl = spawn('fly', [
-      'machine',
-      'exec',
-      machineId,
-      '-a',
-      'lightfast-worker-instances',
-      `sh -c "${fullCommand}"`,
-    ]);
+    const flyctl = spawn(
+      'fly',
+      ['machine', 'exec', machineId, '-a', 'lightfast-worker-instances', `sh -c "${fullCommand}"`],
+      {
+        env: {
+          ...process.env,
+          FLY_API_TOKEN: flyApiToken,
+        },
+      },
+    );
 
     let output = '';
     let error = '';

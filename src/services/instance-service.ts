@@ -7,17 +7,23 @@ import type { CreateInstanceOptions, FlyRegion, Instance, InstanceStatus, Machin
 const log = pino();
 
 // Create instance with GitHub integration
-export const createInstanceWithGitHub = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
+export const createInstanceWithGitHub = async (
+  options: CreateInstanceOptions,
+  flyApiToken: string,
+): Promise<Result<Instance, AppError>> => {
   // Secrets are now passed directly as environment variables in fly-service.ts
   // No need to set app-level secrets anymore
-  return createInstance(options);
+  return createInstance(options, flyApiToken);
 };
 
 // Create a new instance
-export const createInstance = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
+export const createInstance = async (
+  options: CreateInstanceOptions,
+  flyApiToken: string,
+): Promise<Result<Instance, AppError>> => {
   // Create Fly.io machine directly
   log.info('Creating Fly machine...');
-  const flyMachineResult = await flyService.createMachine(options);
+  const flyMachineResult = await flyService.createMachine(options, flyApiToken);
 
   if (flyMachineResult.isErr()) {
     log.error('Failed to create machine:', flyMachineResult.error);
@@ -47,9 +53,12 @@ export const createInstance = async (options: CreateInstanceOptions): Promise<Re
 };
 
 // Get an instance by ID
-export const getInstance = async (machineId: string): Promise<Result<Instance, NotFoundError | AppError>> => {
+export const getInstance = async (
+  machineId: string,
+  flyApiToken: string,
+): Promise<Result<Instance, NotFoundError | AppError>> => {
   // Get machine from Fly.io directly
-  const flyMachineResult = await flyService.getMachine(machineId);
+  const flyMachineResult = await flyService.getMachine(machineId, flyApiToken);
 
   if (flyMachineResult.isErr()) {
     // If it's a 404, return NotFoundError
@@ -81,9 +90,9 @@ export const getInstance = async (machineId: string): Promise<Result<Instance, N
 };
 
 // List all instances
-export const listInstances = async (): Promise<Result<Instance[], AppError>> => {
+export const listInstances = async (flyApiToken: string): Promise<Result<Instance[], AppError>> => {
   // Get all machines from Fly.io
-  const flyMachinesResult = await flyService.listMachines();
+  const flyMachinesResult = await flyService.listMachines(flyApiToken);
 
   if (flyMachinesResult.isErr()) {
     log.error('Failed to list machines:', flyMachinesResult.error);
@@ -112,9 +121,12 @@ export const listInstances = async (): Promise<Result<Instance[], AppError>> => 
 };
 
 // Stop an instance
-export const stopInstance = async (machineId: string): Promise<Result<Instance, NotFoundError | AppError>> => {
+export const stopInstance = async (
+  machineId: string,
+  flyApiToken: string,
+): Promise<Result<Instance, NotFoundError | AppError>> => {
   // Get current instance state
-  const instanceResult = await getInstance(machineId);
+  const instanceResult = await getInstance(machineId, flyApiToken);
 
   if (instanceResult.isErr()) {
     return err(instanceResult.error);
@@ -126,7 +138,7 @@ export const stopInstance = async (machineId: string): Promise<Result<Instance, 
     return err(new AppError(`Instance ${machineId} is not running`));
   }
 
-  const stopResult = await flyService.stopMachine(machineId);
+  const stopResult = await flyService.stopMachine(machineId, flyApiToken);
 
   if (stopResult.isErr()) {
     log.error(`Failed to stop instance ${machineId}:`, stopResult.error);
@@ -142,9 +154,12 @@ export const stopInstance = async (machineId: string): Promise<Result<Instance, 
 };
 
 // Start an instance
-export const startInstance = async (machineId: string): Promise<Result<Instance, NotFoundError | AppError>> => {
+export const startInstance = async (
+  machineId: string,
+  flyApiToken: string,
+): Promise<Result<Instance, NotFoundError | AppError>> => {
   // Get current instance state
-  const instanceResult = await getInstance(machineId);
+  const instanceResult = await getInstance(machineId, flyApiToken);
 
   if (instanceResult.isErr()) {
     return err(instanceResult.error);
@@ -156,7 +171,7 @@ export const startInstance = async (machineId: string): Promise<Result<Instance,
     return err(new AppError(`Instance ${machineId} is not stopped`));
   }
 
-  const startResult = await flyService.startMachine(machineId);
+  const startResult = await flyService.startMachine(machineId, flyApiToken);
 
   if (startResult.isErr()) {
     log.error(`Failed to start instance ${machineId}:`, startResult.error);
@@ -172,9 +187,12 @@ export const startInstance = async (machineId: string): Promise<Result<Instance,
 };
 
 // Destroy an instance
-export const destroyInstance = async (machineId: string): Promise<Result<void, NotFoundError | AppError>> => {
+export const destroyInstance = async (
+  machineId: string,
+  flyApiToken: string,
+): Promise<Result<void, NotFoundError | AppError>> => {
   // Check if instance exists first
-  const instanceResult = await getInstance(machineId);
+  const instanceResult = await getInstance(machineId, flyApiToken);
 
   if (instanceResult.isErr()) {
     return err(instanceResult.error);
@@ -187,7 +205,7 @@ export const destroyInstance = async (machineId: string): Promise<Result<void, N
   }
 
   // Destroy Fly machine
-  const destroyResult = await flyService.destroyMachine(machineId);
+  const destroyResult = await flyService.destroyMachine(machineId, flyApiToken);
 
   if (destroyResult.isErr()) {
     return err(destroyResult.error);
@@ -198,7 +216,9 @@ export const destroyInstance = async (machineId: string): Promise<Result<void, N
 };
 
 // Get instance statistics
-export const getInstanceStats = async (): Promise<
+export const getInstanceStats = async (
+  flyApiToken: string,
+): Promise<
   Result<
     {
       total: number;
@@ -209,7 +229,7 @@ export const getInstanceStats = async (): Promise<
     AppError
   >
 > => {
-  const instancesResult = await listInstances();
+  const instancesResult = await listInstances(flyApiToken);
 
   if (instancesResult.isErr()) {
     return err(instancesResult.error);
@@ -228,8 +248,11 @@ export const getInstanceStats = async (): Promise<
 };
 
 // Health check an instance
-export const healthCheckInstance = async (machineId: string): Promise<Result<boolean, NotFoundError | AppError>> => {
-  const flyMachineResult = await flyService.getMachine(machineId);
+export const healthCheckInstance = async (
+  machineId: string,
+  flyApiToken: string,
+): Promise<Result<boolean, NotFoundError | AppError>> => {
+  const flyMachineResult = await flyService.getMachine(machineId, flyApiToken);
 
   if (flyMachineResult.isErr()) {
     // If it's a 404, return NotFoundError
@@ -245,9 +268,12 @@ export const healthCheckInstance = async (machineId: string): Promise<Result<boo
 };
 
 // Restart an instance
-export const restartInstance = async (machineId: string): Promise<Result<Instance, NotFoundError | AppError>> => {
+export const restartInstance = async (
+  machineId: string,
+  flyApiToken: string,
+): Promise<Result<Instance, NotFoundError | AppError>> => {
   // Get current instance state
-  const instanceResult = await getInstance(machineId);
+  const instanceResult = await getInstance(machineId, flyApiToken);
 
   if (instanceResult.isErr()) {
     return err(instanceResult.error);
@@ -259,7 +285,7 @@ export const restartInstance = async (machineId: string): Promise<Result<Instanc
 
   // Stop the instance if running
   if (instance.status === 'running') {
-    const stopResult = await stopInstance(machineId);
+    const stopResult = await stopInstance(machineId, flyApiToken);
     if (stopResult.isErr()) {
       return err(stopResult.error);
     }
@@ -268,12 +294,12 @@ export const restartInstance = async (machineId: string): Promise<Result<Instanc
   }
 
   // Start the instance
-  return startInstance(machineId);
+  return startInstance(machineId, flyApiToken);
 };
 
 // Stop all instances
-export const stopAllInstances = async (): Promise<Result<Instance[], AppError>> => {
-  const instancesResult = await listInstances();
+export const stopAllInstances = async (flyApiToken: string): Promise<Result<Instance[], AppError>> => {
+  const instancesResult = await listInstances(flyApiToken);
 
   if (instancesResult.isErr()) {
     return err(instancesResult.error);
@@ -288,7 +314,9 @@ export const stopAllInstances = async (): Promise<Result<Instance[], AppError>> 
 
   log.info(`Stopping ${runningInstances.length} running instances...`);
 
-  const stopResults = await Promise.allSettled(runningInstances.map((instance) => stopInstance(instance.id)));
+  const stopResults = await Promise.allSettled(
+    runningInstances.map((instance) => stopInstance(instance.id, flyApiToken)),
+  );
 
   const stoppedInstances: Instance[] = [];
 
@@ -307,8 +335,8 @@ export const stopAllInstances = async (): Promise<Result<Instance[], AppError>> 
 };
 
 // Destroy all instances
-export const destroyAllInstances = async (): Promise<Result<void, AppError>> => {
-  const instancesResult = await listInstances();
+export const destroyAllInstances = async (flyApiToken: string): Promise<Result<void, AppError>> => {
+  const instancesResult = await listInstances(flyApiToken);
 
   if (instancesResult.isErr()) {
     return err(instancesResult.error);
@@ -322,7 +350,9 @@ export const destroyAllInstances = async (): Promise<Result<void, AppError>> => 
 
   log.info(`Destroying ${instances.length} instances...`);
 
-  const destroyResults = await Promise.allSettled(instances.map((instance) => destroyInstance(instance.id)));
+  const destroyResults = await Promise.allSettled(
+    instances.map((instance) => destroyInstance(instance.id, flyApiToken)),
+  );
 
   let successCount = 0;
 
