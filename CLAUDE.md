@@ -231,6 +231,18 @@ bun run typecheck  # Verify TypeScript types
 
 ## Common Development Tasks
 
+### Package Management
+
+**IMPORTANT**: Always use `bun add <package>` to install dependencies. Never manually edit package.json.
+
+```bash
+# ✅ CORRECT: Use bun add
+bun add zod
+bun add -d @types/node
+
+# ❌ WRONG: Never edit package.json directly
+```
+
 ### Using Parallel Task Agents
 
 **When to launch multiple Task agents concurrently:**
