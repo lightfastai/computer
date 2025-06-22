@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { NotFoundError, InstanceCreationError } from '@/lib/error-handler';
+import { setStorage, InMemoryStorage } from '@/lib/storage';
 import * as flyService from '@/services/fly-service';
 import * as instanceService from '@/services/instance-service';
 import { err, ok } from 'neverthrow';
@@ -57,6 +58,9 @@ const mockDestroyMachine = spyOn(flyService, 'destroyMachine');
 
 describe('instance-service', () => {
   beforeEach(() => {
+    // Reset to fresh in-memory storage for each test
+    setStorage(new InMemoryStorage());
+    
     mockCreateMachine.mockClear();
     mockGetMachine.mockClear();
     mockStopMachine.mockClear();
@@ -259,6 +263,33 @@ describe('instance-service', () => {
         }
       }
     });
+
+    it('should destroy failed instance without flyMachineId', async () => {
+      const mockError = new InstanceCreationError('Failed to create machine');
+      mockCreateMachine.mockResolvedValue(err(mockError));
+
+      const createResult = await instanceService.createInstance({ name: 'test' });
+      expect(createResult.isErr()).toBe(true);
+
+      // Get the failed instance from the list
+      const instances = await instanceService.listInstances();
+      expect(instances).toHaveLength(1);
+      expect(instances[0].status).toBe('failed');
+      expect(instances[0].flyMachineId).toBe('');
+
+      const destroyResult = await instanceService.destroyInstance(instances[0].id);
+      expect(destroyResult.isOk()).toBe(true);
+
+      // Should not call flyService.destroyMachine since no flyMachineId
+      expect(mockDestroyMachine).not.toHaveBeenCalled();
+
+      const instanceResult = await instanceService.getInstance(instances[0].id);
+      expect(instanceResult.isOk()).toBe(true);
+
+      if (instanceResult.isOk()) {
+        expect(instanceResult.value.status).toBe('destroyed');
+      }
+    });
   });
 
   describe('healthCheckInstance', () => {
@@ -354,7 +385,7 @@ describe('instance-service', () => {
       const failResult = await instanceService.createInstance({ name: 'test-4' });
       expect(failResult.isErr()).toBe(true); // failed
 
-      const stats = instanceService.getInstanceStats();
+      const stats = await instanceService.getInstanceStats();
 
       expect(stats).toEqual({
         total: 4,

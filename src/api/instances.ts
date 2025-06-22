@@ -118,6 +118,6 @@ instanceRoutes.delete('/:id', async (c) => {
 
 // Get instance statistics
 instanceRoutes.get('/stats/summary', async (c) => {
-  const stats = instanceService.getInstanceStats();
+  const stats = await instanceService.getInstanceStats();
   return c.json(stats);
 });
