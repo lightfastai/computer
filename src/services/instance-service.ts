@@ -81,19 +81,19 @@ export const getInstance = async (machineId: string): Promise<Result<Instance, N
 };
 
 // List all instances
-export const listInstances = async (): Promise<Instance[]> => {
+export const listInstances = async (): Promise<Result<Instance[], AppError>> => {
   // Get all machines from Fly.io
   const flyMachinesResult = await flyService.listMachines();
 
   if (flyMachinesResult.isErr()) {
     log.error('Failed to list machines:', flyMachinesResult.error);
-    return [];
+    return err(flyMachinesResult.error);
   }
 
   const flyMachines = flyMachinesResult.value;
 
   // Map Fly machines to Instances
-  return flyMachines.map((flyMachine) => ({
+  const instances = flyMachines.map((flyMachine) => ({
     id: flyMachine.id,
     flyMachineId: flyMachine.id,
     name: flyMachine.name,
@@ -107,6 +107,8 @@ export const listInstances = async (): Promise<Instance[]> => {
     privateIpAddress: flyMachine.private_ip,
     metadata: {},
   }));
+
+  return ok(instances);
 };
 
 // Stop an instance
@@ -196,20 +198,28 @@ export const destroyInstance = async (machineId: string): Promise<Result<void, N
 };
 
 // Get instance statistics
-export const getInstanceStats = async (): Promise<{
+export const getInstanceStats = async (): Promise<Result<{
   total: number;
   running: number;
   stopped: number;
   failed: number;
-}> => {
-  const instances = await listInstances();
+}, AppError>> => {
+  const instancesResult = await listInstances();
 
-  return {
+  if (instancesResult.isErr()) {
+    return err(instancesResult.error);
+  }
+
+  const instances = instancesResult.value;
+
+  const stats = {
     total: instances.length,
     running: instances.filter((i) => i.status === 'running').length,
     stopped: instances.filter((i) => i.status === 'stopped').length,
     failed: instances.filter((i) => i.status === 'failed').length,
   };
+
+  return ok(stats);
 };
 
 // Health check an instance
@@ -254,6 +264,81 @@ export const restartInstance = async (machineId: string): Promise<Result<Instanc
 
   // Start the instance
   return startInstance(machineId);
+};
+
+// Stop all instances
+export const stopAllInstances = async (): Promise<Result<Instance[], AppError>> => {
+  const instancesResult = await listInstances();
+  
+  if (instancesResult.isErr()) {
+    return err(instancesResult.error);
+  }
+  
+  const instances = instancesResult.value;
+  const runningInstances = instances.filter(i => i.status === 'running');
+  
+  if (runningInstances.length === 0) {
+    return ok([]);
+  }
+  
+  log.info(`Stopping ${runningInstances.length} running instances...`);
+  
+  const stopResults = await Promise.allSettled(
+    runningInstances.map(instance => stopInstance(instance.id))
+  );
+  
+  const stoppedInstances: Instance[] = [];
+  
+  for (const [index, result] of stopResults.entries()) {
+    if (result.status === 'fulfilled' && result.value.isOk()) {
+      stoppedInstances.push(result.value.value);
+    } else {
+      const errorDetails = result.status === 'fulfilled' 
+        ? (result.value.isErr() ? result.value.error : 'Unknown error')
+        : result.reason;
+      log.error(`Failed to stop instance ${runningInstances[index].id}:`, errorDetails);
+    }
+  }
+  
+  log.info(`Successfully stopped ${stoppedInstances.length} of ${runningInstances.length} instances`);
+  return ok(stoppedInstances);
+};
+
+// Destroy all instances
+export const destroyAllInstances = async (): Promise<Result<void, AppError>> => {
+  const instancesResult = await listInstances();
+  
+  if (instancesResult.isErr()) {
+    return err(instancesResult.error);
+  }
+  
+  const instances = instancesResult.value;
+  
+  if (instances.length === 0) {
+    return ok(undefined);
+  }
+  
+  log.info(`Destroying ${instances.length} instances...`);
+  
+  const destroyResults = await Promise.allSettled(
+    instances.map(instance => destroyInstance(instance.id))
+  );
+  
+  let successCount = 0;
+  
+  for (const [index, result] of destroyResults.entries()) {
+    if (result.status === 'fulfilled' && result.value.isOk()) {
+      successCount++;
+    } else {
+      const errorDetails = result.status === 'fulfilled' 
+        ? (result.value.isErr() ? result.value.error : 'Unknown error')
+        : result.reason;
+      log.error(`Failed to destroy instance ${instances[index].id}:`, errorDetails);
+    }
+  }
+  
+  log.info(`Successfully destroyed ${successCount} of ${instances.length} instances`);
+  return ok(undefined);
 };
 
 // Helper function to map Fly machine state to InstanceStatus

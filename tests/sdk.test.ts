@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { ok } from 'neverthrow';
+import { ok, err } from 'neverthrow';
 import { ValidationError } from '@/lib/error-handler';
 import createLightfastComputer from '@/sdk';
 import * as commandService from '@/services/command-service';
@@ -16,6 +16,8 @@ const mockRestartInstance = spyOn(instanceService, 'restartInstance');
 const mockDestroyInstance = spyOn(instanceService, 'destroyInstance');
 const mockHealthCheckInstance = spyOn(instanceService, 'healthCheckInstance');
 const mockGetInstanceStats = spyOn(instanceService, 'getInstanceStats');
+const mockStopAllInstances = spyOn(instanceService, 'stopAllInstances');
+const mockDestroyAllInstances = spyOn(instanceService, 'destroyAllInstances');
 const mockExecuteCommand = spyOn(commandService, 'executeCommand');
 
 const mockInstance = {
@@ -45,6 +47,8 @@ describe('LightfastComputer SDK', () => {
     mockDestroyInstance.mockClear();
     mockHealthCheckInstance.mockClear();
     mockGetInstanceStats.mockClear();
+    mockStopAllInstances.mockClear();
+    mockDestroyAllInstances.mockClear();
     mockExecuteCommand.mockClear();
   });
 
@@ -118,12 +122,15 @@ describe('LightfastComputer SDK', () => {
 
     it('should list all instances', async () => {
       const sdk = createLightfastComputer();
-      mockListInstances.mockResolvedValue([mockInstance]);
+      mockListInstances.mockResolvedValue(ok([mockInstance]));
 
-      const instances = await sdk.instances.list();
+      const result = await sdk.instances.list();
 
-      expect(instances).toHaveLength(1);
-      expect(instances[0]).toEqual(mockInstance);
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toHaveLength(1);
+        expect(result.value[0]).toEqual(mockInstance);
+      }
       expect(mockListInstances).toHaveBeenCalled();
     });
 
@@ -183,12 +190,95 @@ describe('LightfastComputer SDK', () => {
     it('should get instance statistics', async () => {
       const sdk = createLightfastComputer();
       const stats = { total: 5, running: 3, stopped: 1, failed: 1 };
-      mockGetInstanceStats.mockResolvedValue(stats);
+      mockGetInstanceStats.mockResolvedValue(ok(stats));
 
       const result = await sdk.instances.getStats();
 
-      expect(result).toEqual(stats);
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toEqual(stats);
+      }
       expect(mockGetInstanceStats).toHaveBeenCalled();
+    });
+
+    it('should handle errors in list instances', async () => {
+      const sdk = createLightfastComputer();
+      const error = new ValidationError('Failed to list instances');
+      mockListInstances.mockResolvedValue(err(error));
+
+      const result = await sdk.instances.list();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(ValidationError);
+      }
+    });
+
+    it('should handle errors in getStats', async () => {
+      const sdk = createLightfastComputer();
+      const error = new ValidationError('Failed to get stats');
+      mockGetInstanceStats.mockResolvedValue(err(error));
+
+      const result = await sdk.instances.getStats();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(ValidationError);
+      }
+    });
+
+    it('should stop all instances successfully', async () => {
+      const sdk = createLightfastComputer();
+      const stoppedInstances = [
+        { ...mockInstance, status: 'stopped' as const },
+        { ...mockInstance, id: 'test-2', status: 'stopped' as const },
+      ];
+      mockStopAllInstances.mockResolvedValue(ok(stoppedInstances));
+
+      const result = await sdk.instances.stopAll();
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toHaveLength(2);
+        expect(result.value[0].status).toBe('stopped');
+      }
+      expect(mockStopAllInstances).toHaveBeenCalled();
+    });
+
+    it('should destroy all instances successfully', async () => {
+      const sdk = createLightfastComputer();
+      mockDestroyAllInstances.mockResolvedValue(ok(undefined));
+
+      const result = await sdk.instances.destroyAll();
+
+      expect(result.isOk()).toBe(true);
+      expect(mockDestroyAllInstances).toHaveBeenCalled();
+    });
+
+    it('should handle errors in stopAll', async () => {
+      const sdk = createLightfastComputer();
+      const error = new ValidationError('Failed to stop instances');
+      mockStopAllInstances.mockResolvedValue(err(error));
+
+      const result = await sdk.instances.stopAll();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(ValidationError);
+      }
+    });
+
+    it('should handle errors in destroyAll', async () => {
+      const sdk = createLightfastComputer();
+      const error = new ValidationError('Failed to destroy instances');
+      mockDestroyAllInstances.mockResolvedValue(err(error));
+
+      const result = await sdk.instances.destroyAll();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error).toBeInstanceOf(ValidationError);
+      }
     });
   });
 
