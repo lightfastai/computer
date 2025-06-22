@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
+import { beforeEach, describe, expect, it, spyOn, afterEach } from 'bun:test';
 import { err, ok } from 'neverthrow';
 import { InstanceCreationError, NotFoundError } from '@/lib/error-handler';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
@@ -57,16 +57,28 @@ const mockStartMachine = spyOn(flyService, 'startMachine');
 const mockDestroyMachine = spyOn(flyService, 'destroyMachine');
 
 describe('instance-service', () => {
-  beforeEach(() => {
-    // Reset to fresh in-memory storage for each test
-    setStorage(new InMemoryStorage());
+  let storage: InMemoryStorage;
 
+  beforeEach(() => {
+    // Create completely fresh storage for each test
+    storage = new InMemoryStorage();
+    setStorage(storage);
+
+    // Clear all mocks
     mockCreateMachine.mockClear();
     mockGetMachine.mockClear();
     mockStopMachine.mockClear();
     mockStartMachine.mockClear();
     mockDestroyMachine.mockClear();
+    mockRestartMachine.mockClear();
+    
+    // Clear instance service state
     instanceService.clearAllInstances();
+  });
+
+  afterEach(() => {
+    // Ensure complete cleanup
+    storage.clearAllInstances();
   });
 
   describe('createInstance', () => {

@@ -1,15 +1,28 @@
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it, afterEach } from 'bun:test';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
 import type { LightfastComputerSDK } from '@/sdk';
 import createLightfastComputer from '@/sdk';
+import * as instanceService from '@/services/instance-service';
 
 describe('SDK E2E Integration Tests', () => {
   let sdk: LightfastComputerSDK;
+  let storage: InMemoryStorage;
 
   beforeEach(() => {
-    // Use fresh storage for each test
-    setStorage(new InMemoryStorage());
-    sdk = createLightfastComputer({ storage: 'memory' });
+    // Create completely fresh storage
+    storage = new InMemoryStorage();
+    setStorage(storage);
+    
+    // Clear any service-level state
+    instanceService.clearAllInstances();
+    
+    // Create SDK with fresh storage
+    sdk = createLightfastComputer({ storage: storage });
+  });
+
+  afterEach(() => {
+    // Ensure cleanup after each test
+    storage.clearAllInstances();
   });
 
   describe('Full Instance Lifecycle', () => {
