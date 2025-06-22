@@ -23,22 +23,26 @@ describe('command-service', () => {
       // Cast to unknown first, then to the expected type to satisfy TypeScript
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ReturnType<typeof child_process.spawn>);
 
-      const result = await commandService.executeCommand({
-        instanceId: 'test-instance',
-        machineId: 'machine-123',
-        command: 'ls',
-        args: ['-la'],
-      });
+      const result = await commandService.executeCommand(
+        {
+          instanceId: 'test-instance',
+          machineId: 'machine-123',
+          command: 'ls',
+          args: ['-la'],
+        },
+        'test-fly-token-123',
+      );
 
       expect(result.isOk()).toBe(true);
-      expect(mockSpawn).toHaveBeenCalledWith('fly', [
-        'machine',
-        'exec',
-        'machine-123',
-        '-a',
-        'lightfast-worker-instances',
-        'sh -c "ls -la"',
-      ]);
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'fly',
+        ['machine', 'exec', 'machine-123', '-a', 'lightfast-worker-instances', 'sh -c "ls -la"'],
+        expect.objectContaining({
+          env: expect.objectContaining({
+            FLY_API_TOKEN: 'test-fly-token-123',
+          }),
+        }),
+      );
 
       mockSpawn.mockRestore();
     });
@@ -60,21 +64,25 @@ describe('command-service', () => {
       // Cast to unknown first, then to the expected type to satisfy TypeScript
       mockSpawn.mockReturnValue(mockChildProcess as unknown as ReturnType<typeof child_process.spawn>);
 
-      await commandService.executeCommand({
-        instanceId: 'test-instance',
-        machineId: 'machine-123',
-        command: 'pwd',
-        args: [],
-      });
+      await commandService.executeCommand(
+        {
+          instanceId: 'test-instance',
+          machineId: 'machine-123',
+          command: 'pwd',
+          args: [],
+        },
+        'test-fly-token-123',
+      );
 
-      expect(mockSpawn).toHaveBeenCalledWith('fly', [
-        'machine',
-        'exec',
-        'machine-123',
-        '-a',
-        'lightfast-worker-instances',
-        'sh -c "pwd"',
-      ]);
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'fly',
+        ['machine', 'exec', 'machine-123', '-a', 'lightfast-worker-instances', 'sh -c "pwd"'],
+        expect.objectContaining({
+          env: expect.objectContaining({
+            FLY_API_TOKEN: 'test-fly-token-123',
+          }),
+        }),
+      );
 
       mockSpawn.mockRestore();
     });
