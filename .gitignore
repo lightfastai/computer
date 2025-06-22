@@ -20,6 +20,11 @@ build
 out
 *.local
 
+# Next.js
+.next/
+.vercel
+next-env.d.ts
+
 # Turborepo
 .turbo
 
