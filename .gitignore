@@ -71,3 +71,8 @@ bun.lockb
 
 # Worktrees
 worktrees/
+
+# Claude context files
+.claude/settings.local.json
+.claude/tmp_context_*
+tmp_context/
