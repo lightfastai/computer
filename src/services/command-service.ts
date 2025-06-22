@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
 import { err, ok, type Result } from 'neverthrow';
-import pino from 'pino';
 import { type InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
+import { createLogger } from '@/lib/logger';
 
-const log = pino();
+const log = createLogger();
 
 // Types
 export interface CommandExecution {
