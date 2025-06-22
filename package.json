@@ -39,6 +39,7 @@
     "lint": "biome check src tests",
     "lint:fix": "biome check --write src tests",
     "format": "biome format --write src tests",
+    "format:check": "biome check src tests --formatter-only",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build && npm run test && npm run lint",
     "release": "npm version patch && npm publish --access public",
