@@ -36,7 +36,7 @@ describe('command-service', () => {
   describe('executeCommand', () => {
     it('should call fly exec with correct arguments', async () => {
       const mockSpawn = spyOn(child_process, 'spawn');
-      
+
       // Create a mock child process
       const mockChildProcess = {
         stdout: { on: () => {} },
@@ -49,7 +49,7 @@ describe('command-service', () => {
         },
         kill: () => {},
       };
-      
+
       mockSpawn.mockReturnValue(mockChildProcess as any);
 
       const result = await commandService.executeCommand({
@@ -74,7 +74,7 @@ describe('command-service', () => {
 
     it('should handle command with no arguments', async () => {
       const mockSpawn = spyOn(child_process, 'spawn');
-      
+
       const mockChildProcess = {
         stdout: { on: () => {} },
         stderr: { on: () => {} },
@@ -85,7 +85,7 @@ describe('command-service', () => {
         },
         kill: () => {},
       };
-      
+
       mockSpawn.mockReturnValue(mockChildProcess as any);
 
       await commandService.executeCommand({

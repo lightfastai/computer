@@ -190,12 +190,12 @@ export const executeCommandViaHTTP = async (
 export const getCommandHistory = async (instanceId: string): Promise<CommandExecution[]> => {
   const storage = getStorage();
   const historyResult = await storage.getCommandHistory(instanceId);
-  
+
   if (historyResult.isErr()) {
     log.error('Failed to get command history:', historyResult.error);
     return [];
   }
-  
+
   return historyResult.value;
 };
 
@@ -204,7 +204,7 @@ export const getCommandHistory = async (instanceId: string): Promise<CommandExec
 // Clear command history for an instance
 export const clearCommandHistory = (instanceId: string): void => {
   const storage = getStorage();
-  storage.clearCommandHistory(instanceId).catch(error => {
+  storage.clearCommandHistory(instanceId).catch((error) => {
     log.error('Failed to clear command history:', error);
   });
 };
@@ -212,7 +212,7 @@ export const clearCommandHistory = (instanceId: string): void => {
 // Clear all command history (for testing)
 export const clearAllCommandHistory = (): void => {
   const storage = getStorage();
-  storage.clearAllCommandHistory().catch(error => {
+  storage.clearAllCommandHistory().catch((error) => {
     log.error('Failed to clear all command history:', error);
   });
 };

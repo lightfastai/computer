@@ -1,26 +1,9 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { z } from 'zod';
 import * as instanceService from '@/services/instance-service';
+import { createInstanceSchema } from '@/schemas/instance';
 
 export const instanceRoutes = new Hono();
-
-// Validation schemas
-const createInstanceSchema = z.object({
-  name: z.string().optional(),
-  region: z.string().optional(),
-  image: z.string().optional(),
-  size: z.string().optional(),
-  memoryMb: z.number().optional(),
-  metadata: z.record(z.any()).optional(),
-  secrets: z
-    .object({
-      githubToken: z.string().optional(),
-      githubUsername: z.string().optional(),
-    })
-    .optional(),
-  repoUrl: z.string().optional(),
-});
 
 // Create instance
 instanceRoutes.post('/', zValidator('json', createInstanceSchema), async (c) => {

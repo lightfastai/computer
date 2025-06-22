@@ -21,7 +21,7 @@ type MockFlyMachine = {
       cpus: number;
       memory_mb: number;
     };
-    services: Array<any>;
+    services: Array<{ id: string; ports: number[]; protocol: string; internal_port: number }>;
     env: Record<string, string>;
   };
   created_at?: string;
@@ -60,7 +60,7 @@ describe('instance-service', () => {
   beforeEach(() => {
     // Reset to fresh in-memory storage for each test
     setStorage(new InMemoryStorage());
-    
+
     mockCreateMachine.mockClear();
     mockGetMachine.mockClear();
     mockStopMachine.mockClear();

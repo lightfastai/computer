@@ -60,7 +60,13 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.create({ name: 'test' });
 
       expect(result.isOk()).toBe(true);
-      expect(mockCreateInstance).toHaveBeenCalledWith({ name: 'test' });
+      expect(mockCreateInstance).toHaveBeenCalledWith({
+        name: 'test',
+        region: 'iad',
+        image: 'ubuntu-22.04',
+        size: 'shared-cpu-1x',
+        memoryMb: 512,
+      });
       expect(mockCreateInstanceWithGitHub).not.toHaveBeenCalled();
     });
 
@@ -70,13 +76,23 @@ describe('LightfastComputer SDK', () => {
 
       const result = await sdk.instances.create({
         name: 'test',
-        secrets: { githubToken: 'token123' },
+        secrets: {
+          githubToken: 'ghp_1234567890abcdef1234567890abcdef12345',
+          githubUsername: 'testuser',
+        },
       });
 
       expect(result.isOk()).toBe(true);
       expect(mockCreateInstanceWithGitHub).toHaveBeenCalledWith({
         name: 'test',
-        secrets: { githubToken: 'token123' },
+        region: 'iad',
+        image: 'ubuntu-22.04',
+        size: 'shared-cpu-1x',
+        memoryMb: 512,
+        secrets: {
+          githubToken: 'ghp_1234567890abcdef1234567890abcdef12345',
+          githubUsername: 'testuser',
+        },
       });
       expect(mockCreateInstance).not.toHaveBeenCalled();
     });
@@ -184,11 +200,13 @@ describe('LightfastComputer SDK', () => {
     it('should execute command successfully', async () => {
       const sdk = createLightfastComputer();
       mockGetInstance.mockResolvedValue(ok(mockInstance));
-      mockExecuteCommand.mockResolvedValue(ok({
-        output: 'file1.txt\nfile2.txt',
-        error: '',
-        exitCode: 0,
-      }));
+      mockExecuteCommand.mockResolvedValue(
+        ok({
+          output: 'file1.txt\nfile2.txt',
+          error: '',
+          exitCode: 0,
+        }),
+      );
 
       const result = await sdk.commands.execute({
         instanceId: 'test-id',
@@ -203,7 +221,7 @@ describe('LightfastComputer SDK', () => {
         machineId: 'fly-123',
         command: 'ls',
         args: ['-la'],
-        timeout: undefined,
+        timeout: 30000,
         onData: undefined,
         onError: undefined,
       });

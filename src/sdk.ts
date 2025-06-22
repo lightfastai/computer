@@ -3,6 +3,7 @@ import { err } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
 import { setStorage, InMemoryStorage, FileStorage, type InstanceStorage } from '@/lib/storage';
+import { createInstanceSchema, instanceIdSchema, executeCommandSchema } from '@/schemas';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
@@ -59,55 +60,93 @@ export interface CommandExecution {
 }
 
 const createInstanceManager = (): InstanceManager => ({
-  create: (options: CreateInstanceOptions) => {
-    if (options.secrets?.githubToken) {
-      return instanceService.createInstanceWithGitHub(options);
+  create: async (options: CreateInstanceOptions) => {
+    try {
+      const validated = createInstanceSchema.parse(options);
+      if (validated.secrets?.githubToken) {
+        return instanceService.createInstanceWithGitHub(validated);
+      }
+      return instanceService.createInstance(validated);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance configuration'));
     }
-    return instanceService.createInstance(options);
   },
 
-  get: (id: string) => {
-    if (!id) {
-      return Promise.resolve(err(new ValidationError('Instance ID is required')));
+  get: async (id: string) => {
+    try {
+      const validatedId = instanceIdSchema.parse(id);
+      return instanceService.getInstance(validatedId);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance ID'));
     }
-    return instanceService.getInstance(id);
   },
 
   list: () => instanceService.listInstances(),
 
-  start: (id: string) => {
-    if (!id) {
-      return Promise.resolve(err(new ValidationError('Instance ID is required')));
+  start: async (id: string) => {
+    try {
+      const validatedId = instanceIdSchema.parse(id);
+      return instanceService.startInstance(validatedId);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance ID'));
     }
-    return instanceService.startInstance(id);
   },
 
-  stop: (id: string) => {
-    if (!id) {
-      return Promise.resolve(err(new ValidationError('Instance ID is required')));
+  stop: async (id: string) => {
+    try {
+      const validatedId = instanceIdSchema.parse(id);
+      return instanceService.stopInstance(validatedId);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance ID'));
     }
-    return instanceService.stopInstance(id);
   },
 
-  restart: (id: string) => {
-    if (!id) {
-      return Promise.resolve(err(new ValidationError('Instance ID is required')));
+  restart: async (id: string) => {
+    try {
+      const validatedId = instanceIdSchema.parse(id);
+      return instanceService.restartInstance(validatedId);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance ID'));
     }
-    return instanceService.restartInstance(id);
   },
 
-  destroy: (id: string) => {
-    if (!id) {
-      return Promise.resolve(err(new ValidationError('Instance ID is required')));
+  destroy: async (id: string) => {
+    try {
+      const validatedId = instanceIdSchema.parse(id);
+      return instanceService.destroyInstance(validatedId);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance ID'));
     }
-    return instanceService.destroyInstance(id);
   },
 
-  healthCheck: (id: string) => {
-    if (!id) {
-      return Promise.resolve(err(new ValidationError('Instance ID is required')));
+  healthCheck: async (id: string) => {
+    try {
+      const validatedId = instanceIdSchema.parse(id);
+      return instanceService.healthCheckInstance(validatedId);
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid instance ID'));
     }
-    return instanceService.healthCheckInstance(id);
   },
 
   getStats: () => instanceService.getInstanceStats(),
@@ -115,47 +154,43 @@ const createInstanceManager = (): InstanceManager => ({
 
 const createCommandManager = (): CommandManager => ({
   execute: async (options: ExecuteCommandOptions) => {
-    const { instanceId, command, args = [], timeout, onData, onError } = options;
+    try {
+      // Validate command options first
+      const validated = executeCommandSchema.parse(options);
 
-    if (!instanceId) {
-      return err(new ValidationError('Instance ID is required'));
+      // Validate instance ID separately
+      const validatedInstanceId = instanceIdSchema.parse(options.instanceId);
+
+      // Check instance exists and get machine ID
+      const instanceResult = await instanceService.getInstance(validatedInstanceId);
+      if (instanceResult.isErr()) {
+        return err(instanceResult.error);
+      }
+
+      const instance = instanceResult.value;
+      if (instance.status !== 'running') {
+        return err(new ValidationError(`Instance ${validatedInstanceId} is not running`));
+      }
+
+      if (!instance.flyMachineId) {
+        return err(new ValidationError(`Instance ${validatedInstanceId} has no machine ID`));
+      }
+
+      return commandService.executeCommand({
+        instanceId: validatedInstanceId,
+        machineId: instance.flyMachineId,
+        command: validated.command,
+        args: validated.args,
+        timeout: validated.timeout,
+        onData: options.onData,
+        onError: options.onError,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return err(new ValidationError(error.message));
+      }
+      return err(new ValidationError('Invalid command configuration'));
     }
-
-    if (!command) {
-      return err(new ValidationError('Command is required'));
-    }
-
-    // Validate instance exists and get machine ID
-    const instanceResult = await instanceService.getInstance(instanceId);
-    if (instanceResult.isErr()) {
-      return err(instanceResult.error);
-    }
-
-    const instance = instanceResult.value;
-    if (instance.status !== 'running') {
-      return err(new ValidationError(`Instance ${instanceId} is not running`));
-    }
-
-    if (!instance.flyMachineId) {
-      return err(new ValidationError(`Instance ${instanceId} has no machine ID`));
-    }
-
-    // Security check - basic command validation
-    const allowedCommands = ['ls', 'grep', 'find', 'cat', 'echo', 'pwd', 'env', 'ps', 'df', 'du', 'git'];
-    const baseCommand = command.split(' ')[0];
-    if (!allowedCommands.includes(baseCommand)) {
-      return err(new ValidationError(`Command '${baseCommand}' is not allowed`));
-    }
-
-    return commandService.executeCommand({
-      instanceId,
-      machineId: instance.flyMachineId,
-      command,
-      args,
-      timeout,
-      onData,
-      onError,
-    });
   },
 
   getHistory: (instanceId: string) => {
@@ -180,13 +215,14 @@ export const createLightfastComputer = (options: LightfastComputerOptions = {}):
         case 'memory':
           setStorage(new InMemoryStorage());
           break;
-        case 'file':
+        case 'file': {
           const fileStorage = new FileStorage(options.dataDir);
           // Note: In a real implementation, you'd want to handle the async loadFromDisk
           // For now, we'll load in the background
           fileStorage.loadFromDisk().catch(console.error);
           setStorage(fileStorage);
           break;
+        }
       }
     } else {
       setStorage(options.storage);

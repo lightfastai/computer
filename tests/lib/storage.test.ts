@@ -67,8 +67,8 @@ describe('InMemoryStorage', () => {
 
       if (listResult.isOk()) {
         expect(listResult.value).toHaveLength(2);
-        expect(listResult.value.map(i => i.id)).toContain('test-instance-id');
-        expect(listResult.value.map(i => i.id)).toContain('test-2');
+        expect(listResult.value.map((i) => i.id)).toContain('test-instance-id');
+        expect(listResult.value.map((i) => i.id)).toContain('test-2');
       }
     });
 

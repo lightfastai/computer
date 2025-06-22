@@ -25,7 +25,7 @@ export interface InstanceStorage {
   deleteInstance(id: string): Promise<Result<void, AppError>>;
   updateInstanceStatus(id: string, status: Instance['status']): Promise<Result<void, AppError>>;
 
-  // Command operations  
+  // Command operations
   saveCommandExecution(execution: CommandExecution): Promise<Result<void, AppError>>;
   getCommandHistory(instanceId: string): Promise<Result<CommandExecution[], AppError>>;
   clearCommandHistory(instanceId: string): Promise<Result<void, AppError>>;
@@ -59,8 +59,8 @@ export class InMemoryStorage implements InstanceStorage {
 
   async listInstances(): Promise<Result<Instance[], AppError>> {
     try {
-      const instances = Array.from(this.instances.values()).map(instance => ({ ...instance }));
-      
+      const instances = Array.from(this.instances.values()).map((instance) => ({ ...instance }));
+
       // Filter out destroyed instances older than 1 hour
       const activeInstances = instances.filter((instance) => {
         if (instance.status === 'destroyed') {
@@ -120,7 +120,7 @@ export class InMemoryStorage implements InstanceStorage {
   async getCommandHistory(instanceId: string): Promise<Result<CommandExecution[], AppError>> {
     try {
       const history = this.commandHistory.get(instanceId) || [];
-      return ok(history.map(cmd => ({ ...cmd })));
+      return ok(history.map((cmd) => ({ ...cmd })));
     } catch (error) {
       return err(new InfrastructureError('Failed to get command history'));
     }
@@ -315,7 +315,7 @@ export class FileStorage implements InstanceStorage {
       // This is a simplified approach - in a real implementation,
       // we'd want to be more efficient about this
       const commandsMap: Record<string, CommandExecution[]> = {};
-      
+
       const instancesResult = await this.memoryStorage.listInstances();
       if (instancesResult.isOk()) {
         for (const instance of instancesResult.value) {
