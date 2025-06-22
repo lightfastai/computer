@@ -1,10 +1,10 @@
-import { NotFoundError, ValidationError } from '@/lib/error-handler';
-import * as commandService from '@/services/command-service';
-import * as instanceService from '@/services/instance-service';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { z } from 'zod';
+import { ValidationError } from '@/lib/error-handler';
+import * as commandService from '@/services/command-service';
+import * as instanceService from '@/services/instance-service';
 
 export const commandRoutes = new Hono();
 
@@ -104,7 +104,7 @@ commandRoutes.post('/:instanceId/exec', zValidator('json', executeCommandSchema)
         encoder.encode(
           `data: ${JSON.stringify({
             type: 'error',
-            message: result.error.userMessage,
+            message: result.error.message,
           })}\n\n`,
         ),
       );

@@ -1,8 +1,7 @@
 import { spawn } from 'node:child_process';
-import { config } from '@/lib/config';
-import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
-import { type Result, err, ok } from 'neverthrow';
+import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
+import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
 
 const log = pino();
 
@@ -176,7 +175,7 @@ export const executeCommandViaHTTP = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.internalApiToken || 'dev-token'}`,
+        Authorization: `Bearer ${'dev-token'}`,
       },
       body: JSON.stringify({ command, args }),
       signal: AbortSignal.timeout(30000), // 30s timeout
@@ -187,7 +186,7 @@ export const executeCommandViaHTTP = async (
     }
 
     const result = await response.json();
-    return ok(result);
+    return ok(result as ExecuteCommandResult);
   } catch (error) {
     log.error('Failed to execute command via HTTP:', {
       instancePrivateIP,

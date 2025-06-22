@@ -1,12 +1,12 @@
-import { apiRoutes } from '@/api/routes';
-import { config } from '@/lib/config';
-import { errorHandler } from '@/lib/error-handler';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import pino from 'pino';
+import { apiRoutes } from '@/api/routes';
+import { config } from '@/lib/config';
+import { errorHandler } from '@/lib/error-handler';
 
 const log = pino({
   level: config.logLevel,

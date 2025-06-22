@@ -1,9 +1,9 @@
+import { nanoid } from 'nanoid';
+import { err, ok, type Result } from 'neverthrow';
+import pino from 'pino';
 import { AppError, NotFoundError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
 import type { CreateInstanceOptions, Instance, InstanceStatus } from '@/types/index';
-import { nanoid } from 'nanoid';
-import { type Result, err, ok } from 'neverthrow';
-import pino from 'pino';
 
 const log = pino();
 

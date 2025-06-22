@@ -1,8 +1,8 @@
+import { err, ok, type Result } from 'neverthrow';
+import pino from 'pino';
 import { config } from '@/lib/config';
 import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
 import type { CreateInstanceOptions } from '@/types/index';
-import { type Result, err, ok } from 'neverthrow';
-import pino from 'pino';
 
 const log = pino();
 
@@ -187,7 +187,7 @@ export const createMachine = async (
       return err(new InstanceCreationError());
     }
 
-    const machine = await response.json();
+    const machine = (await response.json()) as FlyMachine;
     log.info(`Created Fly machine: ${machine.id}`);
 
     // Wait for machine to be ready
@@ -240,7 +240,7 @@ export const getMachine = async (
       return err(new InstanceOperationError('retrieve'));
     }
 
-    const machine = await response.json();
+    const machine = (await response.json()) as FlyMachine;
     return ok(machine);
   } catch (error) {
     // Log technical error with full details
@@ -279,7 +279,7 @@ export const listMachines = async (): Promise<Result<FlyMachine[], InstanceOpera
       return err(new InstanceOperationError('list'));
     }
 
-    const machines = await response.json();
+    const machines = (await response.json()) as FlyMachine[];
     return ok(machines);
   } catch (error) {
     // Log technical error with full details

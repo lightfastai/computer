@@ -1,7 +1,7 @@
+import { Hono } from 'hono';
 import { commandRoutes } from '@/api/command-execution';
 import { instanceRoutes } from '@/api/instances';
 import { monitoringRoutes } from '@/api/monitoring';
-import { Hono } from 'hono';
 
 export const apiRoutes = new Hono();
 
