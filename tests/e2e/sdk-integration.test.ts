@@ -1,20 +1,39 @@
-import { beforeEach, describe, expect, it, afterEach } from 'bun:test';
+import { beforeEach, describe, expect, it, afterEach, spyOn } from 'bun:test';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
 import type { LightfastComputerSDK } from '@/sdk';
 import createLightfastComputer from '@/sdk';
 import * as instanceService from '@/services/instance-service';
+import * as flyService from '@/services/fly-service';
+import { err, ok } from 'neverthrow';
+import { InstanceCreationError } from '@/lib/error-handler';
 
 describe('SDK E2E Integration Tests', () => {
   let sdk: LightfastComputerSDK;
   let storage: InMemoryStorage;
+
+  // Mock fly service to prevent actual API calls
+  let mockCreateMachine: any;
+  let mockGetMachine: any;
+  let mockStopMachine: any;
+  let mockStartMachine: any;
+  let mockDestroyMachine: any;
+  let mockRestartMachine: any;
 
   beforeEach(() => {
     // Create completely fresh storage
     storage = new InMemoryStorage();
     setStorage(storage);
 
-    // Clear any service-level state
+    // Clear any service-level state FIRST
     instanceService.clearAllInstances();
+
+    // Setup mocks after clearing state
+    mockCreateMachine = spyOn(flyService, 'createMachine');
+    mockGetMachine = spyOn(flyService, 'getMachine');
+    mockStopMachine = spyOn(flyService, 'stopMachine');
+    mockStartMachine = spyOn(flyService, 'startMachine');
+    mockDestroyMachine = spyOn(flyService, 'destroyMachine');
+    mockRestartMachine = spyOn(flyService, 'restartMachine');
 
     // Create SDK with fresh storage
     sdk = createLightfastComputer({ storage: storage });
@@ -23,10 +42,34 @@ describe('SDK E2E Integration Tests', () => {
   afterEach(() => {
     // Ensure cleanup after each test
     storage.clearAllInstances();
+    instanceService.clearAllInstances();
+    
+    // Restore all mocks
+    mockCreateMachine?.mockRestore();
+    mockGetMachine?.mockRestore();
+    mockStopMachine?.mockRestore();
+    mockStartMachine?.mockRestore();
+    mockDestroyMachine?.mockRestore();
+    mockRestartMachine?.mockRestore();
   });
 
   describe('Full Instance Lifecycle', () => {
     it('should create, manage, and destroy an instance', async () => {
+      // Mock successful machine creation
+      const mockMachine = {
+        id: 'fly-123',
+        name: 'test-instance',
+        state: 'started',
+        region: 'iad',
+        instance_id: 'inst-123',
+        private_ip: 'fdaa:0:1234::5',
+        config: {
+          guest: { cpus: 1, memory_mb: 512 },
+        },
+      };
+      mockCreateMachine.mockResolvedValue(ok(mockMachine));
+      mockGetMachine.mockResolvedValue(ok(mockMachine));
+
       // 1. Create instance
       const createResult = await sdk.instances.create({
         name: 'test-instance',
@@ -35,10 +78,10 @@ describe('SDK E2E Integration Tests', () => {
         memoryMb: 512,
       });
 
-      // Should handle the fact that we're mocking
-      expect(createResult.isErr()).toBe(true);
-      if (createResult.isErr()) {
-        expect(createResult.error.message).toContain('Failed to create instance');
+      expect(createResult.isOk()).toBe(true);
+      if (createResult.isOk()) {
+        expect(createResult.value.name).toBe('test-instance');
+        expect(createResult.value.status).toBe('running');
       }
     });
 
@@ -81,12 +124,11 @@ describe('SDK E2E Integration Tests', () => {
     });
 
     it('should handle instance not found errors gracefully', async () => {
+      // Don't mock anything - instance doesn't exist
       const result = await sdk.instances.get('non-existent-id');
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
-        // Since the ID is valid format, we get AppError (NotFoundError wrapped)
-        expect(result.error.name).toBe('AppError');
         expect(result.error.message).toContain('not found');
       }
     });

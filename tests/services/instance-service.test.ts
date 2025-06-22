@@ -49,37 +49,45 @@ const createMockFlyMachine = (overrides: MockFlyMachine = {}) => ({
   ...overrides,
 });
 
-// Mock dependencies
-const mockCreateMachine = spyOn(flyService, 'createMachine');
-const mockGetMachine = spyOn(flyService, 'getMachine');
-const mockStopMachine = spyOn(flyService, 'stopMachine');
-const mockStartMachine = spyOn(flyService, 'startMachine');
-const mockDestroyMachine = spyOn(flyService, 'destroyMachine');
-const mockRestartMachine = spyOn(flyService, 'restartMachine');
-
 describe('instance-service', () => {
   let storage: InMemoryStorage;
+  
+  // Mock dependencies - declare inside describe for better isolation
+  let mockCreateMachine: any;
+  let mockGetMachine: any;
+  let mockStopMachine: any;
+  let mockStartMachine: any;
+  let mockDestroyMachine: any;
+  let mockRestartMachine: any;
 
   beforeEach(() => {
     // Create completely fresh storage for each test
     storage = new InMemoryStorage();
     setStorage(storage);
 
-    // Clear all mocks
-    mockCreateMachine.mockClear();
-    mockGetMachine.mockClear();
-    mockStopMachine.mockClear();
-    mockStartMachine.mockClear();
-    mockDestroyMachine.mockClear();
-    mockRestartMachine.mockClear();
-
-    // Clear instance service state
+    // Clear instance service state FIRST
     instanceService.clearAllInstances();
+
+    // Setup mocks after clearing state
+    mockCreateMachine = spyOn(flyService, 'createMachine');
+    mockGetMachine = spyOn(flyService, 'getMachine');
+    mockStopMachine = spyOn(flyService, 'stopMachine');
+    mockStartMachine = spyOn(flyService, 'startMachine');
+    mockDestroyMachine = spyOn(flyService, 'destroyMachine');
+    mockRestartMachine = spyOn(flyService, 'restartMachine');
   });
 
   afterEach(() => {
     // Ensure complete cleanup
     storage.clearAllInstances();
+    
+    // Restore all mocks
+    mockCreateMachine?.mockRestore();
+    mockGetMachine?.mockRestore();
+    mockStopMachine?.mockRestore();
+    mockStartMachine?.mockRestore();
+    mockDestroyMachine?.mockRestore();
+    mockRestartMachine?.mockRestore();
   });
 
   describe('createInstance', () => {

@@ -1,11 +1,17 @@
-import { beforeEach } from 'bun:test';
+import { beforeEach, afterEach } from 'bun:test';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
+import * as instanceService from '@/services/instance-service';
+import * as commandService from '@/services/command-service';
 
-// Global test setup to ensure clean state between tests
+// Global test setup to ensure clean state between ALL tests
 beforeEach(() => {
   // Reset to fresh in-memory storage for each test
   const freshStorage = new InMemoryStorage();
   setStorage(freshStorage);
+
+  // Clear service-level state
+  instanceService.clearAllInstances();
+  commandService.clearAllCommandHistory();
 
   // Clear any module-level state that might exist
   if (typeof global !== 'undefined') {
@@ -13,6 +19,12 @@ beforeEach(() => {
     (global as any).__testInstances = new Map();
     (global as any).__testCommands = new Map();
   }
+});
+
+afterEach(() => {
+  // Extra cleanup after each test
+  instanceService.clearAllInstances();
+  commandService.clearAllCommandHistory();
 });
 
 // Export a helper to get fresh storage for tests
