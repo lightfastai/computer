@@ -68,3 +68,6 @@ fly.toml.backup
 
 # Bun
 bun.lockb
+
+# Worktrees
+worktrees/
