@@ -65,6 +65,8 @@ jobs:
         run: bun test
         env:
           CI: true
+          FLY_API_TOKEN: test-token
+          FLY_ORG_SLUG: test-org
 
   build:
     name: Build
