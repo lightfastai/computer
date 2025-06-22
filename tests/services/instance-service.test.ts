@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, spyOn, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { err, ok } from 'neverthrow';
 import { InstanceCreationError, NotFoundError } from '@/lib/error-handler';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
@@ -51,13 +51,19 @@ const createMockFlyMachine = (overrides: MockFlyMachine = {}) => ({
 
 describe('instance-service', () => {
   let storage: InMemoryStorage;
-  
+
   // Mock dependencies - declare inside describe for better isolation
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockCreateMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockGetMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockStopMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockStartMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockDestroyMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockRestartMachine: any;
 
   beforeEach(() => {
@@ -80,7 +86,7 @@ describe('instance-service', () => {
   afterEach(() => {
     // Ensure complete cleanup
     storage.clearAllInstances();
-    
+
     // Restore all mocks
     mockCreateMachine?.mockRestore();
     mockGetMachine?.mockRestore();

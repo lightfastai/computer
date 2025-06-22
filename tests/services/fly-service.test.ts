@@ -26,6 +26,7 @@ type MockFlyMachine = {
       cpus: number;
       memory_mb: number;
     };
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock type
     services: Array<any>;
     env: Record<string, string>;
   };

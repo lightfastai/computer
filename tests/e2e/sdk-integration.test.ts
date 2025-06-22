@@ -1,22 +1,27 @@
-import { beforeEach, describe, expect, it, afterEach, spyOn } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
+import { ok } from 'neverthrow';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
 import type { LightfastComputerSDK } from '@/sdk';
 import createLightfastComputer from '@/sdk';
-import * as instanceService from '@/services/instance-service';
 import * as flyService from '@/services/fly-service';
-import { err, ok } from 'neverthrow';
-import { InstanceCreationError } from '@/lib/error-handler';
+import * as instanceService from '@/services/instance-service';
 
 describe('SDK E2E Integration Tests', () => {
   let sdk: LightfastComputerSDK;
   let storage: InMemoryStorage;
 
   // Mock fly service to prevent actual API calls
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockCreateMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockGetMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockStopMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockStartMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockDestroyMachine: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
   let mockRestartMachine: any;
 
   beforeEach(() => {
@@ -43,7 +48,7 @@ describe('SDK E2E Integration Tests', () => {
     // Ensure cleanup after each test
     storage.clearAllInstances();
     instanceService.clearAllInstances();
-    
+
     // Restore all mocks
     mockCreateMachine?.mockRestore();
     mockGetMachine?.mockRestore();
@@ -100,6 +105,7 @@ describe('SDK E2E Integration Tests', () => {
       // Test with invalid region
       const result2 = await sdk.instances.create({
         name: 'test',
+        // biome-ignore lint/suspicious/noExplicitAny: Testing invalid input
         region: 'invalid-region-123' as any,
       });
 

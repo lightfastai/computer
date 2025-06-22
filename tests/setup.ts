@@ -1,7 +1,7 @@
-import { beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach } from 'bun:test';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
-import * as instanceService from '@/services/instance-service';
 import * as commandService from '@/services/command-service';
+import * as instanceService from '@/services/instance-service';
 
 // Global test setup to ensure clean state between ALL tests
 beforeEach(() => {
@@ -16,7 +16,9 @@ beforeEach(() => {
   // Clear any module-level state that might exist
   if (typeof global !== 'undefined') {
     // Reset any global test state
+    // biome-ignore lint/suspicious/noExplicitAny: Global test state
     (global as any).__testInstances = new Map();
+    // biome-ignore lint/suspicious/noExplicitAny: Global test state
     (global as any).__testCommands = new Map();
   }
 });

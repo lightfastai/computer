@@ -12,6 +12,7 @@ const log = pino();
 export const clearAllInstances = (): void => {
   const storage = getStorage();
   if ('clearAllInstances' in storage) {
+    // biome-ignore lint/suspicious/noExplicitAny: Test helper method
     (storage as any).clearAllInstances();
   }
 };
