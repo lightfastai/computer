@@ -1,4 +1,4 @@
-import { type Mock, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { beforeEach, describe, expect, it, type Mock, mock } from 'bun:test';
 import { InstanceCreationError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
 

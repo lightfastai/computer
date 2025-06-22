@@ -1,5 +1,5 @@
 import type { Result } from 'neverthrow';
-import { ok, err } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import type { AppError } from '@/lib/error-handler';
 import { InfrastructureError } from '@/lib/error-handler';
 import type { Instance } from '@/types/index';
@@ -43,7 +43,7 @@ export class InMemoryStorage implements InstanceStorage {
     try {
       this.instances.set(instance.id, { ...instance });
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to save instance'));
     }
   }
@@ -52,7 +52,7 @@ export class InMemoryStorage implements InstanceStorage {
     try {
       const instance = this.instances.get(id);
       return ok(instance ? { ...instance } : null);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to get instance'));
     }
   }
@@ -71,7 +71,7 @@ export class InMemoryStorage implements InstanceStorage {
       });
 
       return ok(activeInstances);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to list instances'));
     }
   }
@@ -81,7 +81,7 @@ export class InMemoryStorage implements InstanceStorage {
       this.instances.delete(id);
       this.commandHistory.delete(id);
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to delete instance'));
     }
   }
@@ -95,7 +95,7 @@ export class InMemoryStorage implements InstanceStorage {
         this.instances.set(id, instance);
       }
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to update instance status'));
     }
   }
@@ -112,7 +112,7 @@ export class InMemoryStorage implements InstanceStorage {
 
       this.commandHistory.set(execution.instanceId, history);
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to save command execution'));
     }
   }
@@ -121,7 +121,7 @@ export class InMemoryStorage implements InstanceStorage {
     try {
       const history = this.commandHistory.get(instanceId) || [];
       return ok(history.map((cmd) => ({ ...cmd })));
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to get command history'));
     }
   }
@@ -130,7 +130,7 @@ export class InMemoryStorage implements InstanceStorage {
     try {
       this.commandHistory.delete(instanceId);
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to clear command history'));
     }
   }
@@ -139,7 +139,7 @@ export class InMemoryStorage implements InstanceStorage {
     try {
       this.commandHistory.clear();
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to clear all command history'));
     }
   }
@@ -162,7 +162,7 @@ export class InMemoryStorage implements InstanceStorage {
       }
 
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to cleanup storage'));
     }
   }
@@ -294,7 +294,7 @@ export class FileStorage implements InstanceStorage {
       }
 
       return ok(undefined);
-    } catch (error) {
+    } catch (_error) {
       return err(new InfrastructureError('Failed to load data from disk'));
     }
   }

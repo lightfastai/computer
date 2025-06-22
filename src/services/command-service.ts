@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
 import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
-import { getStorage, type CommandExecution } from '@/lib/storage';
+import { type CommandExecution, getStorage } from '@/lib/storage';
 
 const log = pino();
 

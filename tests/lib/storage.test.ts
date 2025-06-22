@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
-import { InMemoryStorage, type CommandExecution } from '@/lib/storage';
+import { type CommandExecution, InMemoryStorage } from '@/lib/storage';
 import type { Instance } from '@/types/index';
 
 const mockInstance: Instance = {

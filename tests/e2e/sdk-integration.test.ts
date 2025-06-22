@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
-import createLightfastComputer from '@/sdk';
-import { setStorage, InMemoryStorage } from '@/lib/storage';
+import { beforeEach, describe, expect, it } from 'bun:test';
+import { InMemoryStorage, setStorage } from '@/lib/storage';
 import type { LightfastComputerSDK } from '@/sdk';
+import createLightfastComputer from '@/sdk';
 
 describe('SDK E2E Integration Tests', () => {
   let sdk: LightfastComputerSDK;

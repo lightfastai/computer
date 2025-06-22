@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { NotFoundError, InstanceCreationError } from '@/lib/error-handler';
-import { setStorage, InMemoryStorage } from '@/lib/storage';
+import { err, ok } from 'neverthrow';
+import { InstanceCreationError, NotFoundError } from '@/lib/error-handler';
+import { InMemoryStorage, setStorage } from '@/lib/storage';
 import * as flyService from '@/services/fly-service';
 import * as instanceService from '@/services/instance-service';
-import { err, ok } from 'neverthrow';
 
 // Helper to create proper FlyMachine mock objects
 type MockFlyMachine = {

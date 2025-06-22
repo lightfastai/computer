@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import * as child_process from 'node:child_process';
-import { setStorage, InMemoryStorage } from '@/lib/storage';
+import { InMemoryStorage, setStorage } from '@/lib/storage';
 import * as commandService from '@/services/command-service';
 
 describe('command-service', () => {

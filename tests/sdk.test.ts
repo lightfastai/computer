@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { ok } from 'neverthrow';
 import { ValidationError } from '@/lib/error-handler';
 import createLightfastComputer from '@/sdk';
-import * as instanceService from '@/services/instance-service';
 import * as commandService from '@/services/command-service';
+import * as instanceService from '@/services/instance-service';
 
 // Mock dependencies
 const mockCreateInstance = spyOn(instanceService, 'createInstance');

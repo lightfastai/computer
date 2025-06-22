@@ -2,8 +2,8 @@ import type { Result } from 'neverthrow';
 import { err } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
-import { setStorage, InMemoryStorage, FileStorage, type InstanceStorage } from '@/lib/storage';
-import { createInstanceSchema, instanceIdSchema, executeCommandSchema } from '@/schemas';
+import { FileStorage, InMemoryStorage, type InstanceStorage, setStorage } from '@/lib/storage';
+import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
@@ -238,18 +238,17 @@ export const createLightfastComputer = (options: LightfastComputerOptions = {}):
 // Default export for convenience
 export default createLightfastComputer;
 
+export {
+  AppError,
+  InfrastructureError,
+  InstanceCreationError,
+  InstanceOperationError,
+  InstanceStateError,
+  NotFoundError,
+  ValidationError,
+} from '@/lib/error-handler';
 // Named exports for types
 export type {
   CreateInstanceOptions,
   Instance,
 } from '@/types/index';
-
-export {
-  AppError,
-  NotFoundError,
-  ValidationError,
-  InstanceCreationError,
-  InstanceOperationError,
-  InstanceStateError,
-  InfrastructureError,
-} from '@/lib/error-handler';

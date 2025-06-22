@@ -1,7 +1,7 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import * as instanceService from '@/services/instance-service';
 import { createInstanceSchema } from '@/schemas/instance';
+import * as instanceService from '@/services/instance-service';
 
 export const instanceRoutes = new Hono();
 

@@ -40,7 +40,7 @@ export const executeCommandSchema = z.object({
     .refine(
       (cmd) => {
         const baseCommand = cmd.split(' ')[0];
-        return ALLOWED_COMMANDS.includes(baseCommand as typeof ALLOWED_COMMANDS[number]);
+        return ALLOWED_COMMANDS.includes(baseCommand as (typeof ALLOWED_COMMANDS)[number]);
       },
       (cmd) => ({
         message: `Command '${cmd.split(' ')[0]}' is not allowed. Allowed commands: ${ALLOWED_COMMANDS.join(', ')}`,
