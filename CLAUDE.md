@@ -99,6 +99,38 @@ At the start of your session, tell Claude which mode to use:
 - "Use Fly.io Deploy Mode" (default if not specified)
 - "Use Local Dev Mode - I'm running bun dev"
 
+## 🔄 PR-Based Development Workflow
+
+**Claude MUST follow this workflow for ALL development:**
+
+### 1. Feature Development
+```mermaid
+Start → Create Worktree → Write Tests → Implement → Create PR → Wait for Review
+```
+
+### 2. After PR Merge
+```mermaid
+PR Merged → Analyze Changes → Suggest Version Bump? → User Decides → Publish
+```
+
+### PR Creation Checklist
+Claude should ensure before creating a PR:
+- ✅ All tests pass (`bun test`)
+- ✅ TypeScript builds (`bun run build`)
+- ✅ Linting passes (`bun run lint`)
+- ✅ If npm package: `bun run prepublishOnly` succeeds
+- ✅ Commit messages follow conventional format
+- ✅ PR description includes summary and test plan
+
+### Version Bump Decision Tree
+After PR merge, Claude analyzes:
+```
+├── Contains "feat:" commits? → Suggest MINOR version
+├── Contains "fix:" commits? → Suggest PATCH version
+├── Contains "BREAKING CHANGE"? → Suggest MAJOR version
+└── Only chore/docs/test? → No version bump needed
+```
+
 ## 🚨 CRITICAL: Context Preservation
 
 **YOU MUST** preserve context to survive terminal crashes and session interruptions:
@@ -469,12 +501,18 @@ cd worktrees/<feature_name>
    bun run typecheck  # Type validation
    ```
 
-### Step 4: Commit and Deploy
+### Step 4: Commit and Create PR
 
 #### Fly.io Deploy Mode:
 ```bash
 # Ensure all checks pass
 bun test && bun run build && bun run lint
+
+# Check for npm package build (if applicable)
+if [ -f "package.json" ] && grep -q '"prepublishOnly"' package.json; then
+  echo "📦 Testing npm package build..."
+  bun run prepublishOnly
+fi
 
 # Commit with conventional format
 git add .
@@ -487,12 +525,27 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 # Push branch
 git push -u origin jeevanpillay/<feature_name>
 
-# Deploy to Fly.io
-fly deploy
+# Create PR using GitHub CLI
+gh pr create --title "feat: <description>" --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points describing the changes>
 
-# Monitor deployment
-fly logs
-fly status
+## Changes
+- <specific change 1>
+- <specific change 2>
+
+## Test Plan
+- [ ] All tests pass (`bun test`)
+- [ ] TypeScript builds cleanly (`bun run build`)
+- [ ] Linting passes (`bun run lint`)
+- [ ] Tested locally/on Fly.io
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+EOF
+)"
+
+# Show PR URL
+echo "📝 Pull Request created! Review at the URL above."
 ```
 
 #### Local Dev Mode:
@@ -505,7 +558,64 @@ echo "   - POST /api/instances"
 # User handles commit/deploy when ready
 ```
 
-### Step 5: Cleanup After Merge
+### Step 5: After PR Merge - Version Bump Decision
+
+**🚨 CLAUDE MUST CHECK**: After a PR is merged, evaluate if a version bump is needed:
+
+```bash
+# After PR is merged, Claude should analyze and suggest:
+echo "🤔 Analyzing changes for version bump recommendation..."
+
+# Check what changed
+git log --oneline main..HEAD
+git diff main...HEAD --stat
+
+# Claude should suggest based on conventional commits:
+# - feat: → minor version (0.1.0 → 0.2.0)
+# - fix: → patch version (0.1.0 → 0.1.1)
+# - BREAKING CHANGE: → major version (0.1.0 → 1.0.0)
+# - chore/docs/style/refactor/test: → no version bump needed
+
+# If version bump is recommended:
+echo "📦 Version Bump Recommended!"
+echo "Based on the changes, I recommend a [patch/minor/major] version bump."
+echo ""
+echo "Current version: $(grep '"version"' package.json | cut -d'"' -f4)"
+echo "Suggested new version: X.X.X"
+echo ""
+echo "To release, run:"
+echo "  1. git checkout main && git pull"
+echo "  2. npm version [patch/minor/major]"
+echo "  3. git push --follow-tags"
+echo ""
+echo "This will trigger the GitHub Action to publish to npm."
+```
+
+### Step 6: npm Publishing Workflow
+
+When user agrees to version bump:
+
+```bash
+# 1. Ensure on main with latest changes
+git checkout main
+git pull origin main
+
+# 2. Run version command (this creates commit + tag)
+npm version patch  # or minor/major based on changes
+
+# 3. Push commit and tag
+git push --follow-tags
+
+# 4. Monitor GitHub Actions
+echo "🚀 GitHub Actions will now:"
+echo "  - Run tests"
+echo "  - Build package"
+echo "  - Publish to npm"
+echo ""
+echo "Monitor at: https://github.com/lightfastai/computer/actions"
+```
+
+### Step 7: Cleanup After Merge
 
 ```bash
 # Remove worktree BEFORE merging to prevent errors
@@ -515,6 +625,102 @@ git worktree remove worktrees/<feature_name>
 # Sync main branch after merge
 git checkout main
 git pull origin main
+```
+
+## 📦 npm Package Management & Versioning
+
+### Semantic Versioning Guidelines
+
+Claude should understand and follow semantic versioning (semver):
+- **MAJOR** (1.0.0): Breaking changes
+- **MINOR** (0.1.0): New features (backward compatible)
+- **PATCH** (0.0.1): Bug fixes (backward compatible)
+
+### When Claude Should Suggest Version Bumps
+
+**ALWAYS suggest a version bump when PRs contain:**
+
+1. **Patch Version (bug fixes):**
+   - `fix:` commits
+   - Bug fixes that don't break API
+   - Security patches
+   - Performance improvements
+   - Documentation fixes (if packaged)
+
+2. **Minor Version (new features):**
+   - `feat:` commits
+   - New API endpoints
+   - New SDK methods
+   - New configuration options
+   - New dependencies (that don't break existing usage)
+
+3. **Major Version (breaking changes):**
+   - Any commit with `BREAKING CHANGE:` in the body
+   - Removed API endpoints or methods
+   - Changed function signatures
+   - Changed return types
+   - Renamed exports
+   - Dropped Node.js version support
+
+**NO version bump needed for:**
+- `chore:` commits (unless they affect the published package)
+- `docs:` commits (unless docs are part of the package)
+- `style:` commits
+- `refactor:` commits (unless they change the API)
+- `test:` commits
+- CI/CD changes
+
+### Version Bump Workflow for Claude
+
+```bash
+# 1. After PR merge, check recent commits
+git log --oneline $(git describe --tags --abbrev=0)..HEAD
+
+# 2. Analyze commit types
+PATCH_COMMITS=$(git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -c "^[a-f0-9]* fix:")
+MINOR_COMMITS=$(git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -c "^[a-f0-9]* feat:")
+BREAKING_CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD | grep -c "BREAKING CHANGE")
+
+# 3. Determine version bump
+if [ $BREAKING_CHANGES -gt 0 ]; then
+  echo "💥 MAJOR version bump needed (breaking changes detected)"
+elif [ $MINOR_COMMITS -gt 0 ]; then
+  echo "✨ MINOR version bump needed (new features added)"
+elif [ $PATCH_COMMITS -gt 0 ]; then
+  echo "🐛 PATCH version bump needed (bug fixes)"
+else
+  echo "📝 No version bump needed (only maintenance changes)"
+fi
+```
+
+### npm Publishing Checklist
+
+Before suggesting a version bump, Claude should verify:
+
+```bash
+# Pre-publish checks
+echo "📋 Pre-publish Checklist:"
+echo "[ ] All tests pass: bun test"
+echo "[ ] Build succeeds: bun run build"
+echo "[ ] Lint passes: bun run lint"
+echo "[ ] Package builds: bun run prepublishOnly"
+echo "[ ] CHANGELOG updated (if exists)"
+echo "[ ] README is up to date"
+echo "[ ] Breaking changes documented"
+```
+
+### Package.json Scripts for Publishing
+
+Ensure these scripts exist in package.json:
+```json
+{
+  "scripts": {
+    "prepublishOnly": "npm run build && npm run test && npm run lint",
+    "release": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
+  }
+}
 ```
 
 ## Essential Commands for Claude
@@ -582,3 +788,7 @@ fly machines list -a lightfast-worker-instances
 6. **DIRECT IMPORTS** - Always use `@/*` path alias
 7. **FUNCTIONAL STYLE** - Small, focused, pure functions
 8. **CONTEXT PRESERVATION** - Use local context files for session continuity
+9. **CREATE PRS** - Always create PRs with `gh pr create`, never merge directly
+10. **SUGGEST VERSIONS** - After PR merge, analyze commits and suggest version bumps
+11. **CHECK PUBLISHING** - Run `prepublishOnly` before creating PRs for npm packages
+12. **CONVENTIONAL COMMITS** - Use feat/fix/chore prefixes for automatic versioning
