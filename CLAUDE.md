@@ -323,12 +323,11 @@ Task 3: "Find all tests related to authentication"
 ```env
 # Required
 FLY_API_TOKEN=your_fly_api_token
-FLY_ORG_SLUG=lightfast
 
-# Optional
-PORT=3000
-NODE_ENV=development
-LOG_LEVEL=info
+# Optional (with defaults)
+PORT=3000                    # Default: 3000
+NODE_ENV=development         # Default: development  
+LOG_LEVEL=info              # Default: info
 ```
 
 ## Debugging Tips
@@ -612,7 +611,6 @@ done
    # Add to .github/workflows/ci.yml
    env:
      FLY_API_TOKEN: test-token
-     FLY_ORG_SLUG: test-org
    ```
 
 2. **Lint Warnings (any types)**

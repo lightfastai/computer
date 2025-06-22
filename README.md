@@ -93,31 +93,26 @@ Create a `.env` file in the root directory with the following variables:
 ```bash
 # Fly.io Configuration (Required)
 FLY_API_TOKEN=your_fly_api_token_here        # Get from: fly auth token
-FLY_ORG_SLUG=your_fly_organization          # Your Fly.io organization
 
 # Application Configuration (Optional)
-PORT=3000                                    # Server port
-NODE_ENV=development                         # Environment: development/production
-LOG_LEVEL=info                              # Logging level: debug/info/warn/error
+PORT=3000                                    # Server port (default: 3000)
+NODE_ENV=development                         # Environment: development/production (default: development)
+LOG_LEVEL=info                              # Logging level: debug/info/warn/error (default: info)
 ```
 
 ### Environment Variable Categories
 
-#### **🔒 Server-only Variables**
-These are only available on the server-side and will throw an error if accessed incorrectly:
-- `FLY_API_TOKEN` - Fly.io API authentication (get with `fly auth token`)
-- `FLY_ORG_SLUG` - Your Fly.io organization name
+#### **🔒 Required Variables**
+- `FLY_API_TOKEN` - Fly.io API authentication token (get with `fly auth token`)
 
-#### **⚙️ Shared Variables**
-Available throughout the application:
+#### **⚙️ Optional Variables**
 - `PORT` - HTTP server port (default: 3000)
-- `NODE_ENV` - Runtime environment (development/production)
-- `LOG_LEVEL` - Logging verbosity level
+- `NODE_ENV` - Runtime environment (default: development)
+- `LOG_LEVEL` - Logging verbosity level (default: info)
 
 ### 🔑 Getting API Keys
 
 - **Fly.io API Token**: Run `fly auth token` after installing [Fly CLI](https://fly.io/docs/flyctl/install/)
-- **Fly.io Organization**: Find your org slug at [fly.io/dashboard](https://fly.io/dashboard)
 
 ## Installation & Setup
 

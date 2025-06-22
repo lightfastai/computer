@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { config } from '@/lib/config';
 
 export const monitoringRoutes = new Hono();
 
@@ -11,8 +12,8 @@ monitoringRoutes.get('/health', async (c) => {
       api: 'running',
     },
     environment: {
-      nodeEnv: process.env.NODE_ENV,
-      port: process.env.PORT,
+      nodeEnv: config.nodeEnv,
+      port: config.port,
     },
   };
 

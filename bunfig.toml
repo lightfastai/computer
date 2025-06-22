@@ -4,7 +4,6 @@ preload = ["./tests/setup.ts"]
 # Load test environment variables
 [test.env]
 FLY_API_TOKEN = "test-token"
-FLY_ORG_SLUG = "test-org"
 PORT = "3001"
 NODE_ENV = "test"
 LOG_LEVEL = "error"
