@@ -29,7 +29,7 @@ curl http://localhost:3000/api/instances
 
 ## Project Context
 
-This system enables users to create and manage Ubuntu instances on Fly.io using reliable background processing with Inngest. The focus is on instance lifecycle management without SSH or workflow capabilities.
+This system enables users to create and manage Ubuntu instances on Fly.io with GitHub integration and command execution capabilities. The focus is on providing isolated sandboxes for development and testing.
 
 ### Fly.io Deployment Details
 - **App**: `lightfast-worker-instances` (where Ubuntu instances run)
@@ -121,18 +121,17 @@ fi
 - **Hono**: Lightweight web framework with excellent TypeScript support
 - **Bun**: Fast runtime with built-in TypeScript support and testing
 - **Fly.io Machines API**: For on-demand Ubuntu compute instances
-- **Inngest**: Reliable background job processing with retries
+- **Vercel AI SDK**: For command streaming and AI integration
 
 ### Project Structure
 ```
 /
 ├── src/
-│   ├── api/           # API routes and handlers (instances, monitoring)
-│   ├── services/      # Business logic (fly-service, instance-service)
+│   ├── api/           # API routes and handlers (instances, monitoring, commands)
+│   ├── services/      # Business logic (fly-service, instance-service, command-service)
 │   ├── lib/           # Shared utilities (config, error-handler)
-│   ├── inngest/       # Background job functions
 │   ├── schemas/       # Zod validation schemas
-│   └── index.ts       # Entry point with Hono app and Inngest
+│   └── index.ts       # Entry point with Hono app
 ├── tests/             # Test files (using bun:test)
 └── config files       # biome.json, tsconfig.json, fly.toml
 ```
@@ -191,11 +190,11 @@ return result.match(
 - Machine size parsing and configuration
 - Region selection (defaults to `iad`)
 
-### 3. Inngest Background Processing (`src/inngest/`)
-- Instance lifecycle functions with automatic retries
-- Reliable background job processing
-- Built-in monitoring and observability
-- Failure handling with step functions
+### 3. Command Execution (`src/services/command-service.ts`)
+- Execute commands on instances via Fly.io exec
+- Stream output in real-time using SSE
+- Command history tracking
+- Security whitelist for allowed commands
 
 ## Testing Requirements
 
@@ -258,9 +257,8 @@ Task 3: "Find all tests related to authentication"
 ### Adding Instance Functionality
 1. **Write tests first** in `tests/services/instance-service.test.ts`
 2. Add function to `src/services/instance-service.ts`
-3. Create Inngest function in `src/inngest/instance-functions.ts` if background processing needed
-4. Update API routes to expose functionality
-5. Run tests continuously with `bun test --watch`
+3. Update API routes to expose functionality
+4. Run tests continuously with `bun test --watch`
 
 ### Implementing a New Feature
 1. **Start with tests** (TDD approach)
@@ -275,7 +273,6 @@ Task 3: "Find all tests related to authentication"
 # Required
 FLY_API_TOKEN=your_fly_api_token
 FLY_ORG_SLUG=lightfast
-INNGEST_EVENT_KEY=your_inngest_event_key
 
 # Optional
 PORT=3000
@@ -287,15 +284,15 @@ LOG_LEVEL=info
 
 1. Use structured logging with Pino (`src/lib/error-handler.ts`)
 2. Check Fly.io machine states with `fly machines list`
-3. Monitor Inngest function execution in dashboard
-4. Use `bun run build` to catch TypeScript errors
+3. Use `bun run build` to catch TypeScript errors
+4. Monitor command execution logs
 
 ## Performance Considerations
 
 1. In-memory state storage with Map (no database)
 2. Fly.io API calls are cached at service level
-3. Inngest provides automatic retries and rate limiting
-4. Instances auto-sleep when idle (Fly.io feature)
+3. Instances auto-sleep when idle (Fly.io feature)
+4. Command execution is rate-limited by instance capacity
 
 ## Deployment
 
@@ -538,8 +535,8 @@ fly machines list -a lightfast-worker-instances
 - **@hono/zod-validator**: Request validation middleware
 - **pino**: Structured logging
 - **zod**: Schema validation and TypeScript type inference
-- **inngest**: Reliable background job processing with retries
-- **@anthropic-ai/sdk**: (MCP server functionality)
+- **ai**: Vercel AI SDK for streaming and AI integration
+- **@ai-sdk/openai**: OpenAI provider for AI SDK
 
 ## Common Issues & Solutions
 

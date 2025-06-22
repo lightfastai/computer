@@ -13,6 +13,13 @@ export const CreateInstanceOptionsSchema = z.object({
   size: z.string().optional(),
   memoryMb: z.number().optional(),
   metadata: MetadataSchema.optional(),
+  secrets: z
+    .object({
+      githubToken: z.string().optional(),
+      githubUsername: z.string().optional(),
+    })
+    .optional(),
+  repoUrl: z.string().optional(),
 });
 
 export const InstanceSchema = z.object({
@@ -30,29 +37,6 @@ export const InstanceSchema = z.object({
   updatedAt: z.date(),
   userId: z.string().optional(),
   metadata: MetadataSchema.optional(),
-});
-
-// Inngest event schemas
-export const InstanceCreateEventSchema = z.object({
-  instanceId: z.string().optional(),
-  name: z.string().optional(),
-  region: z.string().optional(),
-  image: z.string().optional(),
-  size: z.string().optional(),
-  memoryMb: z.number().optional(),
-  metadata: MetadataSchema.optional(),
-});
-
-export const InstanceDestroyEventSchema = z.object({
-  instanceId: z.string(),
-});
-
-export const InstanceHealthCheckEventSchema = z.object({
-  instanceId: z.string(),
-});
-
-export const InstanceRestartEventSchema = z.object({
-  instanceId: z.string(),
 });
 
 // Type exports

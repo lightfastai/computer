@@ -1,14 +1,11 @@
 import { apiRoutes } from '@/api/routes';
-import { createInstance, destroyInstance, healthCheckInstance, restartInstance } from '@/inngest/instance-functions';
 import { config } from '@/lib/config';
 import { errorHandler } from '@/lib/error-handler';
-import { inngest } from '@/lib/inngest';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
-import { serve as serveInngest } from 'inngest/hono';
 import pino from 'pino';
 
 const log = pino({
@@ -44,15 +41,6 @@ app.get('/health', (c) => {
 
 // API routes
 app.route('/api', apiRoutes);
-
-// Inngest endpoint for receiving events and running functions
-app.use(
-  '/api/inngest',
-  serveInngest({
-    client: inngest,
-    functions: [createInstance, destroyInstance, healthCheckInstance, restartInstance],
-  }),
-);
 
 // 404 handler
 app.notFound((c) => {
