@@ -1,6 +1,6 @@
 # Claude AI Assistant Guide
 
-This guide provides instructions for Claude AI assistants working on the Lightfast Computer project - a Fly.io instance management system with Inngest-powered background processing.
+This guide provides instructions for Claude AI assistants working on the Lightfast Computer project - a pure TypeScript SDK for Fly.io instance management.
 
 ## 🚨 MANDATORY WORKTREE RULE
 
@@ -20,11 +20,6 @@ bun test --watch        # Run tests continuously during development
 bun run build         # Check for TypeScript compilation errors
 bun run lint          # Check code style with Biome
 bun run typecheck     # Verify TypeScript types
-bun run dev           # Start development server with dotenv loading
-
-# Testing the API
-curl http://localhost:3000/health
-curl http://localhost:3000/api/instances
 
 # Using environment variables with other commands
 bun run with-env -- <command>  # Run any command with .env loaded
@@ -32,7 +27,7 @@ bun run with-env -- <command>  # Run any command with .env loaded
 
 ## Project Context
 
-This system enables users to create and manage Ubuntu instances on Fly.io with GitHub integration and command execution capabilities. The focus is on providing isolated sandboxes for development and testing.
+This SDK enables developers to create and manage Ubuntu instances on Fly.io with GitHub integration and command execution capabilities. The focus is on providing a clean TypeScript interface for isolated compute environments.
 
 ### Fly.io Deployment Details
 - **App**: `lightfast-worker-instances` (where Ubuntu instances run)
@@ -44,6 +39,7 @@ This system enables users to create and manage Ubuntu instances on Fly.io with G
 - The Fly.io app name is hardcoded in `fly-service.ts` as `lightfast-worker-instances`
 - Instances are created without public IPs (only private IPv6 addresses)
 - No SSH functionality - instances are managed through Fly.io Machines API only
+- Pure SDK - no HTTP server or API endpoints
 
 ## Claude AI Best Practices
 
@@ -64,10 +60,10 @@ This system enables users to create and manage Ubuntu instances on Fly.io with G
 - **Test continuously**: Run tests frequently during development
 - **Verify changes**: Use build/lint commands to catch errors early
 
-## 📋 Development Modes
+## 📋 Development Mode
 
-### 🚀 Fly.io Deploy Mode (Default)
-Use this mode when you want Claude to handle the full development lifecycle:
+### 🔧 SDK Development Mode
+Claude follows a pure SDK development approach:
 - **Claude Responsibilities**:
   - Creates worktree using `./scripts/setup-worktree.sh`
   - Writes tests first (TDD approach)
@@ -75,29 +71,10 @@ Use this mode when you want Claude to handle the full development lifecycle:
   - Runs `bun run build` iteratively to fix errors
   - Runs `bun run lint` and `bun run format`
   - Commits and pushes changes automatically
-  - Deploys to Fly.io for testing
 - **User Responsibilities**:
-  - Tests on Fly.io deployment
+  - Tests SDK integration in their own projects
   - Reports bugs or issues back to Claude
-- **When to Use**: Production-ready development, team collaboration
-
-### 🔧 Local Dev Mode
-Use this mode when you're already running `bun dev` locally:
-- **Claude Responsibilities**:
-  - Acts as code generator only
-  - Makes code changes with TDD approach
-  - Asks user to test locally after changes
-  - Does NOT commit or push automatically
-- **User Responsibilities**:
-  - Runs `bun dev` before starting
-  - Tests API changes locally in real-time
-  - Decides when to commit and push
-- **When to Use**: Rapid prototyping, debugging, exploratory development
-
-### Setting Development Mode
-At the start of your session, tell Claude which mode to use:
-- "Use Fly.io Deploy Mode" (default if not specified)
-- "Use Local Dev Mode - I'm running bun dev"
+- **When to Use**: All SDK development (this is the only mode)
 
 ## 🔄 PR-Based Development Workflow
 
@@ -155,33 +132,34 @@ fi
 ## Key Architecture Decisions
 
 ### Technology Stack
-- **Hono**: Lightweight web framework with excellent TypeScript support
+- **TypeScript**: Strict type safety and excellent developer experience
 - **Bun**: Fast runtime with built-in TypeScript support and testing
 - **Fly.io Machines API**: For on-demand Ubuntu compute instances
-- **Vercel AI SDK**: For command streaming and AI integration
-- **Stateless SDK**: Direct Fly.io API integration without local storage
+- **neverthrow**: Functional error handling with Result types
+- **Zod**: Runtime validation and schema parsing
+- **Pino**: Structured logging
 
 ### Project Structure
 ```
 /
 ├── src/
-│   ├── api/           # API routes and handlers (instances, monitoring, commands)
 │   ├── services/      # Business logic (fly-service, instance-service, command-service)
 │   ├── lib/           # Shared utilities (config, error-handler)
 │   ├── schemas/       # Zod validation schemas
-│   └── index.ts       # Entry point with Hono app
+│   ├── types/         # TypeScript type definitions
+│   └── sdk.ts         # Main SDK export
 ├── tests/             # Test files (using bun:test)
-└── config files       # biome.json, tsconfig.json, fly.toml
+└── config files       # biome.json, tsconfig.json
 ```
 
 ## Development Patterns
 
-### API Design
-- RESTful endpoints for instance management (`/api/instances`)
-- No authentication required (open for development)
+### SDK Design
+- Clean TypeScript interface for instance management
+- Result types for safe error handling
 - Request validation using Zod schemas
-- Consistent error handling with proper HTTP status codes
-- Response typing with TypeScript interfaces
+- Comprehensive type definitions
+- Functional programming patterns
 
 ### Error Handling with neverthrow
 ```typescript
@@ -200,11 +178,11 @@ export const getInstance = async (
   return ok(instance);
 };
 
-// Handle in API routes
-const result = await getInstance(id);
-return result.match(
-  (instance) => c.json(instance),
-  (error) => c.json({ error: error.userMessage }, error.statusCode)
+// Handle in SDK client code
+const result = await computer.instances.get(id);
+result.match(
+  (instance) => console.log('Instance:', instance),
+  (error) => console.error('Error:', error.userMessage)
 );
 ```
 
@@ -263,10 +241,10 @@ bun run typecheck  # Verify TypeScript types
 
 ## Security Considerations
 
-1. **Open API**: Currently no authentication required (development mode)
-2. **Input Validation**: All inputs validated with Zod schemas
-3. **Environment Variables**: Store sensitive tokens in `.env` (never commit)
-4. **Instance Isolation**: Fly.io provides natural isolation between machines
+1. **Input Validation**: All inputs validated with Zod schemas
+2. **Environment Variables**: Store sensitive tokens in `.env` (never commit)
+3. **Instance Isolation**: Fly.io provides natural isolation between machines
+4. **API Token Security**: Fly.io tokens should be treated as sensitive credentials
 
 ## Common Development Tasks
 
@@ -314,7 +292,7 @@ Task 3: "Find all tests related to authentication"
 ### Implementing a New Feature
 1. **Start with tests** (TDD approach)
 2. Implement service layer functions (no classes)
-3. Add API endpoints
+3. Update SDK interface if needed
 4. Write comprehensive tests for all scenarios
 5. Ensure `bun run build` passes without errors
 
@@ -325,7 +303,6 @@ Task 3: "Find all tests related to authentication"
 FLY_API_TOKEN=your_fly_api_token
 
 # Optional (with defaults)
-PORT=3000                    # Default: 3000
 NODE_ENV=development         # Default: development  
 LOG_LEVEL=info              # Default: info
 ```
@@ -344,17 +321,19 @@ LOG_LEVEL=info              # Default: info
 3. Instances auto-sleep when idle (Fly.io feature)
 4. Command execution is rate-limited by instance capacity
 
-## Deployment
+## Testing
 
 ```bash
-# Deploy to Fly.io
-fly deploy
+# Run tests
+bun test
+bun test --watch
 
-# Check status
-fly status
-fly logs
+# Build and validate
+bun run build
+bun run lint
+bun run typecheck
 
-# List instances
+# List instances (for debugging)
 fly machines list -a lightfast-worker-instances
 ```
 
@@ -648,14 +627,15 @@ done
    ```
    **Note**: Create a TODO to fix test isolation properly in a future PR
 
-#### Local Dev Mode:
+#### SDK Development Mode:
 ```bash
 # Make changes and notify user
-echo "✅ Changes complete. Please test locally at http://localhost:3000"
-echo "📝 Test these endpoints:"
-echo "   - GET /api/instances"
-echo "   - POST /api/instances"
-# User handles commit/deploy when ready
+echo "✅ Changes complete. Please test the SDK integration:"
+echo "📝 Test these features:"
+echo "   - computer.instances.create()"
+echo "   - computer.instances.list()"
+echo "   - computer.commands.execute()"
+# User handles testing in their own projects
 ```
 
 ### Step 5: After PR Merge - Version Bump Decision
@@ -832,34 +812,26 @@ bun test               # Run all tests once
 bun run build          # Check TypeScript compilation (run frequently)
 bun run lint           # Check code style with Biome
 bun run typecheck      # Verify TypeScript types
-bun dev                # Start development server (port 3000)
-
-# API Testing
-curl http://localhost:3000/health
-curl http://localhost:3000/api/instances
-curl -X POST http://localhost:3000/api/instances \
-  -H "Content-Type: application/json" \
-  -d '{"name":"test-instance","region":"iad"}'
 
 # Dependencies
 bun add <package>      # Add production dependency
 bun add -d <package>   # Add dev dependency
 bun install            # Install from lockfile
 
-# Deployment
-fly deploy             # Deploy to Fly.io
-fly logs               # View logs
-fly machines list -a lightfast-worker-instances
+# SDK Testing (in user projects)
+npm install @lightfast/computer
+# Test SDK integration in user's code
+
+# Debugging
+fly machines list -a lightfast-worker-instances  # List instances
 ```
 
 ## Key Dependencies
 
-- **hono**: Lightweight web framework with TypeScript support
-- **@hono/zod-validator**: Request validation middleware
+- **neverthrow**: Functional error handling with Result types
 - **pino**: Structured logging
 - **zod**: Schema validation and TypeScript type inference
-- **ai**: Vercel AI SDK for streaming and AI integration
-- **@ai-sdk/openai**: OpenAI provider for AI SDK
+- **@t3-oss/env-core**: Type-safe environment variable handling
 
 ## CI/CD Cost Optimization
 
@@ -882,13 +854,14 @@ fly machines list -a lightfast-worker-instances
 - **Token validation errors**: The Fly.io Machines API v2 requires specific token formats. Use org or deploy tokens generated with `fly tokens create org -o lightfast`. Personal tokens from `fly auth token` may not work with the Machines API.
 
 ### Development Issues
-- **Port conflicts**: Default port is 3000, kill existing: `kill -9 $(lsof -ti:3000)`
 - **TypeScript errors**: Run `bun run build` frequently to catch compilation issues
 - **Test failures**: Fix immediately, don't proceed with failing tests
+- **Environment variables**: Ensure `.env` file has proper FLY_API_TOKEN
 
-### API Issues
-- **No authentication**: API is open for development (no auth middleware)
+### SDK Issues
+- **Import errors**: Ensure proper TypeScript paths and exports
 - **Validation errors**: All inputs validated with Zod schemas in `src/schemas/`
+- **Result types**: Always handle both success and error cases with neverthrow
 
 ## Key Workflow Reminders
 

@@ -59,9 +59,6 @@ describe('instance-service', () => {
   let mockRestartMachine: Mock<typeof flyService.restartMachine>;
 
   beforeEach(() => {
-    // Clear instance service state FIRST
-    instanceService.clearAllInstances();
-
     // Setup mocks
     mockCreateMachine = spyOn(flyService, 'createMachine');
     mockGetMachine = spyOn(flyService, 'getMachine');

@@ -4,7 +4,6 @@ import { InstanceOperationError } from '@/lib/error-handler';
 import type { LightfastComputerSDK } from '@/sdk';
 import createLightfastComputer from '@/sdk';
 import * as flyService from '@/services/fly-service';
-import * as instanceService from '@/services/instance-service';
 
 describe('SDK E2E Integration Tests', () => {
   let sdk: LightfastComputerSDK;
@@ -19,9 +18,6 @@ describe('SDK E2E Integration Tests', () => {
   let mockRestartMachine: Mock<typeof flyService.restartMachine>;
 
   beforeEach(() => {
-    // Clear any service-level state FIRST
-    instanceService.clearAllInstances();
-
     // Setup mocks
     mockCreateMachine = spyOn(flyService, 'createMachine');
     mockGetMachine = spyOn(flyService, 'getMachine');
@@ -196,15 +192,6 @@ describe('SDK E2E Integration Tests', () => {
         expect(result4.error.message).toContain('Invalid instance ID format');
       }
     });
-
-    it('should handle command history operations', async () => {
-      const history = await sdk.commands.getHistory('test-instance');
-      expect(Array.isArray(history)).toBe(true);
-      expect(history.length).toBe(0);
-
-      // Clear should not throw
-      expect(() => sdk.commands.clearHistory('test-instance')).not.toThrow();
-    });
   });
 
   describe('SDK Creation', () => {
@@ -303,8 +290,6 @@ describe('SDK E2E Integration Tests', () => {
       expect(typeof sdk.instances.getStats).toBe('function');
 
       expect(typeof sdk.commands.execute).toBe('function');
-      expect(typeof sdk.commands.getHistory).toBe('function');
-      expect(typeof sdk.commands.clearHistory).toBe('function');
     });
   });
 });

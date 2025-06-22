@@ -12,13 +12,13 @@ A powerful, open-source SDK for creating and managing Ubuntu instances on Fly.io
 
 ## About
 
-Lightfast Computer is a stateless SDK and HTTP API that transforms Fly.io into a developer-friendly compute platform. With direct Fly.io API integration and no local state management, it provides isolated Ubuntu environments, automated testing infrastructure, and dynamic compute resources on demand.
+Lightfast Computer is a TypeScript SDK that transforms Fly.io into a developer-friendly compute platform. With direct Fly.io API integration and no local state management, it provides isolated Ubuntu environments, automated testing infrastructure, and dynamic compute resources on demand.
 
 ### Why Lightfast Computer?
 
-- ⚡ **Dual Interface**: Use as SDK library or standalone HTTP service
+- 📦 **Pure SDK**: Lightweight TypeScript library with zero server dependencies
 - 🐧 **Ubuntu Sandboxes**: Fresh, isolated instances with GitHub integration
-- 🔄 **Real-time Streaming**: Live command output via Server-Sent Events
+- 🔄 **Real-time Streaming**: Live command output with callback support
 - 🔄 **Stateless Architecture**: Direct Fly.io API integration without local storage
 - 🛡️ **Production Ready**: Robust error handling with Result types
 - 🏗️ **Developer First**: Full TypeScript support and comprehensive documentation
@@ -26,113 +26,93 @@ Lightfast Computer is a stateless SDK and HTTP API that transforms Fly.io into a
 
 ## Quick Start
 
-### As SDK Library
+### Installation
+
+```bash
+npm install @lightfast/computer
+# or
+bun add @lightfast/computer
+```
+
+### Basic Usage
 
 ```typescript
-import createLightfastComputer from 'lightfast-computer';
+import createLightfastComputer from '@lightfast/computer';
 
-const computer = createLightfastComputer({
-  storage: 'file',
-  dataDir: './data'
-});
+const computer = createLightfastComputer();
 
 // Create Ubuntu instance with GitHub access
 const result = await computer.instances.create({
   name: 'dev-sandbox',
-  region: 'iad',
   size: 'shared-cpu-2x',
   memoryMb: 1024,
   secrets: {
-    githubToken: process.env.GITHUB_TOKEN,
-    githubUsername: 'your-username'
-  },
-  repoUrl: 'https://github.com/your-org/repo.git'
+    githubToken: 'ghp_your_token_here'
+  }
 });
 
 if (result.isOk()) {
-  // Execute commands with real-time streaming
-  const cmdResult = await computer.commands.execute({
-    instanceId: result.value.id,
-    command: 'ls',
-    args: ['-la', '/workspace'],
-    onData: (data) => console.log('STDOUT:', data),
+  const instance = result.value;
+  console.log(`Created instance: ${instance.id}`);
+  
+  // Execute commands with real-time output
+  await computer.commands.execute({
+    instanceId: instance.id,
+    command: 'git clone https://github.com/your-repo/project.git',
+    onData: (data) => console.log('OUTPUT:', data),
     onError: (error) => console.error('STDERR:', error)
   });
 }
 ```
 
-### As HTTP Service
+## Environment Setup
+
+Create a `.env` file in your project root:
 
 ```bash
-# Start the server
-bun dev
+# Required
+FLY_API_TOKEN=your_fly_api_token
 
-# Create instance via API
-curl -X POST http://localhost:3000/api/instances \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "dev-sandbox",
-    "size": "shared-cpu-2x",
-    "memoryMb": 1024,
-    "secrets": {
-      "githubToken": "ghp_YOUR_TOKEN",
-      "githubUsername": "your-username"
-    },
-    "repoUrl": "https://github.com/your-org/repo.git"
-  }'
+# Optional
+NODE_ENV=development
+LOG_LEVEL=info
 ```
-
-## Environment Variables
-
-This project uses `@t3-oss/env-core` for type-safe environment variable validation. The environment configuration is defined in `src/lib/env.ts`.
-
-### Required Environment Variables
-
-Create a `.env` file in the root directory with the following variables:
-
-```bash
-# Fly.io Configuration (Required)
-FLY_API_TOKEN=your_fly_api_token_here        # Get from: fly auth token
-
-# Application Configuration (Optional)
-PORT=3000                                    # Server port (default: 3000)
-NODE_ENV=development                         # Environment: development/production (default: development)
-LOG_LEVEL=info                              # Logging level: debug/info/warn/error (default: info)
-```
-
-### Environment Variable Categories
-
-#### **🔒 Required Variables**
-- `FLY_API_TOKEN` - Fly.io API authentication token (get with `fly auth token`)
-
-#### **⚙️ Optional Variables**
-- `PORT` - HTTP server port (default: 3000)
-- `NODE_ENV` - Runtime environment (default: development)
-- `LOG_LEVEL` - Logging verbosity level (default: info)
 
 ### 🔑 Getting API Keys
 
-- **Fly.io API Token**: Run `fly auth token` after installing [Fly CLI](https://fly.io/docs/flyctl/install/)
-
-## Installation & Setup
-
-### Option 1: Use as SDK
-
+#### Fly.io API Token
 ```bash
-# Install in your project
-npm install lightfast-computer
-# or
-bun add lightfast-computer
+# Install the Fly CLI
+curl -L https://fly.io/install.sh | sh
+
+# Authenticate
+fly auth login
+
+# Generate API token
+fly auth token
 ```
 
-```typescript
-import createLightfastComputer from 'lightfast-computer';
+### Core Features
 
-const computer = createLightfastComputer();
-// Start building with instances and commands
-```
+#### Instance Management
+- **Create**: Ubuntu instances with custom CPU/memory configurations
+- **Start/Stop**: Full lifecycle control with state management
+- **Destroy**: Clean resource cleanup
+- **List**: View all instances with status information
+- **Health Check**: Monitor instance availability
 
-### Option 2: Run as Service
+#### Command Execution
+- **Real-time Output**: Stream command output as it executes
+- **GitHub Integration**: Automatic token injection for repository access
+- **Security**: Allowlist-based command validation
+- **Timeout Control**: Configurable execution limits
+
+#### Error Handling
+- **Result Types**: neverthrow integration for safe error handling
+- **Typed Errors**: Specific error types for different failure modes
+- **User-friendly Messages**: Clear error descriptions for common issues
+
+## Development
 
 ```bash
 # Clone the repository
@@ -146,329 +126,150 @@ bun install
 cp .env.example .env
 # Edit .env with your Fly.io credentials
 
-# Start development server
-bun dev
-
-# Or build for production
-bun run build
-bun start
+# Run tests
+bun test --watch
 ```
-
-## ✨ Features
-
-### 🖥️ Instance Management
-- **Ubuntu Sandboxes**: Fresh Ubuntu 22.04 instances on-demand
-- **GitHub Integration**: Automatic repository cloning with secure token injection
-- **Lifecycle Control**: Create, start, stop, restart, and destroy operations
-- **Health Monitoring**: Real-time instance health checking and statistics
-- **Auto-cleanup**: Automatic removal of old destroyed instances
-
-### 🚀 Command Execution
-- **Real-time Streaming**: Live command output via Server-Sent Events (SSE)
-- **Security Whitelist**: Restricted command set for safe execution
-- **Command History**: Persistent history tracking for debugging
-- **Timeout Handling**: Configurable timeouts with graceful termination
-- **Error Isolation**: Separate stdout/stderr streaming channels
-
-### 🗄️ Storage Flexibility
-- **In-Memory Storage**: Fast, ephemeral storage for development
-- **File-Based Storage**: Persistent storage across restarts
-- **Custom Backends**: Implement your own storage interface
-- **Automatic Persistence**: Seamless data persistence and restoration
-
-### 🛡️ Enterprise Ready
-- **Type Safety**: Full TypeScript with strict validation
-- **Error Handling**: Robust Result types with neverthrow
-- **Input Validation**: Comprehensive request validation with Zod
-- **Security First**: Command restrictions and token management
-- **Production Logging**: Structured logging with Pino
-
-## 🏗️ Architecture
-
-### SDK Interface
-- **Clean API**: Intuitive methods for instance and command management
-- **Result Types**: Functional error handling with neverthrow
-- **Storage Abstraction**: Pluggable backends for different use cases
-- **TypeScript First**: Full type safety and intellisense support
-
-### HTTP Service
-- **Hono Framework**: Lightweight, fast web framework
-- **RESTful Design**: Clean, predictable API endpoints
-- **Real-time Streaming**: Server-Sent Events for live updates
-- **Comprehensive Validation**: Request/response validation with Zod
-
-### Infrastructure
-- **Fly.io Machines**: Ubuntu instances on global edge infrastructure
-- **Regional Deployment**: Choose optimal regions for your workloads
-- **Auto-scaling**: Instances start and stop based on demand
-- **Network Isolation**: Private networking with IPv6 support
-
-## 🛠️ Tech Stack
-
-| Category | Technology | Purpose |
-|----------|------------|----------|
-| **Runtime** | Bun | Fast JavaScript runtime with built-in testing |
-| **Framework** | Hono | Lightweight web framework for APIs |
-| **Language** | TypeScript | Type safety and developer experience |
-| **Validation** | Zod | Runtime schema validation |
-| **Error Handling** | neverthrow | Functional Result types |
-| **Infrastructure** | Fly.io | Global edge compute platform |
-| **Logging** | Pino | High-performance structured logging |
-| **Testing** | Bun Test | Built-in testing framework |
-
-## API Reference
-
-### Instance Management
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/instances` | POST | Create new Ubuntu instance |
-| `/api/instances` | GET | List all instances |
-| `/api/instances/:id` | GET | Get instance details |
-| `/api/instances/:id/start` | POST | Start stopped instance |
-| `/api/instances/:id/stop` | POST | Stop running instance |
-| `/api/instances/:id/restart` | POST | Restart instance |
-| `/api/instances/:id` | DELETE | Destroy instance permanently |
-| `/api/instances/:id/health` | GET | Check instance health |
-| `/api/instances/stats/summary` | GET | Get instance statistics |
-
-### Command Execution
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/commands/:id/exec` | POST | Execute command with streaming |
-| `/api/commands/:id/history` | GET | Get command execution history |
-
-### Monitoring
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | API health check |
-| `/api/monitoring/health` | GET | Detailed health status |
 
 ## Available Scripts
 
 ```bash
 # Development
-bun dev                 # Start development server with hot reload
 bun test               # Run test suite once
 bun test --watch       # Run tests in watch mode
 
 # Production
 bun run build         # Build for production
-bun start             # Start production server
 
 # Code Quality
 bun run lint          # Check code style with Biome
 bun run format        # Format code with Biome
 bun run typecheck     # Verify TypeScript types
-
-# Environment
-bun run with-env      # Run commands with .env loaded
 ```
 
 ## Project Structure
 
 ```
-├── src/
-│   ├── api/            # HTTP API routes and handlers
-│   ├── lib/            # Shared utilities and configuration
-│   ├── services/       # Business logic (instances, commands, fly)
-│   ├── schemas/        # Zod validation schemas
-│   ├── types/          # TypeScript type definitions
-│   ├── sdk.ts          # Main SDK export
-│   └── index.ts        # HTTP server entry point
-├── tests/              # Test suites mirroring src structure
-├── SDK_USAGE.md        # Comprehensive SDK documentation
-└── package.json        # Dependencies and scripts
+src/
+├── lib/            # Shared utilities and configuration
+├── services/       # Business logic (instances, commands, fly)
+├── schemas/        # Zod validation schemas
+├── types/          # TypeScript type definitions
+└── sdk.ts          # Main SDK export
+tests/              # Test suites mirroring src structure
+SDK_USAGE.md        # Comprehensive SDK documentation
+package.json        # Dependencies and scripts
 ```
 
 ## Development Workflow
-
-### Setting Up Development Environment
 
 ```bash
 # Clone and setup
 git clone https://github.com/lightfastai/computer.git
 cd computer
 bun install
-
-# Configure environment
 cp .env.example .env
 # Add your Fly.io credentials to .env
 
 # Start development
-bun test --watch        # In one terminal (TDD workflow)
-bun dev                 # In another terminal
+bun test --watch        # TDD workflow
 ```
 
 ### Code Quality Standards
 
 - **TypeScript**: Strict mode enabled with comprehensive type checking
-- **Functional Programming**: No classes, pure functions with Result types
-- **Test-Driven Development**: Write tests first, then implementation
-- **Error Handling**: All operations return Result<T, E> types
-- **Documentation**: Comprehensive inline docs and usage examples
+- **Testing**: Bun test with 100% coverage requirements
+- **Linting**: Biome for code formatting and style enforcement
+- **Architecture**: Functional programming with neverthrow Result types
 
-### Testing Strategy
+## API Reference
 
-```bash
-# Unit tests for individual services
-bun test tests/services/
+See [SDK_USAGE.md](./SDK_USAGE.md) for comprehensive API documentation and examples.
 
-# Integration tests for SDK interface
-bun test tests/sdk.test.ts
+### Core Types
 
-# Storage abstraction tests
-bun test tests/lib/storage.test.ts
-
-# Run specific test patterns
-bun test --grep "instance creation"
+```typescript
+import type { 
+  Instance, 
+  CreateInstanceOptions, 
+  ExecuteCommandOptions,
+  ExecuteCommandResult 
+} from '@lightfast/computer';
 ```
 
-## 🚀 Deployment
+## Technology Stack
 
-### Option 1: Deploy to Fly.io
+| **Component** | **Technology** | **Purpose** |
+|---------------|---------------|-------------|
+| **Runtime** | Bun | Fast JavaScript runtime and package manager |
+| **Language** | TypeScript | Type-safe development with excellent DX |
+| **Validation** | Zod | Runtime type validation and schema parsing |
+| **Error Handling** | neverthrow | Functional error handling with Result types |
+| **Testing** | Bun Test | Native testing framework with TypeScript support |
+| **Linting** | Biome | Fast code formatting and linting |
+| **Infrastructure** | Fly.io | Global edge compute platform |
 
-```bash
-# Install Fly CLI
-curl -L https://fly.io/install.sh | sh
+## Architecture
 
-# Login and deploy
-fly auth login
-fly deploy
+### Key Design Principles
 
-# Monitor deployment
-fly status
-fly logs
-```
+1. **Stateless**: No local database or state management
+2. **Type Safety**: Comprehensive TypeScript coverage
+3. **Error Handling**: Result types for predictable error handling
+4. **Functional**: Pure functions and immutable data structures
+5. **Testable**: Comprehensive test coverage with mocking
 
-### Option 2: Docker Deployment
+### Infrastructure Details
 
-```dockerfile
-FROM oven/bun:1 AS base
-WORKDIR /app
+- **Instances**: Ubuntu 22.04 LTS on Fly.io Machines
+- **Networking**: Private IPv6 with regional deployment
+- **Security**: Isolated containers with resource limits
+- **Regions**: Global deployment with `iad` (US East) default
 
-# Install dependencies
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
-
-# Build application
-COPY . .
-RUN bun run build
-
-# Production image
-FROM oven/bun:1-slim
-WORKDIR /app
-COPY --from=base /app/dist ./dist
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/package.json ./
-
-EXPOSE 3000
-CMD ["bun", "start"]
-```
-
-### Environment Variables for Production
+## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `FLY_API_TOKEN` | ✅ | Fly.io API authentication token |
-| `FLY_ORG_SLUG` | ✅ | Fly.io organization identifier |
-| `PORT` | ⚠️ | Server port (defaults to 3000) |
-| `NODE_ENV` | ⚠️ | Set to `production` for optimizations |
-| `LOG_LEVEL` | ⚠️ | Logging verbosity (info/warn/error) |
+| `NODE_ENV` | ⚠️ | Runtime environment (defaults to development) |
+| `LOG_LEVEL` | ⚠️ | Logging verbosity (defaults to info) |
 
-## 📚 Documentation
-
-- [**SDK Usage Guide**](./SDK_USAGE.md) - Comprehensive SDK documentation with examples
-- [**API Reference**](./docs/api-reference.md) - Complete HTTP API documentation
-- [**Storage Backends**](./docs/storage.md) - Guide to storage configuration
-- [**Deployment Guide**](./docs/deployment.md) - Production deployment instructions
-- [**Examples**](./examples/) - Real-world usage examples and patterns
-
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### Development Workflow
+### Development Setup
+
 1. Fork the repository
-2. Create a feature branch: `git checkout -b jeevanpillay/amazing-feature`
-3. Make your changes following our code standards
-4. Add comprehensive tests for new functionality
-5. Submit a pull request with detailed description
+2. Create a feature branch
+3. Install dependencies: `bun install`
+4. Make your changes with tests
+5. Run the test suite: `bun test`
+6. Submit a pull request
 
-### Code Standards
-- **TypeScript**: Strict mode with comprehensive type checking
-- **Functional Programming**: Pure functions, no classes allowed
-- **Testing**: Minimum 80% test coverage for new features
-- **Documentation**: Update relevant docs for API changes
-- **Commit Messages**: Follow conventional commit format
+### Code Style
 
-## Security Considerations
+- Follow existing patterns and conventions
+- Add tests for new functionality
+- Update documentation for API changes
+- Use descriptive commit messages
 
-### Command Execution Security
-- **Allowlist**: Only approved commands can be executed
-- **Sandboxing**: All commands run in isolated Ubuntu containers
-- **Timeout Protection**: Automatic termination of long-running commands
-- **Resource Limits**: CPU and memory restrictions per instance
+## License
 
-### Token Management
-- **Secure Storage**: GitHub tokens stored as Fly.io secrets
-- **No Logging**: Sensitive data never appears in logs
-- **Environment Isolation**: Tokens scoped to individual instances
-- **Automatic Cleanup**: Tokens removed when instances are destroyed
+MIT License - see [LICENSE](LICENSE) file for details.
 
-## Performance & Scaling
+## Support
 
-### Instance Performance
-- **Fast Provisioning**: New instances ready in ~10-15 seconds
-- **Auto-sleep**: Instances automatically sleep when idle
-- **Regional Distribution**: Deploy close to your users
-- **Resource Optimization**: Right-sized instances for your workloads
+- 📚 [Documentation](./SDK_USAGE.md)
+- 🐛 [Issue Tracker](https://github.com/lightfastai/computer/issues)
+- 💬 [Discussions](https://github.com/lightfastai/computer/discussions)
+- 📧 [Email Support](mailto:support@lightfast.ai)
 
-### API Performance
-- **Connection Pooling**: Efficient Fly.io API connections
-- **Request Batching**: Optimized batch operations for multiple instances
-- **Caching**: Intelligent caching of instance metadata
-- **Streaming**: Real-time command output without buffering
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
-**TL;DR**: You can use this software for any purpose, including commercial applications. See LICENSE file for full terms.
-
-## 🌟 Community
-
-- **Website**: [lightfast.ai](https://lightfast.ai)
-- **GitHub**: [github.com/lightfastai/computer](https://github.com/lightfastai/computer)
-- **Discord**: [Join our community](https://discord.gg/YqPDfcar2C)
-- **Twitter**: [@lightfastai](https://x.com/lightfastai)
-
-## 💖 Support
-
-If you find this project helpful, please consider:
-- ⭐ Starring the repository
-- 🐛 Reporting bugs and requesting features
-- 💡 Contributing code or documentation
-- 📢 Sharing with your developer community
-- 💬 Joining our Discord for discussions
+Created by the [Lightfast](https://lightfast.ai) team.
 
 ## Roadmap
 
-### 🔄 Current Focus
-- [ ] Enhanced error handling and validation
-- [ ] Connection pooling for performance
-- [ ] Authentication and rate limiting
-- [ ] Monitoring and observability features
-
-### 🚀 Future Plans
 - [ ] Multi-cloud support (AWS, GCP, Azure)
-- [ ] Container orchestration integration
+- [ ] Enhanced security features
 - [ ] Advanced networking and VPC support
-- [ ] Managed database instances
-- [ ] Auto-scaling policies
-
----
-
-**Built with ❤️ by the Lightfast team • Powering the next generation of developer tools**
+- [ ] Kubernetes integration
+- [ ] WebSocket real-time communication

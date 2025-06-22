@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
-import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
+import { type InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
 
 const log = pino();
 
@@ -122,57 +122,4 @@ export const executeCommand = async (
 
     return err(new InstanceOperationError('execute', 'Command execution failed'));
   }
-};
-
-// Alternative: Execute command via HTTP endpoint on the instance
-// This would require the instance to run a command server
-export const executeCommandViaHTTP = async (
-  instancePrivateIP: string,
-  command: string,
-  args: string[],
-): Promise<Result<ExecuteCommandResult, InstanceOperationError | InfrastructureError>> => {
-  try {
-    // This assumes the instance is running a command server on port 8080
-    const response = await fetch(`http://[${instancePrivateIP}]:8080/exec`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${'dev-token'}`,
-      },
-      body: JSON.stringify({ command, args }),
-      signal: AbortSignal.timeout(30000), // 30s timeout
-    });
-
-    if (!response.ok) {
-      return err(new InstanceOperationError('execute', `HTTP ${response.status}`));
-    }
-
-    const result = await response.json();
-    return ok(result as ExecuteCommandResult);
-  } catch (error) {
-    log.error('Failed to execute command via HTTP:', {
-      instancePrivateIP,
-      command,
-      args,
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    return err(new InfrastructureError('Command execution via HTTP failed'));
-  }
-};
-
-// Get command history for an instance - no longer supported in stateless SDK
-export const getCommandHistory = async (_instanceId: string): Promise<CommandExecution[]> => {
-  // Stateless SDK doesn't maintain command history
-  return [];
-};
-
-// Clear command history for an instance - no-op in stateless SDK
-export const clearCommandHistory = (_instanceId: string): void => {
-  // No-op - stateless SDK doesn't maintain history
-};
-
-// Clear all command history (for testing) - no-op in stateless SDK
-export const clearAllCommandHistory = (): void => {
-  // No-op - stateless SDK doesn't maintain history
 };

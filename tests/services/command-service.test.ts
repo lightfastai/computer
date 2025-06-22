@@ -1,37 +1,8 @@
-import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import * as child_process from 'node:child_process';
 import * as commandService from '@/services/command-service';
 
 describe('command-service', () => {
-  beforeEach(() => {
-    // Clear command history (no-op in stateless SDK)
-    commandService.clearAllCommandHistory();
-  });
-
-  describe('command history', () => {
-    it('should return empty history for new instance', async () => {
-      // Stateless SDK always returns empty history
-      const history = await commandService.getCommandHistory('test-instance');
-      expect(history).toEqual([]);
-    });
-
-    it('should clear command history', async () => {
-      // Stateless SDK - clear is a no-op
-      commandService.clearCommandHistory('test-instance');
-      const history = await commandService.getCommandHistory('test-instance');
-      expect(history.length).toBe(0);
-    });
-
-    it('should clear all command history', async () => {
-      // Stateless SDK - clear is a no-op
-      commandService.clearAllCommandHistory();
-      const history1 = await commandService.getCommandHistory('instance1');
-      const history2 = await commandService.getCommandHistory('instance2');
-      expect(history1).toEqual([]);
-      expect(history2).toEqual([]);
-    });
-  });
-
   describe('executeCommand', () => {
     it('should call fly exec with correct arguments', async () => {
       const mockSpawn = spyOn(child_process, 'spawn');

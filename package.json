@@ -11,11 +11,6 @@
       "types": "./dist/sdk.d.ts",
       "import": "./dist/sdk.js",
       "require": "./dist/sdk.cjs"
-    },
-    "./server": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -25,14 +20,12 @@
     "SDK_USAGE.md"
   ],
   "scripts": {
-    "dev": "dotenv -- bun run --hot src/index.ts",
     "with-env": "dotenv -e ./.env --",
     "build": "npm run build:clean && npm run build:js && npm run build:types && npm run build:cjs",
     "build:clean": "rm -rf dist",
-    "build:js": "bun build src/sdk.ts src/index.ts --target node --outdir dist",
+    "build:js": "bun build src/sdk.ts --target node --outdir dist",
     "build:types": "tsc --emitDeclarationOnly --declaration --declarationDir dist",
-    "build:cjs": "bun build src/sdk.ts --target node --format cjs --outfile dist/sdk.cjs && bun build src/index.ts --target node --format cjs --outfile dist/index.cjs",
-    "start": "NODE_ENV=production bun run dist/index.js",
+    "build:cjs": "bun build src/sdk.ts --target node --format cjs --outfile dist/sdk.cjs",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
@@ -84,10 +77,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@hono/node-server": "^1.14.4",
-    "@hono/zod-validator": "^0.7.0",
     "@t3-oss/env-core": "^0.13.8",
-    "hono": "^4.8.2",
     "neverthrow": "^8.2.0",
     "pino": "^9.7.0",
     "zod": "^3.25.67"

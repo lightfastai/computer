@@ -3,7 +3,7 @@ import { err } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
-import type { CommandExecution, ExecuteCommandResult } from '@/services/command-service';
+import type { ExecuteCommandResult } from '@/services/command-service';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
@@ -27,8 +27,6 @@ export interface InstanceManager {
 
 export interface CommandManager {
   execute(options: ExecuteCommandOptions): Promise<Result<ExecuteCommandResult, AppError>>;
-  getHistory(instanceId: string): Promise<CommandExecution[]>;
-  clearHistory(instanceId: string): void;
 }
 
 export interface ExecuteCommandOptions {
@@ -41,7 +39,7 @@ export interface ExecuteCommandOptions {
 }
 
 // Re-export types from command service
-export type { CommandExecution, ExecuteCommandResult } from '@/services/command-service';
+export type { ExecuteCommandResult } from '@/services/command-service';
 
 const createInstanceManager = (): InstanceManager => ({
   create: async (options: CreateInstanceOptions) => {
@@ -175,14 +173,6 @@ const createCommandManager = (): CommandManager => ({
       }
       return err(new ValidationError('Invalid command configuration'));
     }
-  },
-
-  getHistory: (instanceId: string) => {
-    return commandService.getCommandHistory(instanceId);
-  },
-
-  clearHistory: (instanceId: string) => {
-    commandService.clearCommandHistory(instanceId);
   },
 });
 

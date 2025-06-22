@@ -17,8 +17,6 @@ const mockDestroyInstance = spyOn(instanceService, 'destroyInstance');
 const mockHealthCheckInstance = spyOn(instanceService, 'healthCheckInstance');
 const mockGetInstanceStats = spyOn(instanceService, 'getInstanceStats');
 const mockExecuteCommand = spyOn(commandService, 'executeCommand');
-const mockGetCommandHistory = spyOn(commandService, 'getCommandHistory');
-const mockClearCommandHistory = spyOn(commandService, 'clearCommandHistory');
 
 const mockInstance = {
   id: 'test-instance-id',
@@ -48,8 +46,6 @@ describe('LightfastComputer SDK', () => {
     mockHealthCheckInstance.mockClear();
     mockGetInstanceStats.mockClear();
     mockExecuteCommand.mockClear();
-    mockGetCommandHistory.mockClear();
-    mockClearCommandHistory.mockClear();
   });
 
   describe('instances', () => {
@@ -292,38 +288,6 @@ describe('LightfastComputer SDK', () => {
         expect(result.error.message).toContain('is not allowed');
       }
       expect(mockExecuteCommand).not.toHaveBeenCalled();
-    });
-
-    it('should get command history', async () => {
-      const sdk = createLightfastComputer();
-      const history = [
-        {
-          id: 'cmd-1',
-          instanceId: 'test-id',
-          command: 'ls',
-          args: ['-la'],
-          output: 'file1.txt',
-          error: '',
-          exitCode: 0,
-          startedAt: new Date(),
-          completedAt: new Date(),
-          status: 'completed' as const,
-        },
-      ];
-      mockGetCommandHistory.mockResolvedValue(history);
-
-      const result = await sdk.commands.getHistory('test-id');
-
-      expect(result).toEqual(history);
-      expect(mockGetCommandHistory).toHaveBeenCalledWith('test-id');
-    });
-
-    it('should clear command history', () => {
-      const sdk = createLightfastComputer();
-
-      sdk.commands.clearHistory('test-id');
-
-      expect(mockClearCommandHistory).toHaveBeenCalledWith('test-id');
     });
   });
 });

@@ -6,11 +6,6 @@ import type { CreateInstanceOptions, FlyRegion, Instance, InstanceStatus, Machin
 
 const log = pino();
 
-// Clear all instances (for testing) - no longer needed in stateless SDK
-export const clearAllInstances = (): void => {
-  // No-op - stateless SDK doesn't maintain local state
-};
-
 // Create instance with GitHub integration
 export const createInstanceWithGitHub = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
   // Secrets are now passed directly as environment variables in fly-service.ts
