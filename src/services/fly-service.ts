@@ -1,6 +1,5 @@
 import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
-import { config } from '@/lib/config';
 import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
 import type { CreateInstanceOptions } from '@/types/index';
 
@@ -43,6 +42,8 @@ const APP_NAME = 'lightfast-worker-instances';
 
 // Create headers for API requests
 const createHeaders = () => {
+  // Lazy import to avoid circular dependency during tests
+  const { config } = require('@/lib/config');
   // Use the full token string - Fly.io API requires all comma-separated tokens
   const token = config.flyApiToken.trim();
   return {

@@ -63,7 +63,7 @@ describe('LightfastComputer SDK', () => {
       expect(mockCreateInstance).toHaveBeenCalledWith({
         name: 'test',
         region: 'iad',
-        image: 'ubuntu-22.04',
+        image: 'docker.io/library/ubuntu:22.04',
         size: 'shared-cpu-1x',
         memoryMb: 512,
       });
@@ -86,7 +86,7 @@ describe('LightfastComputer SDK', () => {
       expect(mockCreateInstanceWithGitHub).toHaveBeenCalledWith({
         name: 'test',
         region: 'iad',
-        image: 'ubuntu-22.04',
+        image: 'docker.io/library/ubuntu:22.04',
         size: 'shared-cpu-1x',
         memoryMb: 512,
         secrets: {

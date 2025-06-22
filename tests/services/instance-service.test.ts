@@ -127,7 +127,10 @@ describe('instance-service', () => {
 
       // In stateless SDK, failed creates don't appear in list
       const instances = await instanceService.listInstances();
-      expect(instances).toHaveLength(0);
+      expect(instances.isOk()).toBe(true);
+      if (instances.isOk()) {
+        expect(instances.value).toHaveLength(0);
+      }
     });
   });
 
@@ -382,14 +385,17 @@ describe('instance-service', () => {
       // Mock listMachines to return our test machines
       mockListMachines.mockResolvedValue(ok(mockFlyMachines));
 
-      const stats = await instanceService.getInstanceStats();
+      const result = await instanceService.getInstanceStats();
 
-      expect(stats).toEqual({
-        total: 4,
-        running: 2, // 2 started machines
-        stopped: 1, // 1 stopped machine
-        failed: 1, // 1 failed machine
-      });
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value).toEqual({
+          total: 4,
+          running: 2, // 2 started machines
+          stopped: 1, // 1 stopped machine
+          failed: 1, // 1 failed machine
+        });
+      }
     });
   });
 });
