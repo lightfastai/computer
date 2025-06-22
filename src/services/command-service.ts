@@ -2,22 +2,11 @@ import { spawn } from 'node:child_process';
 import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
 import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
+import { getStorage, type CommandExecution } from '@/lib/storage';
 
 const log = pino();
 
-// Types
-interface CommandExecution {
-  id: string;
-  instanceId: string;
-  command: string;
-  args: string[];
-  output: string;
-  error: string;
-  exitCode: number | null;
-  startedAt: Date;
-  completedAt?: Date;
-  status: 'running' | 'completed' | 'failed' | 'timeout';
-}
+// Types - CommandExecution is now imported from storage
 
 interface ExecuteCommandOptions {
   instanceId: string;
@@ -35,8 +24,7 @@ interface ExecuteCommandResult {
   exitCode: number | null;
 }
 
-// In-memory storage for command history
-const commandHistory = new Map<string, CommandExecution[]>();
+// Storage is now handled by the storage abstraction
 
 // Execute command using Fly.io exec (if available) or via SSH proxy
 export const executeCommand = async (
@@ -52,17 +40,14 @@ export const executeCommand = async (
     // Build the command
     const fullCommand = [command, ...args].join(' ');
 
-    // Use flyctl machine exec
+    // Use flyctl machine exec with proper argument format
     const flyctl = spawn('fly', [
       'machine',
       'exec',
       machineId,
-      '--app',
+      '-a',
       'lightfast-worker-instances',
-      '--',
-      'sh',
-      '-c',
-      fullCommand,
+      `sh -c "${fullCommand}"`,
     ]);
 
     let output = '';
@@ -130,7 +115,8 @@ export const executeCommand = async (
       status: result.exitCode === 0 ? 'completed' : 'failed',
     };
 
-    addToHistory(instanceId, execution);
+    const storage = getStorage();
+    await storage.saveCommandExecution(execution);
 
     return ok(result);
   } catch (error) {
@@ -156,7 +142,8 @@ export const executeCommand = async (
       status: 'failed',
     };
 
-    addToHistory(instanceId, execution);
+    const storage = getStorage();
+    await storage.saveCommandExecution(execution);
 
     return err(new InstanceOperationError('execute', 'Command execution failed'));
   }
@@ -201,28 +188,31 @@ export const executeCommandViaHTTP = async (
 
 // Get command history for an instance
 export const getCommandHistory = async (instanceId: string): Promise<CommandExecution[]> => {
-  return commandHistory.get(instanceId) || [];
-};
-
-// Add command execution to history
-const addToHistory = (instanceId: string, execution: CommandExecution): void => {
-  const history = commandHistory.get(instanceId) || [];
-  history.push(execution);
-
-  // Keep only last 100 commands per instance
-  if (history.length > 100) {
-    history.shift();
+  const storage = getStorage();
+  const historyResult = await storage.getCommandHistory(instanceId);
+  
+  if (historyResult.isErr()) {
+    log.error('Failed to get command history:', historyResult.error);
+    return [];
   }
-
-  commandHistory.set(instanceId, history);
+  
+  return historyResult.value;
 };
+
+// The addToHistory function is no longer needed - storage handles this
 
 // Clear command history for an instance
 export const clearCommandHistory = (instanceId: string): void => {
-  commandHistory.delete(instanceId);
+  const storage = getStorage();
+  storage.clearCommandHistory(instanceId).catch(error => {
+    log.error('Failed to clear command history:', error);
+  });
 };
 
 // Clear all command history (for testing)
 export const clearAllCommandHistory = (): void => {
-  commandHistory.clear();
+  const storage = getStorage();
+  storage.clearAllCommandHistory().catch(error => {
+    log.error('Failed to clear all command history:', error);
+  });
 };

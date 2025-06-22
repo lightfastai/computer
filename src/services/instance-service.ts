@@ -2,17 +2,18 @@ import { nanoid } from 'nanoid';
 import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
 import { AppError, NotFoundError } from '@/lib/error-handler';
+import { getStorage } from '@/lib/storage';
 import * as flyService from '@/services/fly-service';
 import type { CreateInstanceOptions, Instance, InstanceStatus } from '@/types/index';
 
 const log = pino();
 
-// State stores
-const instances = new Map<string, Instance>();
-
 // Clear all instances (for testing)
 export const clearAllInstances = (): void => {
-  instances.clear();
+  const storage = getStorage();
+  if ('clearAllInstances' in storage) {
+    (storage as any).clearAllInstances();
+  }
 };
 
 // Create instance with GitHub integration
@@ -24,6 +25,7 @@ export const createInstanceWithGitHub = async (options: CreateInstanceOptions): 
 
 // Create a new instance
 export const createInstance = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
+  const storage = getStorage();
   const instanceId = nanoid();
 
   // Create instance record
@@ -41,7 +43,10 @@ export const createInstance = async (options: CreateInstanceOptions): Promise<Re
     metadata: options.metadata,
   };
 
-  instances.set(instanceId, instance);
+  const saveResult = await storage.saveInstance(instance);
+  if (saveResult.isErr()) {
+    return err(saveResult.error);
+  }
 
   // Create Fly.io machine
   log.info(`Creating Fly machine for instance ${instanceId}...`);
@@ -51,7 +56,7 @@ export const createInstance = async (options: CreateInstanceOptions): Promise<Re
     // Mark instance as failed
     instance.status = 'failed' as InstanceStatus;
     instance.updatedAt = new Date();
-    instances.set(instanceId, instance);
+    await storage.saveInstance(instance);
 
     log.error(`Failed to create instance ${instanceId}:`, flyMachineResult.error);
     return err(flyMachineResult.error);
@@ -65,7 +70,7 @@ export const createInstance = async (options: CreateInstanceOptions): Promise<Re
   instance.status = 'running' as InstanceStatus;
   instance.updatedAt = new Date();
 
-  instances.set(instanceId, instance);
+  await storage.saveInstance(instance);
 
   log.info(`Instance ${instanceId} created successfully`);
   return ok(instance);
@@ -73,8 +78,14 @@ export const createInstance = async (options: CreateInstanceOptions): Promise<Re
 
 // Get an instance by ID
 export const getInstance = async (instanceId: string): Promise<Result<Instance, NotFoundError | AppError>> => {
-  const instance = instances.get(instanceId);
+  const storage = getStorage();
+  const instanceResult = await storage.getInstance(instanceId);
 
+  if (instanceResult.isErr()) {
+    return err(instanceResult.error);
+  }
+
+  const instance = instanceResult.value;
   if (!instance) {
     return err(new NotFoundError('Instance', instanceId));
   }
@@ -103,7 +114,7 @@ export const getInstance = async (instanceId: string): Promise<Result<Instance, 
       }
 
       instance.updatedAt = new Date();
-      instances.set(instanceId, instance);
+      await storage.saveInstance(instance);
     } else {
       log.error(`Failed to update instance ${instanceId} status:`, flyMachineResult.error);
     }
@@ -114,19 +125,15 @@ export const getInstance = async (instanceId: string): Promise<Result<Instance, 
 
 // List all instances
 export const listInstances = async (): Promise<Instance[]> => {
-  // Update all instance statuses
-  const instanceArray = Array.from(instances.values());
+  const storage = getStorage();
+  const instancesResult = await storage.listInstances();
 
-  // Filter out destroyed instances older than 1 hour
-  const activeInstances = instanceArray.filter((instance) => {
-    if (instance.status === 'destroyed') {
-      const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      return instance.updatedAt > hourAgo;
-    }
-    return true;
-  });
+  if (instancesResult.isErr()) {
+    log.error('Failed to list instances:', instancesResult.error);
+    return [];
+  }
 
-  return activeInstances;
+  return instancesResult.value;
 };
 
 // Stop an instance
@@ -152,7 +159,8 @@ export const stopInstance = async (instanceId: string): Promise<Result<Instance,
 
   instance.status = 'stopped' as InstanceStatus;
   instance.updatedAt = new Date();
-  instances.set(instanceId, instance);
+  const storage = getStorage();
+  await storage.saveInstance(instance);
 
   log.info(`Instance ${instanceId} stopped successfully`);
   return ok(instance);
@@ -181,7 +189,8 @@ export const startInstance = async (instanceId: string): Promise<Result<Instance
 
   instance.status = 'running' as InstanceStatus;
   instance.updatedAt = new Date();
-  instances.set(instanceId, instance);
+  const storage = getStorage();
+  await storage.saveInstance(instance);
 
   log.info(`Instance ${instanceId} started successfully`);
   return ok(instance);
@@ -201,9 +210,10 @@ export const destroyInstance = async (instanceId: string): Promise<Result<void, 
     return ok(undefined);
   }
 
+  const storage = getStorage();
   instance.status = 'destroying' as InstanceStatus;
   instance.updatedAt = new Date();
-  instances.set(instanceId, instance);
+  await storage.saveInstance(instance);
 
   // Only destroy Fly machine if it exists
   if (instance.flyMachineId) {
@@ -212,33 +222,41 @@ export const destroyInstance = async (instanceId: string): Promise<Result<void, 
     if (destroyResult.isErr()) {
       instance.status = 'failed' as InstanceStatus;
       instance.updatedAt = new Date();
-      instances.set(instanceId, instance);
+      await storage.saveInstance(instance);
       return err(destroyResult.error);
     }
   }
 
   instance.status = 'destroyed' as InstanceStatus;
   instance.updatedAt = new Date();
-  instances.set(instanceId, instance);
+  await storage.saveInstance(instance);
 
   log.info(`Instance ${instanceId} destroyed successfully`);
   return ok(undefined);
 };
 
 // Get instance statistics
-export const getInstanceStats = (): {
+export const getInstanceStats = async (): Promise<{
   total: number;
   running: number;
   stopped: number;
   failed: number;
-} => {
-  const instanceArray = Array.from(instances.values());
+}> => {
+  const storage = getStorage();
+  const instancesResult = await storage.listInstances();
+
+  if (instancesResult.isErr()) {
+    log.error('Failed to get instance stats:', instancesResult.error);
+    return { total: 0, running: 0, stopped: 0, failed: 0 };
+  }
+
+  const instances = instancesResult.value;
 
   return {
-    total: instanceArray.length,
-    running: instanceArray.filter((i) => i.status === 'running').length,
-    stopped: instanceArray.filter((i) => i.status === 'stopped').length,
-    failed: instanceArray.filter((i) => i.status === 'failed').length,
+    total: instances.length,
+    running: instances.filter((i) => i.status === 'running').length,
+    stopped: instances.filter((i) => i.status === 'stopped').length,
+    failed: instances.filter((i) => i.status === 'failed').length,
   };
 };
 

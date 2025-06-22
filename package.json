@@ -3,10 +3,22 @@
   "version": "0.2.0",
   "description": "Simplified Fly.io instance management with GitHub integration and command execution",
   "type": "module",
+  "main": "dist/sdk.js",
+  "types": "dist/sdk.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/sdk.js",
+      "types": "./dist/sdk.d.ts"
+    },
+    "./server": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "dotenv -- bun run --hot src/index.ts",
     "with-env": "dotenv -e ./.env --",
-    "build": "bun build src/index.ts --target node --outdir dist",
+    "build": "bun build src/sdk.ts src/index.ts --target node --outdir dist",
     "start": "NODE_ENV=production bun run dist/index.js",
     "test": "bun test",
     "lint": "biome check src",
