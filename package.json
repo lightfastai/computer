@@ -4,7 +4,8 @@
   "description": "Simplified Fly.io instance management with GitHub integration and command execution",
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "dotenv -- bun run --hot src/index.ts",
+    "with-env": "dotenv --",
     "build": "bun build src/index.ts --target node --outdir dist",
     "start": "NODE_ENV=production bun run dist/index.js",
     "test": "bun test",
@@ -33,6 +34,7 @@
     "@biomejs/biome": "^2.0.4",
     "@types/bun": "^1.2.17",
     "@types/node": "^24.0.3",
+    "dotenv-cli": "^8.0.0",
     "typescript": "^5.8.3"
   }
 }

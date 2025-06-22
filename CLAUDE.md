@@ -20,11 +20,14 @@ bun test --watch        # Run tests continuously during development
 bun run build         # Check for TypeScript compilation errors
 bun run lint          # Check code style with Biome
 bun run typecheck     # Verify TypeScript types
-bun dev               # Start development server
+bun run dev           # Start development server with dotenv loading
 
 # Testing the API
 curl http://localhost:3000/health
 curl http://localhost:3000/api/instances
+
+# Using environment variables with other commands
+bun run with-env -- <command>  # Run any command with .env loaded
 ```
 
 ## Project Context
@@ -556,6 +559,7 @@ fly machines list -a lightfast-worker-instances
 - "app not found": Run `fly apps create lightfast-worker-instances --org lightfast`
 - "invalid token": Get fresh token with `fly auth token`
 - Instances stop when idle: This is normal Fly.io behavior
+- **Token validation errors**: The Fly.io Machines API v2 requires specific token formats. Use org or deploy tokens generated with `fly tokens create org -o lightfast`. Personal tokens from `fly auth token` may not work with the Machines API.
 
 ### Development Issues
 - **Port conflicts**: Default port is 3000, kill existing: `kill -9 $(lsof -ti:3000)`

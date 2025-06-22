@@ -17,19 +17,8 @@ export const clearAllInstances = (): void => {
 
 // Create instance with GitHub integration
 export const createInstanceWithGitHub = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
-  // If GitHub secrets provided, set them at app level first
-  if (options.secrets?.githubToken) {
-    const secretsResult = await flyService.setAppSecrets({
-      GITHUB_TOKEN: options.secrets.githubToken,
-      GITHUB_USERNAME: options.secrets.githubUsername || 'x-access-token',
-    });
-
-    if (secretsResult.isErr()) {
-      return err(secretsResult.error);
-    }
-  }
-
-  // Create the instance with proper configuration
+  // Secrets are now passed directly as environment variables in fly-service.ts
+  // No need to set app-level secrets anymore
   return createInstance(options);
 };
 
@@ -216,14 +205,16 @@ export const destroyInstance = async (instanceId: string): Promise<Result<void, 
   instance.updatedAt = new Date();
   instances.set(instanceId, instance);
 
-  // Destroy Fly machine
-  const destroyResult = await flyService.destroyMachine(instance.flyMachineId);
+  // Only destroy Fly machine if it exists
+  if (instance.flyMachineId) {
+    const destroyResult = await flyService.destroyMachine(instance.flyMachineId);
 
-  if (destroyResult.isErr()) {
-    instance.status = 'failed' as InstanceStatus;
-    instance.updatedAt = new Date();
-    instances.set(instanceId, instance);
-    return err(destroyResult.error);
+    if (destroyResult.isErr()) {
+      instance.status = 'failed' as InstanceStatus;
+      instance.updatedAt = new Date();
+      instances.set(instanceId, instance);
+      return err(destroyResult.error);
+    }
   }
 
   instance.status = 'destroyed' as InstanceStatus;

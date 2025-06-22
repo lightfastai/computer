@@ -14,7 +14,10 @@
       "Bash(mkdir:*)",
       "Bash(grep:*)",
       "Bash(gh pr merge:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(fly apps list:*)",
+      "Bash(fly status:*)",
+      "Bash(fly machines destroy:*)"
     ],
     "deny": []
   }

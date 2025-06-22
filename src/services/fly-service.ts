@@ -42,10 +42,14 @@ const API_URL = 'https://api.machines.dev/v1';
 const APP_NAME = 'lightfast-worker-instances';
 
 // Create headers for API requests
-const createHeaders = () => ({
-  Authorization: `Bearer ${config.flyApiToken}`,
-  'Content-Type': 'application/json',
-});
+const createHeaders = () => {
+  // Extract the first token if multiple are provided (comma-separated)
+  const token = config.flyApiToken.split(',')[0].trim();
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
 
 // Parse machine size configuration
 export const parseMachineSize = (size: string): { kind: string; cpus: number } => {
@@ -91,7 +95,7 @@ interface MachineConfig {
 
 // Create machine configuration
 const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
-  const { name, region, image, size, memoryMb, metadata, repoUrl } = options;
+  const { name, region, image, size, memoryMb, metadata, repoUrl, secrets } = options;
   const cpuConfig = parseMachineSize(size || 'shared-cpu-1x');
 
   const machineConfig: MachineConfig = {
@@ -109,6 +113,11 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
         ...metadata,
         DEBIAN_FRONTEND: 'noninteractive',
         TZ: 'UTC',
+        // Add GitHub credentials directly as environment variables
+        ...(secrets?.githubToken && {
+          GITHUB_TOKEN: secrets.githubToken,
+          GITHUB_USERNAME: secrets.githubUsername || 'x-access-token',
+        }),
       },
       init: {
         exec: [
@@ -125,7 +134,7 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
 
           # Configure Git credential helper
           git config --global credential.helper 'cache --timeout=86400'
-          
+
           # Set up GitHub authentication if token provided
           if [ -n "$GITHUB_TOKEN" ]; then
             git config --global url."https://\${GITHUB_USERNAME:-x-access-token}:\${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
@@ -172,6 +181,12 @@ export const createMachine = async (
         statusText: response.statusText,
         error: errorText,
         config: machineConfig,
+      });
+
+      // Also log to console for debugging
+      console.error('Fly.io Error Details:', {
+        status: response.status,
+        error: errorText,
       });
 
       // Return user-friendly error based on status code
