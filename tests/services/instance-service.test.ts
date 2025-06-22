@@ -70,7 +70,7 @@ describe('instance-service', () => {
     mockStartMachine = spyOn(flyService, 'startMachine');
     mockDestroyMachine = spyOn(flyService, 'destroyMachine');
     mockRestartMachine = spyOn(flyService, 'restartMachine');
-    
+
     // Default to empty list for listMachines
     mockListMachines.mockResolvedValue(ok([]));
   });
@@ -127,7 +127,7 @@ describe('instance-service', () => {
       if (result.isErr()) {
         expect(result.error).toBe(mockError);
       }
-      
+
       // In stateless SDK, failed creates don't appear in list
       const instances = await instanceService.listInstances();
       expect(instances).toHaveLength(0);
@@ -157,7 +157,7 @@ describe('instance-service', () => {
     it('should return NotFoundError for non-existent instance', async () => {
       // Mock 404 response
       mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
-      
+
       const result = await instanceService.getInstance('non-existent');
 
       expect(result.isErr()).toBe(true);
@@ -274,13 +274,13 @@ describe('instance-service', () => {
         expect(destroyResult.isOk()).toBe(true);
 
         expect(mockDestroyMachine).toHaveBeenCalledWith('fly-123');
-        
+
         // After destroy, machine should not exist
         mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
 
         const instanceResult = await instanceService.getInstance(createResult.value.id);
         expect(instanceResult.isErr()).toBe(true);
-        
+
         if (instanceResult.isErr()) {
           expect(instanceResult.error).toBeInstanceOf(NotFoundError);
         }
@@ -290,14 +290,14 @@ describe('instance-service', () => {
     it('should handle destroy when instance does not exist', async () => {
       // Mock 404 response for non-existent instance
       mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
-      
+
       const destroyResult = await instanceService.destroyInstance('non-existent');
       expect(destroyResult.isErr()).toBe(true);
-      
+
       if (destroyResult.isErr()) {
         expect(destroyResult.error).toBeInstanceOf(NotFoundError);
       }
-      
+
       // Should not call destroyMachine if instance doesn't exist
       expect(mockDestroyMachine).not.toHaveBeenCalled();
     });
@@ -389,9 +389,9 @@ describe('instance-service', () => {
 
       expect(stats).toEqual({
         total: 4,
-        running: 2,  // 2 started machines
-        stopped: 1,  // 1 stopped machine
-        failed: 1,   // 1 failed machine
+        running: 2, // 2 started machines
+        stopped: 1, // 1 stopped machine
+        failed: 1, // 1 failed machine
       });
     });
   });

@@ -2,7 +2,7 @@ import { err, ok, type Result } from 'neverthrow';
 import pino from 'pino';
 import { AppError, NotFoundError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
-import type { CreateInstanceOptions, Instance, InstanceStatus } from '@/types/index';
+import type { CreateInstanceOptions, FlyRegion, Instance, InstanceStatus, MachineSize } from '@/types/index';
 
 const log = pino();
 
@@ -21,11 +21,11 @@ export const createInstanceWithGitHub = async (options: CreateInstanceOptions): 
 // Create a new instance
 export const createInstance = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
   // Create Fly.io machine directly
-  log.info(`Creating Fly machine...`);
+  log.info('Creating Fly machine...');
   const flyMachineResult = await flyService.createMachine(options);
 
   if (flyMachineResult.isErr()) {
-    log.error(`Failed to create machine:`, flyMachineResult.error);
+    log.error('Failed to create machine:', flyMachineResult.error);
     return err(flyMachineResult.error);
   }
 
@@ -36,9 +36,9 @@ export const createInstance = async (options: CreateInstanceOptions): Promise<Re
     id: flyMachine.id, // Use Fly machine ID directly
     flyMachineId: flyMachine.id,
     name: flyMachine.name,
-    region: flyMachine.region as any, // Type assertion needed
+    region: flyMachine.region as FlyRegion, // Type assertion needed
     image: flyMachine.config.image,
-    size: 'shared-cpu-1x' as any, // Default since Fly doesn't expose this directly
+    size: 'shared-cpu-1x' as MachineSize, // Default since Fly doesn't expose this directly
     memoryMb: flyMachine.config.guest.memory_mb,
     status: mapFlyStateToInstanceStatus(flyMachine.state),
     createdAt: new Date(flyMachine.created_at),
@@ -71,9 +71,9 @@ export const getInstance = async (machineId: string): Promise<Result<Instance, N
     id: flyMachine.id,
     flyMachineId: flyMachine.id,
     name: flyMachine.name,
-    region: flyMachine.region as any,
+    region: flyMachine.region as FlyRegion,
     image: flyMachine.config.image,
-    size: 'shared-cpu-1x' as any,
+    size: 'shared-cpu-1x' as MachineSize,
     memoryMb: flyMachine.config.guest.memory_mb,
     status: mapFlyStateToInstanceStatus(flyMachine.state),
     createdAt: new Date(flyMachine.created_at),
@@ -102,9 +102,9 @@ export const listInstances = async (): Promise<Instance[]> => {
     id: flyMachine.id,
     flyMachineId: flyMachine.id,
     name: flyMachine.name,
-    region: flyMachine.region as any,
+    region: flyMachine.region as FlyRegion,
     image: flyMachine.config.image,
-    size: 'shared-cpu-1x' as any,
+    size: 'shared-cpu-1x' as MachineSize,
     memoryMb: flyMachine.config.guest.memory_mb,
     status: mapFlyStateToInstanceStatus(flyMachine.state),
     createdAt: new Date(flyMachine.created_at),

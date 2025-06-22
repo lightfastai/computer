@@ -3,10 +3,10 @@ import { err } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
+import type { CommandExecution, ExecuteCommandResult } from '@/services/command-service';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
-import type { CommandExecution, ExecuteCommandResult } from '@/services/command-service';
 
 export interface LightfastComputerSDK {
   instances: InstanceManager;

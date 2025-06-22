@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'bun:test';
 import { err, ok } from 'neverthrow';
-import { InstanceOperationError, NotFoundError } from '@/lib/error-handler';
+import { InstanceOperationError } from '@/lib/error-handler';
 import type { LightfastComputerSDK } from '@/sdk';
 import createLightfastComputer from '@/sdk';
 import * as flyService from '@/services/fly-service';
@@ -30,7 +30,7 @@ describe('SDK E2E Integration Tests', () => {
     mockStartMachine = spyOn(flyService, 'startMachine');
     mockDestroyMachine = spyOn(flyService, 'destroyMachine');
     mockRestartMachine = spyOn(flyService, 'restartMachine');
-    
+
     // Default to empty list
     mockListMachines.mockResolvedValue(ok([]));
 
@@ -122,7 +122,7 @@ describe('SDK E2E Integration Tests', () => {
     it('should handle instance not found errors gracefully', async () => {
       // Mock 404 response
       mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
-      
+
       const result = await sdk.instances.get('non-existent-id');
 
       expect(result.isErr()).toBe(true);
