@@ -92,13 +92,14 @@ For each instance, you can:
 
 ### SDK Usage
 
+**Server-Side (API Routes)**:
 ```typescript
 import createLightfastComputer from '@lightfast/computer';
 
-// Initialize the SDK
+// Initialize the SDK (server-side only)
 const sdk = createLightfastComputer();
 
-// Create an instance
+// Create an instance (in API route)
 const result = await sdk.instances.create({
   name: 'my-instance',
   region: 'iad',
@@ -107,10 +108,22 @@ const result = await sdk.instances.create({
 });
 
 if (result.isOk()) {
-  console.log('Instance created:', result.value);
+  return NextResponse.json(result.value);
 } else {
-  console.error('Error:', result.error.message);
+  return NextResponse.json({ error: result.error.message }, { status: 400 });
 }
+```
+
+**Client-Side (React Components)**:
+```typescript
+import type { Instance } from '@lightfast/computer';
+
+// Use types for proper TypeScript support
+const [instances, setInstances] = useState<Instance[]>([]);
+
+// Call API routes instead of SDK directly
+const response = await fetch('/api/instances');
+const instances: Instance[] = await response.json();
 ```
 
 ### Error Handling

@@ -5,22 +5,8 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 // SDK is used only in API routes, not client-side
-
-// Define types locally since we can't import SDK on client
-interface Instance {
-  id: string;
-  flyMachineId: string;
-  name: string;
-  region: string;
-  image: string;
-  size: string;
-  memoryMb: number;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-  privateIpAddress?: string;
-  metadata?: Record<string, unknown>;
-}
+// But we can import types since they're stripped at build time
+import type { Instance, CreateInstanceOptions } from '@lightfast/computer';
 
 interface FileTreeNode {
   name: string;
