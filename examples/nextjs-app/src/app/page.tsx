@@ -1,13 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Play, Square, RotateCcw, Trash2, Plus, GitBranch, FolderTree, Loader2 } from 'lucide-react';
+import { FolderTree, GitBranch, Loader2, Play, Plus, RotateCcw, Square, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import createLightfastComputer from '@lightfast/computer';
-import type { Instance } from '@lightfast/computer';
 
-// Initialize SDK
-const sdk = createLightfastComputer();
+// SDK is used only in API routes, not client-side
+
+// Define types locally since we can't import SDK on client
+interface Instance {
+  id: string;
+  flyMachineId: string;
+  name: string;
+  region: string;
+  image: string;
+  size: string;
+  memoryMb: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  privateIpAddress?: string;
+  metadata?: Record<string, unknown>;
+}
 
 interface FileTreeNode {
   name: string;
@@ -32,7 +45,11 @@ export default function Home() {
   const loadInstances = async () => {
     try {
       setLoading(true);
-      const instanceList = await sdk.instances.list();
+      const response = await fetch('/api/instances');
+      if (!response.ok) {
+        throw new Error('Failed to fetch instances');
+      }
+      const instanceList = await response.json();
       setInstances(instanceList);
     } catch (error) {
       console.error('Failed to load instances:', error);
@@ -45,19 +62,27 @@ export default function Home() {
   const createInstance = async () => {
     setCreating(true);
     try {
-      const result = await sdk.instances.create({
-        name: `demo-${Date.now()}`,
-        region: 'iad',
-        size: 'shared-cpu-1x',
-        memoryMb: 512,
+      const response = await fetch('/api/instances', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `demo-${Date.now()}`,
+          region: 'iad',
+          size: 'shared-cpu-1x',
+          memoryMb: 512,
+        }),
       });
 
-      if (result.isOk()) {
-        toast.success(`Instance ${result.value.name} created successfully!`);
-        await loadInstances();
-      } else {
-        throw new Error(result.error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create instance');
       }
+
+      const instance = await response.json();
+      toast.success(`Instance ${instance.name} created successfully!`);
+      await loadInstances();
     } catch (error) {
       console.error('Failed to create instance:', error);
       toast.error(`Failed to create instance: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -68,23 +93,26 @@ export default function Home() {
 
   const deleteInstance = async (id: string) => {
     if (!confirm('Are you sure you want to delete this instance?')) return;
-    
+
     setOperationLoading(id);
     try {
-      const result = await sdk.instances.destroy(id);
+      const response = await fetch(`/api/instances/${id}`, {
+        method: 'DELETE',
+      });
       
-      if (result.isOk()) {
-        toast.success('Instance deleted successfully!');
-        await loadInstances();
-        // Clear file tree for deleted instance
-        setFileTree(prev => {
-          const newTree = { ...prev };
-          delete newTree[id];
-          return newTree;
-        });
-      } else {
-        throw new Error(result.error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete instance');
       }
+      
+      toast.success('Instance deleted successfully!');
+      await loadInstances();
+      // Clear file tree for deleted instance
+      setFileTree((prev) => {
+        const newTree = { ...prev };
+        delete newTree[id];
+        return newTree;
+      });
     } catch (error) {
       console.error('Failed to delete instance:', error);
       toast.error(`Failed to delete instance: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -96,14 +124,17 @@ export default function Home() {
   const startInstance = async (id: string) => {
     setOperationLoading(id);
     try {
-      const result = await sdk.instances.start(id);
+      const response = await fetch(`/api/instances/${id}/start`, {
+        method: 'POST',
+      });
       
-      if (result.isOk()) {
-        toast.success('Instance started successfully!');
-        await loadInstances();
-      } else {
-        throw new Error(result.error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start instance');
       }
+      
+      toast.success('Instance started successfully!');
+      await loadInstances();
     } catch (error) {
       console.error('Failed to start instance:', error);
       toast.error(`Failed to start instance: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -115,14 +146,17 @@ export default function Home() {
   const stopInstance = async (id: string) => {
     setOperationLoading(id);
     try {
-      const result = await sdk.instances.stop(id);
+      const response = await fetch(`/api/instances/${id}/stop`, {
+        method: 'POST',
+      });
       
-      if (result.isOk()) {
-        toast.success('Instance stopped successfully!');
-        await loadInstances();
-      } else {
-        throw new Error(result.error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to stop instance');
       }
+      
+      toast.success('Instance stopped successfully!');
+      await loadInstances();
     } catch (error) {
       console.error('Failed to stop instance:', error);
       toast.error(`Failed to stop instance: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -134,14 +168,17 @@ export default function Home() {
   const restartInstance = async (id: string) => {
     setOperationLoading(id);
     try {
-      const result = await sdk.instances.restart(id);
+      const response = await fetch(`/api/instances/${id}/restart`, {
+        method: 'POST',
+      });
       
-      if (result.isOk()) {
-        toast.success('Instance restarted successfully!');
-        await loadInstances();
-      } else {
-        throw new Error(result.error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to restart instance');
       }
+      
+      toast.success('Instance restarted successfully!');
+      await loadInstances();
     } catch (error) {
       console.error('Failed to restart instance:', error);
       toast.error(`Failed to restart instance: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -154,28 +191,58 @@ export default function Home() {
     setGitCloneLoading(instanceId);
     try {
       // Clone the repository
-      const cloneResult = await sdk.commands.execute({
-        instanceId,
-        command: 'git',
-        args: ['clone', url, 'cloned-repo'],
+      const cloneResponse = await fetch('/api/commands', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          instanceId,
+          command: 'git',
+          args: ['clone', url, 'cloned-repo'],
+        }),
       });
 
-      if (cloneResult.isErr()) {
-        throw new Error(cloneResult.error.message);
+      if (!cloneResponse.ok) {
+        const errorData = await cloneResponse.json();
+        throw new Error(errorData.error || 'Failed to clone repository');
       }
 
       // Get file tree
-      const treeResult = await sdk.commands.execute({
-        instanceId,
-        command: 'find',
-        args: ['cloned-repo', '-type', 'f', '-name', '*.js', '-o', '-name', '*.ts', '-o', '-name', '*.json', '-o', '-name', '*.md'],
+      const treeResponse = await fetch('/api/commands', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          instanceId,
+          command: 'find',
+          args: [
+            'cloned-repo',
+            '-type',
+            'f',
+            '-name',
+            '*.js',
+            '-o',
+            '-name',
+            '*.ts',
+            '-o',
+            '-name',
+            '*.json',
+            '-o',
+            '-name',
+            '*.md',
+          ],
+        }),
       });
 
-      if (treeResult.isOk()) {
+      if (treeResponse.ok) {
+        const treeResult = await treeResponse.json();
         // Parse file tree (simplified)
-        const files = treeResult.value.output.split('\n')
-          .filter(line => line.trim())
-          .map(path => {
+        const files = treeResult.output
+          .split('\n')
+          .filter((line: string) => line.trim())
+          .map((path: string) => {
             const parts = path.replace('cloned-repo/', '').split('/');
             return {
               name: parts[parts.length - 1],
@@ -185,9 +252,9 @@ export default function Home() {
           })
           .slice(0, 20); // Limit to first 20 files
 
-        setFileTree(prev => ({
+        setFileTree((prev) => ({
           ...prev,
-          [instanceId]: files.map(f => ({ name: f.name, type: f.type }))
+          [instanceId]: files.map((f: { name: string; type: 'file'; path: string }) => ({ name: f.name, type: f.type })),
         }));
 
         toast.success(`Repository cloned! Found ${files.length} files.`);
@@ -204,10 +271,14 @@ export default function Home() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'running': return 'status-running';
-      case 'stopped': return 'status-stopped';
-      case 'failed': return 'status-failed';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      case 'running':
+        return 'status-running';
+      case 'stopped':
+        return 'status-stopped';
+      case 'failed':
+        return 'status-failed';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
 
@@ -226,23 +297,15 @@ export default function Home() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Instance Management
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Create, manage, and deploy Ubuntu instances on Fly.io
-            </p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Instance Management</h2>
+            <p className="text-gray-600 dark:text-gray-400">Create, manage, and deploy Ubuntu instances on Fly.io</p>
           </div>
           <button
             onClick={createInstance}
             disabled={creating}
             className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {creating ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
+            {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
             {creating ? 'Creating...' : 'Create Instance'}
           </button>
         </div>
@@ -256,9 +319,7 @@ export default function Home() {
         </h3>
         <div className="flex gap-4 items-end">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Repository URL
-            </label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Repository URL</label>
             <input
               type="url"
               value={repoUrl}
@@ -276,22 +337,14 @@ export default function Home() {
           <div className="text-gray-400 dark:text-gray-600 mb-4">
             <FolderTree className="h-16 w-16 mx-auto mb-4" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No instances yet
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Create your first Ubuntu instance to get started
-          </p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No instances yet</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">Create your first Ubuntu instance to get started</p>
           <button
             onClick={createInstance}
             disabled={creating}
             className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50"
           >
-            {creating ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
+            {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
             {creating ? 'Creating...' : 'Create First Instance'}
           </button>
         </div>
@@ -302,9 +355,7 @@ export default function Home() {
               {/* Instance Header */}
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {instance.name}
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{instance.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {instance.region} • {instance.size}
                   </p>
@@ -318,15 +369,11 @@ export default function Home() {
               <div className="space-y-2 mb-4">
                 <div className="text-sm">
                   <span className="text-gray-500 dark:text-gray-400">ID:</span>
-                  <span className="ml-2 font-mono text-gray-900 dark:text-white">
-                    {instance.id.slice(0, 12)}...
-                  </span>
+                  <span className="ml-2 font-mono text-gray-900 dark:text-white">{instance.id.slice(0, 12)}...</span>
                 </div>
                 <div className="text-sm">
                   <span className="text-gray-500 dark:text-gray-400">Memory:</span>
-                  <span className="ml-2 text-gray-900 dark:text-white">
-                    {instance.memoryMb}MB
-                  </span>
+                  <span className="ml-2 text-gray-900 dark:text-white">{instance.memoryMb}MB</span>
                 </div>
                 <div className="text-sm">
                   <span className="text-gray-500 dark:text-gray-400">Created:</span>
@@ -411,7 +458,7 @@ export default function Home() {
                       {gitCloneLoading === instance.id ? 'Cloning...' : 'Clone Repo'}
                     </button>
                   </div>
-                  
+
                   {/* File Tree Display */}
                   {fileTree[instance.id] && (
                     <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded border">
