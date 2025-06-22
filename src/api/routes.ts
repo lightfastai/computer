@@ -1,3 +1,4 @@
+import { commandRoutes } from '@/api/command-execution';
 import { instanceRoutes } from '@/api/instances';
 import { monitoringRoutes } from '@/api/monitoring';
 import { Hono } from 'hono';
@@ -7,6 +8,7 @@ export const apiRoutes = new Hono();
 // Mount route handlers
 apiRoutes.route('/instances', instanceRoutes);
 apiRoutes.route('/monitoring', monitoringRoutes);
+apiRoutes.route('/commands', commandRoutes);
 
 // API info endpoint
 apiRoutes.get('/', (c) => {
@@ -16,10 +18,7 @@ apiRoutes.get('/', (c) => {
     endpoints: {
       instances: '/api/instances',
       monitoring: '/api/monitoring',
-      inngest: '/api/inngest',
-    },
-    features: {
-      inngest: process.env.INNGEST_ENABLED === 'true' ? 'enabled' : 'disabled',
+      commands: '/api/commands',
     },
   });
 });

@@ -15,6 +15,24 @@ export const clearAllInstances = (): void => {
   instances.clear();
 };
 
+// Create instance with GitHub integration
+export const createInstanceWithGitHub = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
+  // If GitHub secrets provided, set them at app level first
+  if (options.secrets?.githubToken) {
+    const secretsResult = await flyService.setAppSecrets({
+      GITHUB_TOKEN: options.secrets.githubToken,
+      GITHUB_USERNAME: options.secrets.githubUsername || 'x-access-token',
+    });
+
+    if (secretsResult.isErr()) {
+      return err(secretsResult.error);
+    }
+  }
+
+  // Create the instance with proper configuration
+  return createInstance(options);
+};
+
 // Create a new instance
 export const createInstance = async (options: CreateInstanceOptions): Promise<Result<Instance, AppError>> => {
   const instanceId = nanoid();

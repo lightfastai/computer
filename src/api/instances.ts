@@ -13,12 +13,19 @@ const createInstanceSchema = z.object({
   size: z.string().optional(),
   memoryMb: z.number().optional(),
   metadata: z.record(z.any()).optional(),
+  secrets: z
+    .object({
+      githubToken: z.string().optional(),
+      githubUsername: z.string().optional(),
+    })
+    .optional(),
+  repoUrl: z.string().optional(),
 });
 
 // Create instance
 instanceRoutes.post('/', zValidator('json', createInstanceSchema), async (c) => {
   const body = c.req.valid('json');
-  const result = await instanceService.createInstance(body);
+  const result = await instanceService.createInstanceWithGitHub(body);
 
   if (result.isErr()) {
     throw result.error;

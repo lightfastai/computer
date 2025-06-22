@@ -91,14 +91,14 @@ interface MachineConfig {
 
 // Create machine configuration
 const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
-  const { name, region, image, size, memoryMb, metadata } = options;
+  const { name, region, image, size, memoryMb, metadata, repoUrl } = options;
   const cpuConfig = parseMachineSize(size || 'shared-cpu-1x');
 
   const machineConfig: MachineConfig = {
     name: name || `instance-${Date.now()}`,
     region: region || 'iad',
     config: {
-      image: image || 'ubuntu-22.04',
+      image: image || 'ubuntu:22.04',
       guest: {
         cpu_kind: cpuConfig.kind,
         cpus: cpuConfig.cpus,
@@ -107,6 +107,42 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
       services: [],
       env: {
         ...metadata,
+        DEBIAN_FRONTEND: 'noninteractive',
+        TZ: 'UTC',
+      },
+      init: {
+        exec: [
+          '/bin/bash',
+          '-c',
+          `
+          # Update and install essential packages
+          apt-get update && apt-get install -y --no-install-recommends \
+            git \
+            curl \
+            ca-certificates \
+            openssh-client \
+            && rm -rf /var/lib/apt/lists/*
+
+          # Configure Git credential helper
+          git config --global credential.helper 'cache --timeout=86400'
+          
+          # Set up GitHub authentication if token provided
+          if [ -n "$GITHUB_TOKEN" ]; then
+            git config --global url."https://\${GITHUB_USERNAME:-x-access-token}:\${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+            git config --global user.name "\${GITHUB_USERNAME:-Fly-Instance}"
+            git config --global user.email "\${GITHUB_USERNAME:-fly}@instance.local"
+          fi
+
+          # Clone repository if URL provided
+          if [ -n "${repoUrl || ''}" ]; then
+            git clone "${repoUrl}" /workspace
+            cd /workspace
+          fi
+
+          # Keep container running
+          tail -f /dev/null
+          `,
+        ],
       },
     },
   };
@@ -442,4 +478,42 @@ export const waitForMachineReady = async (
   });
 
   return err(new InstanceOperationError('start', 'timeout waiting for instance to become ready'));
+};
+
+// Set app-level secrets
+export const setAppSecrets = async (secrets: Record<string, string>): Promise<Result<void, InfrastructureError>> => {
+  try {
+    const secretsArray = Object.entries(secrets).map(([key, value]) => ({
+      name: key,
+      value: value,
+    }));
+
+    const response = await fetch(`${API_URL}/apps/${APP_NAME}/secrets`, {
+      method: 'PUT',
+      headers: createHeaders(),
+      body: JSON.stringify({ secrets: secretsArray }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      log.error('Failed to set app secrets:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+      });
+
+      return err(new InfrastructureError('Failed to set app secrets'));
+    }
+
+    log.info('App secrets updated successfully');
+    return ok(undefined);
+  } catch (error) {
+    log.error('Unexpected error setting app secrets:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return err(new InfrastructureError('compute platform'));
+  }
 };
