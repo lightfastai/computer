@@ -55,6 +55,7 @@ const mockGetMachine = spyOn(flyService, 'getMachine');
 const mockStopMachine = spyOn(flyService, 'stopMachine');
 const mockStartMachine = spyOn(flyService, 'startMachine');
 const mockDestroyMachine = spyOn(flyService, 'destroyMachine');
+const mockRestartMachine = spyOn(flyService, 'restartMachine');
 
 describe('instance-service', () => {
   let storage: InMemoryStorage;
@@ -71,7 +72,7 @@ describe('instance-service', () => {
     mockStartMachine.mockClear();
     mockDestroyMachine.mockClear();
     mockRestartMachine.mockClear();
-    
+
     // Clear instance service state
     instanceService.clearAllInstances();
   });

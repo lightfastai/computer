@@ -12,10 +12,10 @@ describe('SDK E2E Integration Tests', () => {
     // Create completely fresh storage
     storage = new InMemoryStorage();
     setStorage(storage);
-    
+
     // Clear any service-level state
     instanceService.clearAllInstances();
-    
+
     // Create SDK with fresh storage
     sdk = createLightfastComputer({ storage: storage });
   });

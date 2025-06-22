@@ -6,7 +6,7 @@ beforeEach(() => {
   // Reset to fresh in-memory storage for each test
   const freshStorage = new InMemoryStorage();
   setStorage(freshStorage);
-  
+
   // Clear any module-level state that might exist
   if (typeof global !== 'undefined') {
     // Reset any global test state
