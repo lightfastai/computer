@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
-import { ok, err } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { ValidationError } from '@/lib/error-handler';
 import createLightfastComputer from '@/sdk';
 import * as commandService from '@/services/command-service';

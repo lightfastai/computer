@@ -198,12 +198,17 @@ export const destroyInstance = async (machineId: string): Promise<Result<void, N
 };
 
 // Get instance statistics
-export const getInstanceStats = async (): Promise<Result<{
-  total: number;
-  running: number;
-  stopped: number;
-  failed: number;
-}, AppError>> => {
+export const getInstanceStats = async (): Promise<
+  Result<
+    {
+      total: number;
+      running: number;
+      stopped: number;
+      failed: number;
+    },
+    AppError
+  >
+> => {
   const instancesResult = await listInstances();
 
   if (instancesResult.isErr()) {
@@ -269,37 +274,34 @@ export const restartInstance = async (machineId: string): Promise<Result<Instanc
 // Stop all instances
 export const stopAllInstances = async (): Promise<Result<Instance[], AppError>> => {
   const instancesResult = await listInstances();
-  
+
   if (instancesResult.isErr()) {
     return err(instancesResult.error);
   }
-  
+
   const instances = instancesResult.value;
-  const runningInstances = instances.filter(i => i.status === 'running');
-  
+  const runningInstances = instances.filter((i) => i.status === 'running');
+
   if (runningInstances.length === 0) {
     return ok([]);
   }
-  
+
   log.info(`Stopping ${runningInstances.length} running instances...`);
-  
-  const stopResults = await Promise.allSettled(
-    runningInstances.map(instance => stopInstance(instance.id))
-  );
-  
+
+  const stopResults = await Promise.allSettled(runningInstances.map((instance) => stopInstance(instance.id)));
+
   const stoppedInstances: Instance[] = [];
-  
+
   for (const [index, result] of stopResults.entries()) {
     if (result.status === 'fulfilled' && result.value.isOk()) {
       stoppedInstances.push(result.value.value);
     } else {
-      const errorDetails = result.status === 'fulfilled' 
-        ? (result.value.isErr() ? result.value.error : 'Unknown error')
-        : result.reason;
+      const errorDetails =
+        result.status === 'fulfilled' ? (result.value.isErr() ? result.value.error : 'Unknown error') : result.reason;
       log.error(`Failed to stop instance ${runningInstances[index].id}:`, errorDetails);
     }
   }
-  
+
   log.info(`Successfully stopped ${stoppedInstances.length} of ${runningInstances.length} instances`);
   return ok(stoppedInstances);
 };
@@ -307,36 +309,33 @@ export const stopAllInstances = async (): Promise<Result<Instance[], AppError>> 
 // Destroy all instances
 export const destroyAllInstances = async (): Promise<Result<void, AppError>> => {
   const instancesResult = await listInstances();
-  
+
   if (instancesResult.isErr()) {
     return err(instancesResult.error);
   }
-  
+
   const instances = instancesResult.value;
-  
+
   if (instances.length === 0) {
     return ok(undefined);
   }
-  
+
   log.info(`Destroying ${instances.length} instances...`);
-  
-  const destroyResults = await Promise.allSettled(
-    instances.map(instance => destroyInstance(instance.id))
-  );
-  
+
+  const destroyResults = await Promise.allSettled(instances.map((instance) => destroyInstance(instance.id)));
+
   let successCount = 0;
-  
+
   for (const [index, result] of destroyResults.entries()) {
     if (result.status === 'fulfilled' && result.value.isOk()) {
       successCount++;
     } else {
-      const errorDetails = result.status === 'fulfilled' 
-        ? (result.value.isErr() ? result.value.error : 'Unknown error')
-        : result.reason;
+      const errorDetails =
+        result.status === 'fulfilled' ? (result.value.isErr() ? result.value.error : 'Unknown error') : result.reason;
       log.error(`Failed to destroy instance ${instances[index].id}:`, errorDetails);
     }
   }
-  
+
   log.info(`Successfully destroyed ${successCount} of ${instances.length} instances`);
   return ok(undefined);
 };
