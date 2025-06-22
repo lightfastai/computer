@@ -861,6 +861,18 @@ fly machines list -a lightfast-worker-instances
 - **ai**: Vercel AI SDK for streaming and AI integration
 - **@ai-sdk/openai**: OpenAI provider for AI SDK
 
+## CI/CD Cost Optimization
+
+### macOS Runners
+**IMPORTANT**: macOS runners on GitHub Actions cost 10x more than Linux runners.
+- Only run macOS tests on the main branch after PR merge
+- PRs should only use ubuntu-latest runners
+- Use matrix strategy with conditional OS selection:
+  ```yaml
+  matrix:
+    os: ${{ github.ref == 'refs/heads/main' && fromJSON('["ubuntu-latest", "macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
+  ```
+
 ## Common Issues & Solutions
 
 ### Fly.io Errors

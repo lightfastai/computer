@@ -9,6 +9,9 @@ on:
 env:
   BUN_VERSION: latest
 
+# Note: macOS runners cost 10x more than Linux runners
+# We only run macOS tests on main branch after merge
+
 jobs:
   lint:
     name: Lint
@@ -46,11 +49,12 @@ jobs:
         run: bun run typecheck
 
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Only run macOS tests on main branch to save costs
+        os: ${{ github.ref == 'refs/heads/main' && fromJSON('["ubuntu-latest", "macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
       
