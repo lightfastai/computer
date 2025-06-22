@@ -1,4 +1,4 @@
-# Lightfast Computer
+# lightfast-computer
 
 A simplified Fly.io instance management system for creating Ubuntu sandboxes with GitHub integration and command execution capabilities.
 
