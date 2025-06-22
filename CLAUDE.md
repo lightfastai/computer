@@ -447,12 +447,14 @@ cat "$CONTEXT_FILE" 2>/dev/null || echo "No existing context found"
 cd worktrees/<feature_name>
 
 # The script will:
-# - Create branch: jeevanpillay/<feature_name>
+# - Create branch: jeevanpillay/<feature_name>  ⚠️ NOTE: Always username/feature, never feat/feature
 # - Install dependencies with bun
 # - Copy .env.local if exists
 # - Set up context file
 # - Run initial checks
 ```
+
+**⚠️ IMPORTANT**: Branch names MUST follow the pattern `jeevanpillay/<feature-name>`, NOT `feat/<feature-name>`. This ensures proper attribution and follows GitHub best practices for user branches.
 
 ### Step 3: Development with TDD
 
