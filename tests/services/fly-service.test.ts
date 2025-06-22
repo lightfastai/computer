@@ -1,6 +1,9 @@
-import { type Mock, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, type Mock, mock } from 'bun:test';
 import { InstanceCreationError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
+
+// Save original fetch
+const originalFetch = global.fetch;
 
 // Mock fetch globally
 const mockFetch = mock() as Mock<typeof fetch>;
@@ -26,7 +29,11 @@ type MockFlyMachine = {
       cpus: number;
       memory_mb: number;
     };
-    services: Array<any>;
+    services: Array<{
+      ports: Array<{ port: number; handlers: string[] }>;
+      protocol: string;
+      internal_port: number;
+    }>;
     env: Record<string, string>;
   };
   created_at?: string;
@@ -57,6 +64,13 @@ const createMockFlyMachine = (overrides: MockFlyMachine = {}) => ({
 describe('fly-service', () => {
   beforeEach(() => {
     mockFetch.mockClear();
+    // Ensure fetch is mocked
+    global.fetch = mockFetchWithProperties;
+  });
+
+  afterEach(() => {
+    // Restore original fetch
+    global.fetch = originalFetch;
   });
 
   describe('createMachine', () => {

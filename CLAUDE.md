@@ -1,6 +1,6 @@
 # Claude AI Assistant Guide
 
-This guide provides instructions for Claude AI assistants working on the Lightfast Computer project - a Fly.io instance management system with Inngest-powered background processing.
+This guide provides instructions for Claude AI assistants working on the Lightfast Computer project - a pure TypeScript SDK for Fly.io instance management.
 
 ## 🚨 MANDATORY WORKTREE RULE
 
@@ -20,11 +20,6 @@ bun test --watch        # Run tests continuously during development
 bun run build         # Check for TypeScript compilation errors
 bun run lint          # Check code style with Biome
 bun run typecheck     # Verify TypeScript types
-bun run dev           # Start development server with dotenv loading
-
-# Testing the API
-curl http://localhost:3000/health
-curl http://localhost:3000/api/instances
 
 # Using environment variables with other commands
 bun run with-env -- <command>  # Run any command with .env loaded
@@ -32,7 +27,7 @@ bun run with-env -- <command>  # Run any command with .env loaded
 
 ## Project Context
 
-This system enables users to create and manage Ubuntu instances on Fly.io with GitHub integration and command execution capabilities. The focus is on providing isolated sandboxes for development and testing.
+This SDK enables developers to create and manage Ubuntu instances on Fly.io with GitHub integration and command execution capabilities. The focus is on providing a clean TypeScript interface for isolated compute environments.
 
 ### Fly.io Deployment Details
 - **App**: `lightfast-worker-instances` (where Ubuntu instances run)
@@ -44,6 +39,7 @@ This system enables users to create and manage Ubuntu instances on Fly.io with G
 - The Fly.io app name is hardcoded in `fly-service.ts` as `lightfast-worker-instances`
 - Instances are created without public IPs (only private IPv6 addresses)
 - No SSH functionality - instances are managed through Fly.io Machines API only
+- Pure SDK - no HTTP server or API endpoints
 
 ## Claude AI Best Practices
 
@@ -64,10 +60,10 @@ This system enables users to create and manage Ubuntu instances on Fly.io with G
 - **Test continuously**: Run tests frequently during development
 - **Verify changes**: Use build/lint commands to catch errors early
 
-## 📋 Development Modes
+## 📋 Development Mode
 
-### 🚀 Fly.io Deploy Mode (Default)
-Use this mode when you want Claude to handle the full development lifecycle:
+### 🔧 SDK Development Mode
+Claude follows a pure SDK development approach:
 - **Claude Responsibilities**:
   - Creates worktree using `./scripts/setup-worktree.sh`
   - Writes tests first (TDD approach)
@@ -75,29 +71,44 @@ Use this mode when you want Claude to handle the full development lifecycle:
   - Runs `bun run build` iteratively to fix errors
   - Runs `bun run lint` and `bun run format`
   - Commits and pushes changes automatically
-  - Deploys to Fly.io for testing
 - **User Responsibilities**:
-  - Tests on Fly.io deployment
+  - Tests SDK integration in their own projects
   - Reports bugs or issues back to Claude
-- **When to Use**: Production-ready development, team collaboration
+- **When to Use**: All SDK development (this is the only mode)
 
-### 🔧 Local Dev Mode
-Use this mode when you're already running `bun dev` locally:
-- **Claude Responsibilities**:
-  - Acts as code generator only
-  - Makes code changes with TDD approach
-  - Asks user to test locally after changes
-  - Does NOT commit or push automatically
-- **User Responsibilities**:
-  - Runs `bun dev` before starting
-  - Tests API changes locally in real-time
-  - Decides when to commit and push
-- **When to Use**: Rapid prototyping, debugging, exploratory development
+## 🔄 PR-Based Development Workflow
 
-### Setting Development Mode
-At the start of your session, tell Claude which mode to use:
-- "Use Fly.io Deploy Mode" (default if not specified)
-- "Use Local Dev Mode - I'm running bun dev"
+**Claude MUST follow this workflow for ALL development:**
+
+### 1. Feature Development
+```mermaid
+Start → Create Worktree → Write Tests → Implement → Create PR → Wait for Review
+```
+
+### 2. After PR Merge
+```mermaid
+PR Merged → Analyze Changes → Suggest Version Bump? → User Decides → Publish
+```
+
+### PR Creation Checklist
+Claude should ensure before creating a PR:
+- ✅ All tests pass (`bun test`)
+- ✅ TypeScript builds (`bun run build`)
+- ✅ Linting passes (`bun run lint`)
+- ✅ If npm package: `bun run prepublishOnly` succeeds
+- ✅ Commit messages follow conventional format
+- ✅ PR description includes summary and test plan
+- ✅ Monitor CI after PR creation and fix any failures iteratively
+- ✅ Update PR description with any known issues or workarounds
+
+### Version Bump Decision Tree
+After PR merge, Claude analyzes:
+```
+├── Contains "feat:" commits? → Suggest MINOR version
+├── Contains "fix:" commits? → Suggest PATCH version
+├── Contains "BREAKING CHANGE"? → Suggest MAJOR version
+└── Only chore/docs/test? → No version bump needed
+```
 
 ## 🚨 CRITICAL: Context Preservation
 
@@ -121,32 +132,34 @@ fi
 ## Key Architecture Decisions
 
 ### Technology Stack
-- **Hono**: Lightweight web framework with excellent TypeScript support
+- **TypeScript**: Strict type safety and excellent developer experience
 - **Bun**: Fast runtime with built-in TypeScript support and testing
 - **Fly.io Machines API**: For on-demand Ubuntu compute instances
-- **Vercel AI SDK**: For command streaming and AI integration
+- **neverthrow**: Functional error handling with Result types
+- **Zod**: Runtime validation and schema parsing
+- **Pino**: Structured logging
 
 ### Project Structure
 ```
 /
 ├── src/
-│   ├── api/           # API routes and handlers (instances, monitoring, commands)
 │   ├── services/      # Business logic (fly-service, instance-service, command-service)
 │   ├── lib/           # Shared utilities (config, error-handler)
 │   ├── schemas/       # Zod validation schemas
-│   └── index.ts       # Entry point with Hono app
+│   ├── types/         # TypeScript type definitions
+│   └── sdk.ts         # Main SDK export
 ├── tests/             # Test files (using bun:test)
-└── config files       # biome.json, tsconfig.json, fly.toml
+└── config files       # biome.json, tsconfig.json
 ```
 
 ## Development Patterns
 
-### API Design
-- RESTful endpoints for instance management (`/api/instances`)
-- No authentication required (open for development)
+### SDK Design
+- Clean TypeScript interface for instance management
+- Result types for safe error handling
 - Request validation using Zod schemas
-- Consistent error handling with proper HTTP status codes
-- Response typing with TypeScript interfaces
+- Comprehensive type definitions
+- Functional programming patterns
 
 ### Error Handling with neverthrow
 ```typescript
@@ -165,11 +178,11 @@ export const getInstance = async (
   return ok(instance);
 };
 
-// Handle in API routes
-const result = await getInstance(id);
-return result.match(
-  (instance) => c.json(instance),
-  (error) => c.json({ error: error.userMessage }, error.statusCode)
+// Handle in SDK client code
+const result = await computer.instances.get(id);
+result.match(
+  (instance) => console.log('Instance:', instance),
+  (error) => console.error('Error:', error.userMessage)
 );
 ```
 
@@ -183,9 +196,10 @@ return result.match(
 
 ### 1. Instance Management (`src/services/instance-service.ts`)
 - Create, start, stop, restart, destroy instances
-- Module-level Map for in-memory state storage
-- Sync instance status with Fly.io API
-- Health checking and statistics
+- Stateless operations - no local storage
+- Direct Fly.io API integration
+- Real-time status from Fly.io API
+- Health checking via Fly.io machine status
 
 ### 2. Fly.io Integration (`src/services/fly-service.ts`)
 - Use Machines API v2 for Ubuntu instances
@@ -196,8 +210,8 @@ return result.match(
 ### 3. Command Execution (`src/services/command-service.ts`)
 - Execute commands on instances via Fly.io exec
 - Stream output in real-time using SSE
-- Command history tracking
 - Security whitelist for allowed commands
+- No command history (stateless operation)
 
 ## Testing Requirements
 
@@ -227,10 +241,10 @@ bun run typecheck  # Verify TypeScript types
 
 ## Security Considerations
 
-1. **Open API**: Currently no authentication required (development mode)
-2. **Input Validation**: All inputs validated with Zod schemas
-3. **Environment Variables**: Store sensitive tokens in `.env` (never commit)
-4. **Instance Isolation**: Fly.io provides natural isolation between machines
+1. **Input Validation**: All inputs validated with Zod schemas
+2. **Environment Variables**: Store sensitive tokens in `.env` (never commit)
+3. **Instance Isolation**: Fly.io provides natural isolation between machines
+4. **API Token Security**: Fly.io tokens should be treated as sensitive credentials
 
 ## Common Development Tasks
 
@@ -278,7 +292,7 @@ Task 3: "Find all tests related to authentication"
 ### Implementing a New Feature
 1. **Start with tests** (TDD approach)
 2. Implement service layer functions (no classes)
-3. Add API endpoints
+3. Update SDK interface if needed
 4. Write comprehensive tests for all scenarios
 5. Ensure `bun run build` passes without errors
 
@@ -287,12 +301,10 @@ Task 3: "Find all tests related to authentication"
 ```env
 # Required
 FLY_API_TOKEN=your_fly_api_token
-FLY_ORG_SLUG=lightfast
 
-# Optional
-PORT=3000
-NODE_ENV=development
-LOG_LEVEL=info
+# Optional (with defaults)
+NODE_ENV=development         # Default: development  
+LOG_LEVEL=info              # Default: info
 ```
 
 ## Debugging Tips
@@ -304,22 +316,24 @@ LOG_LEVEL=info
 
 ## Performance Considerations
 
-1. In-memory state storage with Map (no database)
-2. Fly.io API calls are cached at service level
+1. Stateless architecture - no local storage
+2. Direct Fly.io API calls for all operations
 3. Instances auto-sleep when idle (Fly.io feature)
 4. Command execution is rate-limited by instance capacity
 
-## Deployment
+## Testing
 
 ```bash
-# Deploy to Fly.io
-fly deploy
+# Run tests
+bun test
+bun test --watch
 
-# Check status
-fly status
-fly logs
+# Build and validate
+bun run build
+bun run lint
+bun run typecheck
 
-# List instances
+# List instances (for debugging)
 fly machines list -a lightfast-worker-instances
 ```
 
@@ -469,12 +483,18 @@ cd worktrees/<feature_name>
    bun run typecheck  # Type validation
    ```
 
-### Step 4: Commit and Deploy
+### Step 4: Commit and Create PR
 
 #### Fly.io Deploy Mode:
 ```bash
 # Ensure all checks pass
 bun test && bun run build && bun run lint
+
+# Check for npm package build (if applicable)
+if [ -f "package.json" ] && grep -q '"prepublishOnly"' package.json; then
+  echo "📦 Testing npm package build..."
+  bun run prepublishOnly
+fi
 
 # Commit with conventional format
 git add .
@@ -487,25 +507,195 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 # Push branch
 git push -u origin jeevanpillay/<feature_name>
 
-# Deploy to Fly.io
-fly deploy
+# Create PR using GitHub CLI
+gh pr create --title "feat: <description>" --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points describing the changes>
 
-# Monitor deployment
-fly logs
-fly status
+## Changes
+- <specific change 1>
+- <specific change 2>
+
+## Test Plan
+- [ ] All tests pass (`bun test`)
+- [ ] TypeScript builds cleanly (`bun run build`)
+- [ ] Linting passes (`bun run lint`)
+- [ ] Tested locally/on Fly.io
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+EOF
+)"
+
+# Show PR URL
+echo "📝 Pull Request created! Review at the URL above."
 ```
 
-#### Local Dev Mode:
+### Step 4a: Iterative CI Testing and Fixing
+
+**IMPORTANT**: After creating a PR, Claude should continuously monitor and fix CI failures:
+
+1. **Start by creating a TODO** to track the CI fixing task:
+   ```
+   TodoWrite: "Iteratively fix CI issues until all checks pass" (in_progress, high priority)
+   ```
+
+2. **Monitor and fix CI failures**:
+```bash
+# Monitor CI status
+gh pr checks <PR_NUMBER> --watch
+
+# If failures occur, follow this iterative approach:
+while true; do
+  # 1. Check CI status
+  gh pr checks <PR_NUMBER>
+  
+  # 2. If failures exist, investigate specific errors
+  gh run view <RUN_ID> --log-failed | head -100
+  
+  # 3. Common CI fixes:
+  # - Environment variables: Add to .github/workflows/ci.yml
+  # - Lint errors: Run `bun run lint:fix`
+  # - Type errors: Run `bun run build` locally
+  # - Test failures: Check for test isolation issues
+  # - Missing dependencies: Ensure setup steps in CI
+  
+  # 4. Apply fixes and commit
+  git add -A
+  git commit -m "fix: <specific fix description>
+
+<details of what was fixed>
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+  
+  # 5. Push and continue monitoring
+  git push
+  
+  # 6. Wait for new CI run
+  sleep 30
+  
+  # 7. Check if all passes
+  if gh pr checks <PR_NUMBER> | grep -v "fail"; then
+    echo "✅ All CI checks passing!"
+    break
+  fi
+done
+```
+
+**Common CI Issues and Solutions**:
+
+1. **Environment Variables Missing**
+   ```yaml
+   # Add to .github/workflows/ci.yml
+   env:
+     FLY_API_TOKEN: test-token
+   ```
+
+2. **Lint Warnings (any types)**
+   ```typescript
+   // Add biome-ignore comment
+   // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
+   let mockFunction: any;
+   ```
+
+3. **Test Isolation Issues**
+   - Add proper beforeEach/afterEach cleanup
+   - Restore global mocks after tests
+   - Use fresh storage instances per test
+
+4. **Security Scan Failures**
+   - Ensure bun is installed in security job
+   - Add `|| echo "No vulnerabilities"` for empty audits
+
+5. **Import Order Issues**
+   ```bash
+   bun run lint:fix  # Auto-fixes import ordering
+   ```
+
+6. **Test Isolation Issues (Complex)**
+   If tests pass individually but fail when run together:
+   ```typescript
+   // Save and restore global state
+   const originalFetch = global.fetch;
+   afterEach(() => {
+     global.fetch = originalFetch;
+   });
+   
+   // Or temporarily allow failures in CI
+   run: bun test || echo "Tests completed with known isolation issues"
+   ```
+   **Note**: Create a TODO to fix test isolation properly in a future PR
+
+#### SDK Development Mode:
 ```bash
 # Make changes and notify user
-echo "✅ Changes complete. Please test locally at http://localhost:3000"
-echo "📝 Test these endpoints:"
-echo "   - GET /api/instances"
-echo "   - POST /api/instances"
-# User handles commit/deploy when ready
+echo "✅ Changes complete. Please test the SDK integration:"
+echo "📝 Test these features:"
+echo "   - computer.instances.create()"
+echo "   - computer.instances.list()"
+echo "   - computer.commands.execute()"
+# User handles testing in their own projects
 ```
 
-### Step 5: Cleanup After Merge
+### Step 5: After PR Merge - Version Bump Decision
+
+**🚨 CLAUDE MUST CHECK**: After a PR is merged, evaluate if a version bump is needed:
+
+```bash
+# After PR is merged, Claude should analyze and suggest:
+echo "🤔 Analyzing changes for version bump recommendation..."
+
+# Check what changed
+git log --oneline main..HEAD
+git diff main...HEAD --stat
+
+# Claude should suggest based on conventional commits:
+# - feat: → minor version (0.1.0 → 0.2.0)
+# - fix: → patch version (0.1.0 → 0.1.1)
+# - BREAKING CHANGE: → major version (0.1.0 → 1.0.0)
+# - chore/docs/style/refactor/test: → no version bump needed
+
+# If version bump is recommended:
+echo "📦 Version Bump Recommended!"
+echo "Based on the changes, I recommend a [patch/minor/major] version bump."
+echo ""
+echo "Current version: $(grep '"version"' package.json | cut -d'"' -f4)"
+echo "Suggested new version: X.X.X"
+echo ""
+echo "To release, run:"
+echo "  1. git checkout main && git pull"
+echo "  2. npm version [patch/minor/major]"
+echo "  3. git push --follow-tags"
+echo ""
+echo "This will trigger the GitHub Action to publish to npm."
+```
+
+### Step 6: npm Publishing Workflow
+
+When user agrees to version bump:
+
+```bash
+# 1. Ensure on main with latest changes
+git checkout main
+git pull origin main
+
+# 2. Run version command (this creates commit + tag)
+npm version patch  # or minor/major based on changes
+
+# 3. Push commit and tag
+git push --follow-tags
+
+# 4. Monitor GitHub Actions
+echo "🚀 GitHub Actions will now:"
+echo "  - Run tests"
+echo "  - Build package"
+echo "  - Publish to npm"
+echo ""
+echo "Monitor at: https://github.com/lightfastai/computer/actions"
+```
+
+### Step 7: Cleanup After Merge
 
 ```bash
 # Remove worktree BEFORE merging to prevent errors
@@ -517,6 +707,102 @@ git checkout main
 git pull origin main
 ```
 
+## 📦 npm Package Management & Versioning
+
+### Semantic Versioning Guidelines
+
+Claude should understand and follow semantic versioning (semver):
+- **MAJOR** (1.0.0): Breaking changes
+- **MINOR** (0.1.0): New features (backward compatible)
+- **PATCH** (0.0.1): Bug fixes (backward compatible)
+
+### When Claude Should Suggest Version Bumps
+
+**ALWAYS suggest a version bump when PRs contain:**
+
+1. **Patch Version (bug fixes):**
+   - `fix:` commits
+   - Bug fixes that don't break API
+   - Security patches
+   - Performance improvements
+   - Documentation fixes (if packaged)
+
+2. **Minor Version (new features):**
+   - `feat:` commits
+   - New API endpoints
+   - New SDK methods
+   - New configuration options
+   - New dependencies (that don't break existing usage)
+
+3. **Major Version (breaking changes):**
+   - Any commit with `BREAKING CHANGE:` in the body
+   - Removed API endpoints or methods
+   - Changed function signatures
+   - Changed return types
+   - Renamed exports
+   - Dropped Node.js version support
+
+**NO version bump needed for:**
+- `chore:` commits (unless they affect the published package)
+- `docs:` commits (unless docs are part of the package)
+- `style:` commits
+- `refactor:` commits (unless they change the API)
+- `test:` commits
+- CI/CD changes
+
+### Version Bump Workflow for Claude
+
+```bash
+# 1. After PR merge, check recent commits
+git log --oneline $(git describe --tags --abbrev=0)..HEAD
+
+# 2. Analyze commit types
+PATCH_COMMITS=$(git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -c "^[a-f0-9]* fix:")
+MINOR_COMMITS=$(git log --oneline $(git describe --tags --abbrev=0)..HEAD | grep -c "^[a-f0-9]* feat:")
+BREAKING_CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD | grep -c "BREAKING CHANGE")
+
+# 3. Determine version bump
+if [ $BREAKING_CHANGES -gt 0 ]; then
+  echo "💥 MAJOR version bump needed (breaking changes detected)"
+elif [ $MINOR_COMMITS -gt 0 ]; then
+  echo "✨ MINOR version bump needed (new features added)"
+elif [ $PATCH_COMMITS -gt 0 ]; then
+  echo "🐛 PATCH version bump needed (bug fixes)"
+else
+  echo "📝 No version bump needed (only maintenance changes)"
+fi
+```
+
+### npm Publishing Checklist
+
+Before suggesting a version bump, Claude should verify:
+
+```bash
+# Pre-publish checks
+echo "📋 Pre-publish Checklist:"
+echo "[ ] All tests pass: bun test"
+echo "[ ] Build succeeds: bun run build"
+echo "[ ] Lint passes: bun run lint"
+echo "[ ] Package builds: bun run prepublishOnly"
+echo "[ ] CHANGELOG updated (if exists)"
+echo "[ ] README is up to date"
+echo "[ ] Breaking changes documented"
+```
+
+### Package.json Scripts for Publishing
+
+Ensure these scripts exist in package.json:
+```json
+{
+  "scripts": {
+    "prepublishOnly": "npm run build && npm run test && npm run lint",
+    "release": "npm version patch && git push --follow-tags",
+    "release:minor": "npm version minor && git push --follow-tags",
+    "release:major": "npm version major && git push --follow-tags"
+  }
+}
+```
+
 ## Essential Commands for Claude
 
 ```bash
@@ -526,34 +812,38 @@ bun test               # Run all tests once
 bun run build          # Check TypeScript compilation (run frequently)
 bun run lint           # Check code style with Biome
 bun run typecheck      # Verify TypeScript types
-bun dev                # Start development server (port 3000)
-
-# API Testing
-curl http://localhost:3000/health
-curl http://localhost:3000/api/instances
-curl -X POST http://localhost:3000/api/instances \
-  -H "Content-Type: application/json" \
-  -d '{"name":"test-instance","region":"iad"}'
 
 # Dependencies
 bun add <package>      # Add production dependency
 bun add -d <package>   # Add dev dependency
 bun install            # Install from lockfile
 
-# Deployment
-fly deploy             # Deploy to Fly.io
-fly logs               # View logs
-fly machines list -a lightfast-worker-instances
+# SDK Testing (in user projects)
+npm install @lightfast/computer
+# Test SDK integration in user's code
+
+# Debugging
+fly machines list -a lightfast-worker-instances  # List instances
 ```
 
 ## Key Dependencies
 
-- **hono**: Lightweight web framework with TypeScript support
-- **@hono/zod-validator**: Request validation middleware
+- **neverthrow**: Functional error handling with Result types
 - **pino**: Structured logging
 - **zod**: Schema validation and TypeScript type inference
-- **ai**: Vercel AI SDK for streaming and AI integration
-- **@ai-sdk/openai**: OpenAI provider for AI SDK
+- **@t3-oss/env-core**: Type-safe environment variable handling
+
+## CI/CD Cost Optimization
+
+### macOS Runners
+**IMPORTANT**: macOS runners on GitHub Actions cost 10x more than Linux runners.
+- Only run macOS tests on the main branch after PR merge
+- PRs should only use ubuntu-latest runners
+- Use matrix strategy with conditional OS selection:
+  ```yaml
+  matrix:
+    os: ${{ github.ref == 'refs/heads/main' && fromJSON('["ubuntu-latest", "macos-latest"]') || fromJSON('["ubuntu-latest"]') }}
+  ```
 
 ## Common Issues & Solutions
 
@@ -564,13 +854,14 @@ fly machines list -a lightfast-worker-instances
 - **Token validation errors**: The Fly.io Machines API v2 requires specific token formats. Use org or deploy tokens generated with `fly tokens create org -o lightfast`. Personal tokens from `fly auth token` may not work with the Machines API.
 
 ### Development Issues
-- **Port conflicts**: Default port is 3000, kill existing: `kill -9 $(lsof -ti:3000)`
 - **TypeScript errors**: Run `bun run build` frequently to catch compilation issues
 - **Test failures**: Fix immediately, don't proceed with failing tests
+- **Environment variables**: Ensure `.env` file has proper FLY_API_TOKEN
 
-### API Issues
-- **No authentication**: API is open for development (no auth middleware)
+### SDK Issues
+- **Import errors**: Ensure proper TypeScript paths and exports
 - **Validation errors**: All inputs validated with Zod schemas in `src/schemas/`
+- **Result types**: Always handle both success and error cases with neverthrow
 
 ## Key Workflow Reminders
 
@@ -582,3 +873,7 @@ fly machines list -a lightfast-worker-instances
 6. **DIRECT IMPORTS** - Always use `@/*` path alias
 7. **FUNCTIONAL STYLE** - Small, focused, pure functions
 8. **CONTEXT PRESERVATION** - Use local context files for session continuity
+9. **CREATE PRS** - Always create PRs with `gh pr create`, never merge directly
+10. **SUGGEST VERSIONS** - After PR merge, analyze commits and suggest version bumps
+11. **CHECK PUBLISHING** - Run `prepublishOnly` before creating PRs for npm packages
+12. **CONVENTIONAL COMMITS** - Use feat/fix/chore prefixes for automatic versioning

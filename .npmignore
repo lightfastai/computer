@@ -1,0 +1,60 @@
+# Source files (we ship compiled JS)
+src/
+tests/
+scripts/
+
+# Development files
+.env*
+!.env.example
+.claude/
+tmp_context/
+worktrees/
+
+# Config files
+tsconfig.json
+biome.json
+fly.toml
+bun.lockb
+.gitignore
+
+# Development dependencies
+node_modules/
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts not needed
+*.tsbuildinfo
+
+# Documentation source
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Examples (users can find these on GitHub)
+examples/
+
+# Keep these
+!dist/
+!README.md
+!LICENSE
+!SDK_USAGE.md
+!package.json

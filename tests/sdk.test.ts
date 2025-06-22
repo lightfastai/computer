@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { ok } from 'neverthrow';
 import { ValidationError } from '@/lib/error-handler';
 import createLightfastComputer from '@/sdk';
-import * as instanceService from '@/services/instance-service';
 import * as commandService from '@/services/command-service';
+import * as instanceService from '@/services/instance-service';
 
 // Mock dependencies
 const mockCreateInstance = spyOn(instanceService, 'createInstance');
@@ -17,8 +17,6 @@ const mockDestroyInstance = spyOn(instanceService, 'destroyInstance');
 const mockHealthCheckInstance = spyOn(instanceService, 'healthCheckInstance');
 const mockGetInstanceStats = spyOn(instanceService, 'getInstanceStats');
 const mockExecuteCommand = spyOn(commandService, 'executeCommand');
-const mockGetCommandHistory = spyOn(commandService, 'getCommandHistory');
-const mockClearCommandHistory = spyOn(commandService, 'clearCommandHistory');
 
 const mockInstance = {
   id: 'test-instance-id',
@@ -48,8 +46,6 @@ describe('LightfastComputer SDK', () => {
     mockHealthCheckInstance.mockClear();
     mockGetInstanceStats.mockClear();
     mockExecuteCommand.mockClear();
-    mockGetCommandHistory.mockClear();
-    mockClearCommandHistory.mockClear();
   });
 
   describe('instances', () => {
@@ -60,7 +56,13 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.create({ name: 'test' });
 
       expect(result.isOk()).toBe(true);
-      expect(mockCreateInstance).toHaveBeenCalledWith({ name: 'test' });
+      expect(mockCreateInstance).toHaveBeenCalledWith({
+        name: 'test',
+        region: 'iad',
+        image: 'ubuntu-22.04',
+        size: 'shared-cpu-1x',
+        memoryMb: 512,
+      });
       expect(mockCreateInstanceWithGitHub).not.toHaveBeenCalled();
     });
 
@@ -70,13 +72,23 @@ describe('LightfastComputer SDK', () => {
 
       const result = await sdk.instances.create({
         name: 'test',
-        secrets: { githubToken: 'token123' },
+        secrets: {
+          githubToken: 'ghp_1234567890abcdef1234567890abcdef12345',
+          githubUsername: 'testuser',
+        },
       });
 
       expect(result.isOk()).toBe(true);
       expect(mockCreateInstanceWithGitHub).toHaveBeenCalledWith({
         name: 'test',
-        secrets: { githubToken: 'token123' },
+        region: 'iad',
+        image: 'ubuntu-22.04',
+        size: 'shared-cpu-1x',
+        memoryMb: 512,
+        secrets: {
+          githubToken: 'ghp_1234567890abcdef1234567890abcdef12345',
+          githubUsername: 'testuser',
+        },
       });
       expect(mockCreateInstance).not.toHaveBeenCalled();
     });
@@ -184,11 +196,13 @@ describe('LightfastComputer SDK', () => {
     it('should execute command successfully', async () => {
       const sdk = createLightfastComputer();
       mockGetInstance.mockResolvedValue(ok(mockInstance));
-      mockExecuteCommand.mockResolvedValue(ok({
-        output: 'file1.txt\nfile2.txt',
-        error: '',
-        exitCode: 0,
-      }));
+      mockExecuteCommand.mockResolvedValue(
+        ok({
+          output: 'file1.txt\nfile2.txt',
+          error: '',
+          exitCode: 0,
+        }),
+      );
 
       const result = await sdk.commands.execute({
         instanceId: 'test-id',
@@ -203,7 +217,7 @@ describe('LightfastComputer SDK', () => {
         machineId: 'fly-123',
         command: 'ls',
         args: ['-la'],
-        timeout: undefined,
+        timeout: 30000,
         onData: undefined,
         onError: undefined,
       });
@@ -274,38 +288,6 @@ describe('LightfastComputer SDK', () => {
         expect(result.error.message).toContain('is not allowed');
       }
       expect(mockExecuteCommand).not.toHaveBeenCalled();
-    });
-
-    it('should get command history', async () => {
-      const sdk = createLightfastComputer();
-      const history = [
-        {
-          id: 'cmd-1',
-          instanceId: 'test-id',
-          command: 'ls',
-          args: ['-la'],
-          output: 'file1.txt',
-          error: '',
-          exitCode: 0,
-          startedAt: new Date(),
-          completedAt: new Date(),
-          status: 'completed' as const,
-        },
-      ];
-      mockGetCommandHistory.mockResolvedValue(history);
-
-      const result = await sdk.commands.getHistory('test-id');
-
-      expect(result).toEqual(history);
-      expect(mockGetCommandHistory).toHaveBeenCalledWith('test-id');
-    });
-
-    it('should clear command history', () => {
-      const sdk = createLightfastComputer();
-
-      sdk.commands.clearHistory('test-id');
-
-      expect(mockClearCommandHistory).toHaveBeenCalledWith('test-id');
     });
   });
 });
