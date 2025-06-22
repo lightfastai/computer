@@ -39,7 +39,10 @@ bun add @lightfast/computer
 ```typescript
 import createLightfastComputer from '@lightfastai/computer';
 
-const computer = createLightfastComputer();
+// Initialize with your Fly.io API token
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token_here'
+});
 
 // Create Ubuntu instance with GitHub access
 const result = await computer.instances.create({
@@ -65,17 +68,14 @@ if (result.isOk()) {
 }
 ```
 
-## Environment Setup
+## Configuration
 
-Create a `.env` file in your project root:
+The SDK requires a Fly.io API token to be provided when creating an instance. This follows SDK best practices by allowing dependency injection rather than relying on environment variables.
 
-```bash
-# Required
-FLY_API_TOKEN=your_fly_api_token
-
-# Optional
-NODE_ENV=development
-LOG_LEVEL=info
+```typescript
+const computer = createLightfastComputer({
+  flyApiToken: process.env.FLY_API_TOKEN || 'your-token'
+});
 ```
 
 ### 🔑 Getting API Keys
