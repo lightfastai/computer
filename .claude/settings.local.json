@@ -19,7 +19,8 @@
       "Bash(fly status:*)",
       "Bash(fly machines destroy:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

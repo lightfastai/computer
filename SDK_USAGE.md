@@ -232,7 +232,7 @@ for (const cmd of commands) {
     instanceId,
     ...cmd,
   });
-  
+
   if (result.isOk()) {
     console.log(`${cmd.command}: ${result.value.output}`);
   }
@@ -244,11 +244,11 @@ for (const cmd of commands) {
 The SDK is fully typed with TypeScript:
 
 ```typescript
-import type { 
-  Instance, 
-  CreateInstanceOptions, 
+import type {
+  Instance,
+  CreateInstanceOptions,
   ExecuteCommandResult,
-  LightfastComputerSDK 
+  LightfastComputerSDK
 } from 'lightfast-computer';
 
 // All types are available for import

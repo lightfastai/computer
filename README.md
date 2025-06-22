@@ -12,11 +12,11 @@ A powerful, open-source SDK for creating and managing Ubuntu instances on Fly.io
 
 ## About
 
-Lightfast Computer is a TypeScript SDK that transforms Fly.io into a developer-friendly compute platform. With direct Fly.io API integration and no local state management, it provides isolated Ubuntu environments, automated testing infrastructure, and dynamic compute resources on demand.
+Lightfast Computer is a TypeScript SDK that transforms Fly.io into a developer-friendly compute platform. With direct Fly.io API integration and no local state management, it provides isolated Ubuntu environments, automated testing infrastructure, and dynamic compute resources on demand. The SDK uses dependency injection for configuration, requiring no environment variables at runtime.
 
 ### Why Lightfast Computer?
 
-- 📦 **Pure SDK**: Lightweight TypeScript library with zero server dependencies
+- 📦 **Pure SDK**: Lightweight TypeScript library with dependency injection and zero server dependencies
 - 🐧 **Ubuntu Sandboxes**: Fresh, isolated instances with GitHub integration
 - 🔄 **Real-time Streaming**: Live command output with callback support
 - 🔄 **Stateless Architecture**: Direct Fly.io API integration without local storage
@@ -39,7 +39,10 @@ bun add @lightfast/computer
 ```typescript
 import createLightfastComputer from '@lightfastai/computer';
 
-const computer = createLightfastComputer();
+// Initialize the SDK with your Fly.io API token
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token'
+});
 
 // Create Ubuntu instance with GitHub access
 const result = await computer.instances.create({
@@ -54,7 +57,7 @@ const result = await computer.instances.create({
 if (result.isOk()) {
   const instance = result.value;
   console.log(`Created instance: ${instance.id}`);
-  
+
   // Execute commands with real-time output
   await computer.commands.execute({
     instanceId: instance.id,
@@ -65,18 +68,9 @@ if (result.isOk()) {
 }
 ```
 
-## Environment Setup
+## Configuration
 
-Create a `.env` file in your project root:
-
-```bash
-# Required
-FLY_API_TOKEN=your_fly_api_token
-
-# Optional
-NODE_ENV=development
-LOG_LEVEL=info
-```
+The SDK requires a Fly.io API token to be passed during initialization. No environment variables are required.
 
 ### 🔑 Getting API Keys
 
@@ -122,9 +116,8 @@ cd computer
 # Install dependencies
 bun install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your Fly.io credentials
+# Create a .env file for local development (optional)
+echo "FLY_API_TOKEN=your_fly_api_token" > .env
 
 # Run tests
 bun test --watch
@@ -167,8 +160,8 @@ package.json        # Dependencies and scripts
 git clone https://github.com/lightfastai/computer.git
 cd computer
 bun install
-cp .env.example .env
-# Add your Fly.io credentials to .env
+# Create .env file for local development if needed
+echo "FLY_API_TOKEN=your_fly_api_token" > .env
 
 # Start development
 bun test --watch        # TDD workflow
@@ -188,11 +181,11 @@ See [SDK_USAGE.md](./SDK_USAGE.md) for comprehensive API documentation and examp
 ### Core Types
 
 ```typescript
-import type { 
-  Instance, 
-  CreateInstanceOptions, 
+import type {
+  Instance,
+  CreateInstanceOptions,
   ExecuteCommandOptions,
-  ExecuteCommandResult 
+  ExecuteCommandResult
 } from '@lightfast/computer';
 ```
 
@@ -225,13 +218,17 @@ import type {
 - **Security**: Isolated containers with resource limits
 - **Regions**: Global deployment with `iad` (US East) default
 
-## Environment Variables
+## API Authentication
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `FLY_API_TOKEN` | ✅ | Fly.io API authentication token |
-| `NODE_ENV` | ⚠️ | Runtime environment (defaults to development) |
-| `LOG_LEVEL` | ⚠️ | Logging verbosity (defaults to info) |
+The SDK requires a Fly.io API token which is passed during initialization:
+
+```typescript
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token'
+});
+```
+
+For local development, you can optionally store the token in a `.env` file to avoid hardcoding it in your source code.
 
 ## Contributing
 

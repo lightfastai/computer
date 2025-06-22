@@ -21,8 +21,9 @@ bun run build         # Check for TypeScript compilation errors
 bun run lint          # Check code style with Biome
 bun run typecheck     # Verify TypeScript types
 
-# Using environment variables with other commands
-bun run with-env -- <command>  # Run any command with .env loaded
+# Build and test commands
+bun run build         # Check for TypeScript compilation errors
+bun run lint          # Check code style with Biome
 ```
 
 ## Project Context
@@ -242,7 +243,7 @@ bun run typecheck  # Verify TypeScript types
 ## Security Considerations
 
 1. **Input Validation**: All inputs validated with Zod schemas
-2. **Environment Variables**: Store sensitive tokens in `.env` (never commit)
+2. **API Token Security**: Pass Fly.io tokens via SDK initialization, not environment variables
 3. **Instance Isolation**: Fly.io provides natural isolation between machines
 4. **API Token Security**: Fly.io tokens should be treated as sensitive credentials
 
@@ -296,16 +297,19 @@ Task 3: "Find all tests related to authentication"
 4. Write comprehensive tests for all scenarios
 5. Ensure `bun run build` passes without errors
 
-## Environment Variables
+## SDK Configuration
 
-```env
-# Required
-FLY_API_TOKEN=your_fly_api_token
+The SDK requires a Fly.io API token to be passed during initialization:
 
-# Optional (with defaults)
-NODE_ENV=development         # Default: development  
-LOG_LEVEL=info              # Default: info
+```typescript
+import { createLightfastComputer } from '@lightfastai/computer';
+
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token'
+});
 ```
+
+For local development, you can optionally store the token in a `.env` file to avoid hardcoding it in your test files.
 
 ## Debugging Tips
 
@@ -463,7 +467,7 @@ cd worktrees/<feature_name>
 # The script will:
 # - Create branch: jeevanpillay/<feature_name>  ⚠️ NOTE: Always username/feature, never feat/feature
 # - Install dependencies with bun
-# - Copy .env.local if exists
+# - Set up project structure
 # - Set up context file
 # - Run initial checks
 ```
@@ -548,17 +552,17 @@ gh pr checks <PR_NUMBER> --watch
 while true; do
   # 1. Check CI status
   gh pr checks <PR_NUMBER>
-  
+
   # 2. If failures exist, investigate specific errors
   gh run view <RUN_ID> --log-failed | head -100
-  
+
   # 3. Common CI fixes:
   # - Environment variables: Add to .github/workflows/ci.yml
   # - Lint errors: Run `bun run lint:fix`
   # - Type errors: Run `bun run build` locally
   # - Test failures: Check for test isolation issues
   # - Missing dependencies: Ensure setup steps in CI
-  
+
   # 4. Apply fixes and commit
   git add -A
   git commit -m "fix: <specific fix description>
@@ -568,13 +572,13 @@ while true; do
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-  
+
   # 5. Push and continue monitoring
   git push
-  
+
   # 6. Wait for new CI run
   sleep 30
-  
+
   # 7. Check if all passes
   if gh pr checks <PR_NUMBER> | grep -v "fail"; then
     echo "✅ All CI checks passing!"
@@ -585,11 +589,11 @@ done
 
 **Common CI Issues and Solutions**:
 
-1. **Environment Variables Missing**
-   ```yaml
-   # Add to .github/workflows/ci.yml
-   env:
-     FLY_API_TOKEN: test-token
+1. **Mock Configuration Missing**
+   ```typescript
+   // Ensure tests mock the Fly.io API properly
+   const mockFlyService = spyOn(flyService, 'createMachine');
+   mockFlyService.mockResolvedValue({ id: 'test-123' });
    ```
 
 2. **Lint Warnings (any types)**
@@ -621,7 +625,7 @@ done
    afterEach(() => {
      global.fetch = originalFetch;
    });
-   
+
    // Or temporarily allow failures in CI
    run: bun test || echo "Tests completed with known isolation issues"
    ```
@@ -831,7 +835,7 @@ fly machines list -a lightfast-worker-instances  # List instances
 - **neverthrow**: Functional error handling with Result types
 - **pino**: Structured logging
 - **zod**: Schema validation and TypeScript type inference
-- **@t3-oss/env-core**: Type-safe environment variable handling
+- **TypeScript**: Strict mode with comprehensive type coverage
 
 ## CI/CD Cost Optimization
 
@@ -856,7 +860,7 @@ fly machines list -a lightfast-worker-instances  # List instances
 ### Development Issues
 - **TypeScript errors**: Run `bun run build` frequently to catch compilation issues
 - **Test failures**: Fix immediately, don't proceed with failing tests
-- **Environment variables**: Ensure `.env` file has proper FLY_API_TOKEN
+- **SDK initialization**: Ensure flyApiToken is passed to createLightfastComputer()
 
 ### SDK Issues
 - **Import errors**: Ensure proper TypeScript paths and exports
