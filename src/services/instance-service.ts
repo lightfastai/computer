@@ -11,9 +11,9 @@ const log = pino();
 // Clear all instances (for testing)
 export const clearAllInstances = (): void => {
   const storage = getStorage();
-  if ('clearAllInstances' in storage) {
-    // biome-ignore lint/suspicious/noExplicitAny: Test helper method
-    (storage as any).clearAllInstances();
+  // Type guard to check if the storage has the test method
+  if ('clearAllInstances' in storage && typeof storage.clearAllInstances === 'function') {
+    storage.clearAllInstances();
   }
 };
 

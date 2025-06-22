@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'bun:test';
 import { ok } from 'neverthrow';
 import { InMemoryStorage, setStorage } from '@/lib/storage';
 import type { LightfastComputerSDK } from '@/sdk';
@@ -11,18 +11,12 @@ describe('SDK E2E Integration Tests', () => {
   let storage: InMemoryStorage;
 
   // Mock fly service to prevent actual API calls
-  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-  let mockCreateMachine: any;
-  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-  let mockGetMachine: any;
-  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-  let mockStopMachine: any;
-  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-  let mockStartMachine: any;
-  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-  let mockDestroyMachine: any;
-  // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-  let mockRestartMachine: any;
+  let mockCreateMachine: Mock<typeof flyService.createMachine>;
+  let mockGetMachine: Mock<typeof flyService.getMachine>;
+  let mockStopMachine: Mock<typeof flyService.stopMachine>;
+  let mockStartMachine: Mock<typeof flyService.startMachine>;
+  let mockDestroyMachine: Mock<typeof flyService.destroyMachine>;
+  let mockRestartMachine: Mock<typeof flyService.restartMachine>;
 
   beforeEach(() => {
     // Create completely fresh storage
@@ -102,11 +96,10 @@ describe('SDK E2E Integration Tests', () => {
         expect(result1.error.message).toContain('Instance name is required');
       }
 
-      // Test with invalid region
+      // Test with invalid region - use type assertion to test validation
       const result2 = await sdk.instances.create({
         name: 'test',
-        // biome-ignore lint/suspicious/noExplicitAny: Testing invalid input
-        region: 'invalid-region-123' as any,
+        region: 'invalid-region-123' as Parameters<typeof sdk.instances.create>[0]['region'],
       });
 
       expect(result2.isErr()).toBe(true);

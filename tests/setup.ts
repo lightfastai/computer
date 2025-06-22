@@ -15,11 +15,14 @@ beforeEach(() => {
 
   // Clear any module-level state that might exist
   if (typeof global !== 'undefined') {
-    // Reset any global test state
-    // biome-ignore lint/suspicious/noExplicitAny: Global test state
-    (global as any).__testInstances = new Map();
-    // biome-ignore lint/suspicious/noExplicitAny: Global test state
-    (global as any).__testCommands = new Map();
+    // Reset any global test state - properly typed
+    interface TestGlobals {
+      __testInstances?: Map<string, unknown>;
+      __testCommands?: Map<string, unknown>;
+    }
+    const testGlobal = global as typeof globalThis & TestGlobals;
+    testGlobal.__testInstances = new Map();
+    testGlobal.__testCommands = new Map();
   }
 });
 

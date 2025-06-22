@@ -50,8 +50,8 @@ describe('command-service', () => {
         kill: () => {},
       };
 
-      // biome-ignore lint/suspicious/noExplicitAny: Mock child process type
-      mockSpawn.mockReturnValue(mockChildProcess as any);
+      // Cast to unknown first, then to the expected type to satisfy TypeScript
+      mockSpawn.mockReturnValue(mockChildProcess as unknown as ReturnType<typeof child_process.spawn>);
 
       const result = await commandService.executeCommand({
         instanceId: 'test-instance',
@@ -87,8 +87,8 @@ describe('command-service', () => {
         kill: () => {},
       };
 
-      // biome-ignore lint/suspicious/noExplicitAny: Mock child process type
-      mockSpawn.mockReturnValue(mockChildProcess as any);
+      // Cast to unknown first, then to the expected type to satisfy TypeScript
+      mockSpawn.mockReturnValue(mockChildProcess as unknown as ReturnType<typeof child_process.spawn>);
 
       await commandService.executeCommand({
         instanceId: 'test-instance',
