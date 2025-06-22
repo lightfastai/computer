@@ -20,7 +20,8 @@
       "Bash(fly machines destroy:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebFetch(domain:docs.browserbase.com)"
     ],
     "deny": []
   }
