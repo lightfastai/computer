@@ -81,7 +81,7 @@ export const createInstanceSchema = z
   .object({
     name: instanceNameSchema,
     region: z.enum(FLY_REGIONS).optional().default('iad'),
-    image: z.string().optional().default('ubuntu-22.04'),
+    image: z.string().optional().default('docker.io/library/ubuntu:22.04'),
     size: z.enum(MACHINE_SIZES).optional().default('shared-cpu-1x'),
     memoryMb: z
       .number()

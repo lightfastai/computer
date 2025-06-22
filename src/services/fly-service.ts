@@ -102,7 +102,7 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
     name: name || `instance-${Date.now()}`,
     region: region || 'iad',
     config: {
-      image: image || 'ubuntu:22.04',
+      image: image || 'docker.io/library/ubuntu:22.04',
       guest: {
         cpu_kind: cpuConfig.kind,
         cpus: cpuConfig.cpus,
