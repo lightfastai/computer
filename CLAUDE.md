@@ -2,6 +2,16 @@
 
 This guide provides instructions for Claude AI assistants working on the Lightfast Computer project - a Fly.io instance management system with Inngest-powered background processing.
 
+## 🚨 MANDATORY WORKTREE RULE
+
+**YOU MUST ALWAYS** use git worktrees for ANY development work including:
+- Feature requests (e.g., "add monitoring endpoint", "integrate metrics")
+- Bug fixes (e.g., "fix instance restart", "resolve memory leak")
+- Chores (e.g., "update dependencies", "refactor error handling")
+- ANY code changes whatsoever
+
+**NO EXCEPTIONS**: If you're modifying code, you MUST be in a worktree.
+
 ## Quick Start Commands
 
 ```bash
@@ -40,11 +50,70 @@ This system enables users to create and manage Ubuntu instances on Fly.io using 
 - **Be proactive**: Take actions when asked, but don't surprise users with unexpected changes
 - **Use tools effectively**: Batch tool calls when possible for better performance
 
+### Task Agent Parallelism
+- **Launch multiple agents concurrently**: When searching for keywords, patterns, or exploring different parts of the codebase, use multiple Task agents in parallel
+- **Example**: Searching for "error handling" patterns, configuration files, and API endpoints can all be done simultaneously with 3 parallel Task agents
+- **Performance benefit**: Parallel agents dramatically reduce investigation time compared to sequential searches
+
 ### Development Approach
 - **Read first**: Always use Read tool before editing files to understand context
 - **Follow conventions**: Mimic existing code style and patterns in the codebase
 - **Test continuously**: Run tests frequently during development
 - **Verify changes**: Use build/lint commands to catch errors early
+
+## 📋 Development Modes
+
+### 🚀 Fly.io Deploy Mode (Default)
+Use this mode when you want Claude to handle the full development lifecycle:
+- **Claude Responsibilities**:
+  - Creates worktree using `./scripts/setup-worktree.sh`
+  - Writes tests first (TDD approach)
+  - Runs `bun test --watch` continuously
+  - Runs `bun run build` iteratively to fix errors
+  - Runs `bun run lint` and `bun run format`
+  - Commits and pushes changes automatically
+  - Deploys to Fly.io for testing
+- **User Responsibilities**:
+  - Tests on Fly.io deployment
+  - Reports bugs or issues back to Claude
+- **When to Use**: Production-ready development, team collaboration
+
+### 🔧 Local Dev Mode
+Use this mode when you're already running `bun dev` locally:
+- **Claude Responsibilities**:
+  - Acts as code generator only
+  - Makes code changes with TDD approach
+  - Asks user to test locally after changes
+  - Does NOT commit or push automatically
+- **User Responsibilities**:
+  - Runs `bun dev` before starting
+  - Tests API changes locally in real-time
+  - Decides when to commit and push
+- **When to Use**: Rapid prototyping, debugging, exploratory development
+
+### Setting Development Mode
+At the start of your session, tell Claude which mode to use:
+- "Use Fly.io Deploy Mode" (default if not specified)
+- "Use Local Dev Mode - I'm running bun dev"
+
+## 🚨 CRITICAL: Context Preservation
+
+**YOU MUST** preserve context to survive terminal crashes and session interruptions:
+
+### Local Context File (Always Required)
+```bash
+# ALWAYS set this variable at start of each session
+mkdir -p tmp_context
+CONTEXT_FILE="./tmp_context/claude-context-$(basename $(pwd)).md"
+
+# Create or check existing context file
+if [ -f "$CONTEXT_FILE" ]; then
+  echo "📋 Resuming from existing context:"
+  cat "$CONTEXT_FILE"
+else
+  echo "🆕 Creating new context file: $CONTEXT_FILE"
+fi
+```
 
 ## Key Architecture Decisions
 
@@ -77,20 +146,29 @@ This system enables users to create and manage Ubuntu instances on Fly.io using 
 - Consistent error handling with proper HTTP status codes
 - Response typing with TypeScript interfaces
 
-### Error Handling
+### Error Handling with neverthrow
 ```typescript
-// Use custom error classes from error-handler.ts
+// Use Result types for all operations
+import { Result, ok, err } from 'neverthrow';
 import { AppError, NotFoundError, ValidationError } from '@/lib/error-handler';
 
-export const getInstance = async (id: string) => {
+// Service functions return Result types
+export const getInstance = async (
+  id: string
+): Promise<Result<Instance, AppError>> => {
   const instance = instances.get(id);
   if (!instance) {
-    throw new NotFoundError('Instance', id);
+    return err(new NotFoundError('Instance', id));
   }
-  return instance;
+  return ok(instance);
 };
 
-// Errors are handled by the global errorHandler middleware
+// Handle in API routes
+const result = await getInstance(id);
+return result.match(
+  (instance) => c.json(instance),
+  (error) => c.json({ error: error.userMessage }, error.statusCode)
+);
 ```
 
 ### Functional Programming Pattern
@@ -153,6 +231,22 @@ bun run typecheck  # Verify TypeScript types
 4. **Instance Isolation**: Fly.io provides natural isolation between machines
 
 ## Common Development Tasks
+
+### Using Parallel Task Agents
+
+**When to launch multiple Task agents concurrently:**
+1. **Codebase exploration**: "Find all error handling patterns" + "Find all API endpoints" + "Find configuration files"
+2. **Feature investigation**: "Find authentication logic" + "Find user management" + "Find permission checks"
+3. **Refactoring preparation**: "Find all usages of X" + "Find similar patterns" + "Find test coverage"
+4. **Debugging**: "Find error logs" + "Find related functions" + "Find recent changes"
+
+**Example usage:**
+```typescript
+// Launch 3 parallel agents to investigate authentication
+Task 1: "Find all authentication-related files and logic"
+Task 2: "Find all API endpoints that require authentication"
+Task 3: "Find all tests related to authentication"
+```
 
 ### Adding a New API Endpoint
 1. **Write tests first** in `tests/api/`
@@ -311,6 +405,104 @@ bun test           # Run all tests once
 bun run build      # Check TypeScript errors (run frequently)
 ```
 
+## Worktree Development Workflow
+
+### Step 1: Resume or Start Work
+
+**ALWAYS** check for existing work first:
+```bash
+# Check existing worktrees
+git worktree list
+
+# Check for existing context files
+ls -la ./tmp_context/claude-context-*.md 2>/dev/null || echo "No context files found"
+
+# If worktree exists, navigate to it
+cd worktrees/<feature_name>
+
+# Load existing context
+mkdir -p tmp_context
+CONTEXT_FILE="./tmp_context/claude-context-$(basename $(pwd)).md"
+cat "$CONTEXT_FILE" 2>/dev/null || echo "No existing context found"
+```
+
+### Step 2: Create Worktree for New Features
+
+**MANDATORY**: You MUST create a worktree for ANY code changes:
+```bash
+# Automated setup (RECOMMENDED)
+./scripts/setup-worktree.sh <feature_name>
+cd worktrees/<feature_name>
+
+# The script will:
+# - Create branch: jeevanpillay/<feature_name>
+# - Install dependencies with bun
+# - Copy .env.local if exists
+# - Set up context file
+# - Run initial checks
+```
+
+### Step 3: Development with TDD
+
+1. **Write tests first** following TDD workflow above
+2. **Run tests continuously**: `bun test --watch`
+3. **Implement code** to make tests pass
+4. **Validate frequently**:
+   ```bash
+   bun run build      # TypeScript compilation
+   bun run lint       # Code style
+   bun run format     # Auto-format
+   bun run typecheck  # Type validation
+   ```
+
+### Step 4: Commit and Deploy
+
+#### Fly.io Deploy Mode:
+```bash
+# Ensure all checks pass
+bun test && bun run build && bun run lint
+
+# Commit with conventional format
+git add .
+git commit -m "feat: <description>
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# Push branch
+git push -u origin jeevanpillay/<feature_name>
+
+# Deploy to Fly.io
+fly deploy
+
+# Monitor deployment
+fly logs
+fly status
+```
+
+#### Local Dev Mode:
+```bash
+# Make changes and notify user
+echo "✅ Changes complete. Please test locally at http://localhost:3000"
+echo "📝 Test these endpoints:"
+echo "   - GET /api/instances"
+echo "   - POST /api/instances"
+# User handles commit/deploy when ready
+```
+
+### Step 5: Cleanup After Merge
+
+```bash
+# Remove worktree BEFORE merging to prevent errors
+cd ../..
+git worktree remove worktrees/<feature_name>
+
+# Sync main branch after merge
+git checkout main
+git pull origin main
+```
+
 ## Essential Commands for Claude
 
 ```bash
@@ -364,3 +556,14 @@ fly machines list -a lightfast-worker-instances
 ### API Issues
 - **No authentication**: API is open for development (no auth middleware)
 - **Validation errors**: All inputs validated with Zod schemas in `src/schemas/`
+
+## Key Workflow Reminders
+
+1. **WORKTREES ARE MANDATORY** - ANY code change requires a worktree
+2. **TDD IS MANDATORY** - Write tests first with `bun test --watch`
+3. **NO CLASSES** - Pure functions and module-level state only
+4. **USE RESULT TYPES** - neverthrow for ALL error handling
+5. **RUN BUILD OFTEN** - `bun run build` catches TypeScript errors
+6. **DIRECT IMPORTS** - Always use `@/*` path alias
+7. **FUNCTIONAL STYLE** - Small, focused, pure functions
+8. **CONTEXT PRESERVATION** - Use local context files for session continuity
