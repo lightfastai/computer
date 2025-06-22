@@ -1,28 +1,47 @@
 # Fly.io configuration file
-app = "lightfast-workflow-orchestrator"
+app = "lightfast-computer"
 primary_region = "iad"
+kill_signal = "SIGINT"
+kill_timeout = "10s"
 
 [build]
-  builder = "dockerfile"
+  dockerfile = "Dockerfile"
 
 [env]
-  PORT = "8080"
+  PORT = "3000"
+  NODE_ENV = "production"
 
-[http_service]
-  internal_port = 8080
-  force_https = true
-  auto_stop_machines = "stop"
-  auto_start_machines = true
-  min_machines_running = 0
-
-  [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
+[[services]]
+  protocol = "tcp"
+  internal_port = 3000
+  processes = ["app"]
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+  
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+  
+  [[services.tcp_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "5s"
+    restart_limit = 0
+  
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "5s"
     method = "GET"
-    timeout = "5s"
     path = "/health"
+    protocol = "http"
+    restart_limit = 0
+    tls_skip_verify = false
 
 [[vm]]
-  memory = '256mb'
-  cpu_kind = 'shared'
+  memory = "512mb"
+  cpu_kind = "shared"
   cpus = 1
