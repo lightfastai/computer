@@ -1,9 +1,9 @@
 import { err, ok, type Result } from 'neverthrow';
-import pino from 'pino';
 import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
+import { createLogger } from '@/lib/logger';
 import type { CreateInstanceOptions } from '@/types/index';
 
-const log = pino();
+const log = createLogger();
 
 interface FlyMachine {
   id: string;
