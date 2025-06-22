@@ -89,10 +89,13 @@ describe('fly-service', () => {
         json: async () => mockMachine,
       } as Response);
 
-      const result = await flyService.createMachine({
-        name: 'test-machine',
-        region: 'iad',
-      });
+      const result = await flyService.createMachine(
+        {
+          name: 'test-machine',
+          region: 'iad',
+        },
+        'test-fly-token-123',
+      );
 
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
@@ -116,7 +119,7 @@ describe('fly-service', () => {
         text: async () => 'Invalid machine configuration',
       } as Response);
 
-      const result = await flyService.createMachine({ name: 'test' });
+      const result = await flyService.createMachine({ name: 'test' }, 'test-fly-token-123');
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -134,7 +137,7 @@ describe('fly-service', () => {
         json: async () => mockMachine,
       } as Response);
 
-      const result = await flyService.getMachine('machine-123');
+      const result = await flyService.getMachine('machine-123', 'test-fly-token-123');
 
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
@@ -155,7 +158,7 @@ describe('fly-service', () => {
         ok: true,
       } as Response);
 
-      await flyService.destroyMachine('machine-123');
+      await flyService.destroyMachine('machine-123', 'test-fly-token-123');
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/machines/machine-123'),

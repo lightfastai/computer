@@ -5,7 +5,7 @@ This document shows how to use the Lightfast Computer SDK for programmatic insta
 ## Installation
 
 ```bash
-npm install lightfast-computer
+npm install @lightfastai/computer
 # or
 bun add lightfast-computer
 ```
@@ -13,7 +13,7 @@ bun add lightfast-computer
 ## Basic Usage
 
 ```typescript
-import createLightfastComputer from 'lightfast-computer';
+import createLightfastComputer from '@lightfastai/computer';
 // or
 import { createLightfastComputer } from 'lightfast-computer';
 

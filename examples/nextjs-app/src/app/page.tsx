@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 // SDK is used only in API routes, not client-side
 // But we can import types since they're stripped at build time
-import type { Instance, CreateInstanceOptions } from '@lightfast/computer';
+import type { Instance, CreateInstanceOptions } from '@lightfastai/computer';
 
 interface FileTreeNode {
   name: string;

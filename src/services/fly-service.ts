@@ -41,11 +41,9 @@ const API_URL = 'https://api.machines.dev/v1';
 const APP_NAME = 'lightfast-worker-instances';
 
 // Create headers for API requests
-const createHeaders = () => {
-  // Lazy import to avoid circular dependency during tests
-  const { config } = require('@/lib/config');
+const createHeaders = (flyApiToken: string) => {
   // Use the full token string - Fly.io API requires all comma-separated tokens
-  const token = config.flyApiToken.trim();
+  const token = flyApiToken.trim();
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -163,13 +161,14 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
 // Create a new Fly machine
 export const createMachine = async (
   options: CreateInstanceOptions,
+  flyApiToken: string,
 ): Promise<Result<FlyMachine, InstanceCreationError | InfrastructureError>> => {
   const machineConfig = createMachineConfig(options);
 
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines`, {
       method: 'POST',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
       body: JSON.stringify(machineConfig),
     });
 
@@ -207,7 +206,7 @@ export const createMachine = async (
     log.info(`Created Fly machine: ${machine.id}`);
 
     // Wait for machine to be ready
-    const readyResult = await waitForMachineReady(machine.id);
+    const readyResult = await waitForMachineReady(machine.id, flyApiToken);
     if (readyResult.isErr()) {
       return err(readyResult.error);
     }
@@ -228,11 +227,12 @@ export const createMachine = async (
 // Get machine details
 export const getMachine = async (
   machineId: string,
+  flyApiToken: string,
 ): Promise<Result<FlyMachine, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}`, {
       method: 'GET',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
     });
 
     if (!response.ok) {
@@ -271,11 +271,13 @@ export const getMachine = async (
 };
 
 // List all machines
-export const listMachines = async (): Promise<Result<FlyMachine[], InstanceOperationError | InfrastructureError>> => {
+export const listMachines = async (
+  flyApiToken: string,
+): Promise<Result<FlyMachine[], InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines`, {
       method: 'GET',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
     });
 
     if (!response.ok) {
@@ -311,11 +313,12 @@ export const listMachines = async (): Promise<Result<FlyMachine[], InstanceOpera
 // Destroy a machine
 export const destroyMachine = async (
   machineId: string,
+  flyApiToken: string,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}`, {
       method: 'DELETE',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
     });
 
     if (!response.ok) {
@@ -356,11 +359,12 @@ export const destroyMachine = async (
 // Stop a machine
 export const stopMachine = async (
   machineId: string,
+  flyApiToken: string,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}/stop`, {
       method: 'POST',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
     });
 
     if (!response.ok) {
@@ -401,11 +405,12 @@ export const stopMachine = async (
 // Start a machine
 export const startMachine = async (
   machineId: string,
+  flyApiToken: string,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}/start`, {
       method: 'POST',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
     });
 
     if (!response.ok) {
@@ -431,7 +436,7 @@ export const startMachine = async (
 
     log.info(`Started Fly machine: ${machineId}`);
 
-    const readyResult = await waitForMachineReady(machineId);
+    const readyResult = await waitForMachineReady(machineId, flyApiToken);
     if (readyResult.isErr()) {
       return err(readyResult.error);
     }
@@ -452,12 +457,13 @@ export const startMachine = async (
 // Wait for machine to be ready
 export const waitForMachineReady = async (
   machineId: string,
+  flyApiToken: string,
   maxAttempts = 30,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   log.info(`Waiting for machine ${machineId} to be ready...`);
 
   for (let i = 0; i < maxAttempts; i++) {
-    const machineResult = await getMachine(machineId);
+    const machineResult = await getMachine(machineId, flyApiToken);
 
     if (machineResult.isErr()) {
       return err(machineResult.error);
@@ -497,7 +503,10 @@ export const waitForMachineReady = async (
 };
 
 // Set app-level secrets
-export const setAppSecrets = async (secrets: Record<string, string>): Promise<Result<void, InfrastructureError>> => {
+export const setAppSecrets = async (
+  secrets: Record<string, string>,
+  flyApiToken: string,
+): Promise<Result<void, InfrastructureError>> => {
   try {
     const secretsArray = Object.entries(secrets).map(([key, value]) => ({
       name: key,
@@ -506,7 +515,7 @@ export const setAppSecrets = async (secrets: Record<string, string>): Promise<Re
 
     const response = await fetch(`${API_URL}/apps/${APP_NAME}/secrets`, {
       method: 'PUT',
-      headers: createHeaders(),
+      headers: createHeaders(flyApiToken),
       body: JSON.stringify({ secrets: secretsArray }),
     });
 

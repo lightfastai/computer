@@ -90,10 +90,13 @@ describe('instance-service', () => {
       mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const result = await instanceService.createInstance({
-        name: 'test-instance',
-        region: 'iad',
-      });
+      const result = await instanceService.createInstance(
+        {
+          name: 'test-instance',
+          region: 'iad',
+        },
+        'test-fly-token-123',
+      );
 
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
@@ -111,6 +114,7 @@ describe('instance-service', () => {
           name: 'test-instance',
           region: 'iad',
         }),
+        'test-fly-token-123',
       );
     });
 
@@ -118,7 +122,7 @@ describe('instance-service', () => {
       const mockError = new InstanceCreationError('Failed to create machine');
       mockCreateMachine.mockResolvedValue(err(mockError));
 
-      const result = await instanceService.createInstance({ name: 'test' });
+      const result = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -126,10 +130,10 @@ describe('instance-service', () => {
       }
 
       // In stateless SDK, failed creates don't appear in list
-      const instances = await instanceService.listInstances();
-      expect(instances.isOk()).toBe(true);
-      if (instances.isOk()) {
-        expect(instances.value).toHaveLength(0);
+      const listResult = await instanceService.listInstances('test-fly-token-123');
+      expect(listResult.isOk()).toBe(true);
+      if (listResult.isOk()) {
+        expect(listResult.value).toHaveLength(0);
       }
     });
   });
@@ -141,11 +145,11 @@ describe('instance-service', () => {
       mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const createdResult = await instanceService.createInstance({ name: 'test' });
+      const createdResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createdResult.isOk()).toBe(true);
 
       if (createdResult.isOk()) {
-        const instanceResult = await instanceService.getInstance(createdResult.value.id);
+        const instanceResult = await instanceService.getInstance(createdResult.value.id, 'test-fly-token-123');
         expect(instanceResult.isOk()).toBe(true);
 
         if (instanceResult.isOk()) {
@@ -158,7 +162,7 @@ describe('instance-service', () => {
       // Mock 404 response
       mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
 
-      const result = await instanceService.getInstance('non-existent');
+      const result = await instanceService.getInstance('non-existent', 'test-fly-token-123');
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -172,12 +176,12 @@ describe('instance-service', () => {
       mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
       mockGetMachine.mockResolvedValue(ok({ ...mockFlyMachine, state: 'stopped' }));
 
-      const createdResult = await instanceService.createInstance({ name: 'test' });
+      const createdResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createdResult.isOk()).toBe(true);
 
       if (createdResult.isOk()) {
         // Get instance again, should update status
-        const instanceResult = await instanceService.getInstance(createdResult.value.id);
+        const instanceResult = await instanceService.getInstance(createdResult.value.id, 'test-fly-token-123');
         expect(instanceResult.isOk()).toBe(true);
 
         if (instanceResult.isOk()) {
@@ -195,17 +199,17 @@ describe('instance-service', () => {
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
       mockStopMachine.mockResolvedValue(ok(undefined));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
-        const stopResult = await instanceService.stopInstance(createResult.value.id);
+        const stopResult = await instanceService.stopInstance(createResult.value.id, 'test-fly-token-123');
         expect(stopResult.isOk()).toBe(true);
 
         if (stopResult.isOk()) {
           expect(stopResult.value.status).toBe('stopped');
         }
-        expect(mockStopMachine).toHaveBeenCalledWith('fly-123');
+        expect(mockStopMachine).toHaveBeenCalledWith('fly-123', 'test-fly-token-123');
       }
     });
 
@@ -215,14 +219,14 @@ describe('instance-service', () => {
       mockCreateMachine.mockResolvedValue(ok(createMockFlyMachine({ state: 'started' })));
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
         // Force update status by calling getInstance which syncs with fly
-        await instanceService.getInstance(createResult.value.id);
+        await instanceService.getInstance(createResult.value.id, 'test-fly-token-123');
 
-        const stopResult = await instanceService.stopInstance(createResult.value.id);
+        const stopResult = await instanceService.stopInstance(createResult.value.id, 'test-fly-token-123');
         expect(stopResult.isErr()).toBe(true);
 
         if (stopResult.isErr()) {
@@ -240,20 +244,20 @@ describe('instance-service', () => {
       mockGetMachine.mockResolvedValue(ok({ ...mockFlyMachine, state: 'stopped' }));
       mockStartMachine.mockResolvedValue(ok(undefined));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
         // getInstance will update status to stopped due to mock
-        await instanceService.getInstance(createResult.value.id);
+        await instanceService.getInstance(createResult.value.id, 'test-fly-token-123');
 
-        const startResult = await instanceService.startInstance(createResult.value.id);
+        const startResult = await instanceService.startInstance(createResult.value.id, 'test-fly-token-123');
         expect(startResult.isOk()).toBe(true);
 
         if (startResult.isOk()) {
           expect(startResult.value.status).toBe('running');
         }
-        expect(mockStartMachine).toHaveBeenCalledWith('fly-123');
+        expect(mockStartMachine).toHaveBeenCalledWith('fly-123', 'test-fly-token-123');
       }
     });
   });
@@ -266,19 +270,19 @@ describe('instance-service', () => {
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
       mockDestroyMachine.mockResolvedValue(ok(undefined));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
-        const destroyResult = await instanceService.destroyInstance(createResult.value.id);
+        const destroyResult = await instanceService.destroyInstance(createResult.value.id, 'test-fly-token-123');
         expect(destroyResult.isOk()).toBe(true);
 
-        expect(mockDestroyMachine).toHaveBeenCalledWith('fly-123');
+        expect(mockDestroyMachine).toHaveBeenCalledWith('fly-123', 'test-fly-token-123');
 
         // After destroy, machine should not exist
         mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
 
-        const instanceResult = await instanceService.getInstance(createResult.value.id);
+        const instanceResult = await instanceService.getInstance(createResult.value.id, 'test-fly-token-123');
         expect(instanceResult.isErr()).toBe(true);
 
         if (instanceResult.isErr()) {
@@ -291,7 +295,7 @@ describe('instance-service', () => {
       // Mock 404 response for non-existent instance
       mockGetMachine.mockResolvedValue(err(new InstanceOperationError('retrieve', 'instance not found')));
 
-      const destroyResult = await instanceService.destroyInstance('non-existent');
+      const destroyResult = await instanceService.destroyInstance('non-existent', 'test-fly-token-123');
       expect(destroyResult.isErr()).toBe(true);
 
       if (destroyResult.isErr()) {
@@ -310,11 +314,11 @@ describe('instance-service', () => {
       mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
-        const healthResult = await instanceService.healthCheckInstance(createResult.value.id);
+        const healthResult = await instanceService.healthCheckInstance(createResult.value.id, 'test-fly-token-123');
         expect(healthResult.isOk()).toBe(true);
 
         if (healthResult.isOk()) {
@@ -329,11 +333,11 @@ describe('instance-service', () => {
       mockCreateMachine.mockResolvedValue(ok(mockFlyMachine));
       mockGetMachine.mockResolvedValue(ok(mockFlyMachine));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
-        const healthResult = await instanceService.healthCheckInstance(createResult.value.id);
+        const healthResult = await instanceService.healthCheckInstance(createResult.value.id, 'test-fly-token-123');
         expect(healthResult.isOk()).toBe(true);
 
         if (healthResult.isOk()) {
@@ -356,15 +360,15 @@ describe('instance-service', () => {
       mockStopMachine.mockResolvedValue(ok(undefined));
       mockStartMachine.mockResolvedValue(ok(undefined));
 
-      const createResult = await instanceService.createInstance({ name: 'test' });
+      const createResult = await instanceService.createInstance({ name: 'test' }, 'test-fly-token-123');
       expect(createResult.isOk()).toBe(true);
 
       if (createResult.isOk()) {
-        const restartResult = await instanceService.restartInstance(createResult.value.id);
+        const restartResult = await instanceService.restartInstance(createResult.value.id, 'test-fly-token-123');
         expect(restartResult.isOk()).toBe(true);
 
-        expect(mockStopMachine).toHaveBeenCalledWith('fly-123');
-        expect(mockStartMachine).toHaveBeenCalledWith('fly-123');
+        expect(mockStopMachine).toHaveBeenCalledWith('fly-123', 'test-fly-token-123');
+        expect(mockStartMachine).toHaveBeenCalledWith('fly-123', 'test-fly-token-123');
 
         if (restartResult.isOk()) {
           expect(restartResult.value.status).toBe('running');
@@ -385,11 +389,11 @@ describe('instance-service', () => {
       // Mock listMachines to return our test machines
       mockListMachines.mockResolvedValue(ok(mockFlyMachines));
 
-      const result = await instanceService.getInstanceStats();
+      const statsResult = await instanceService.getInstanceStats('test-fly-token-123');
 
-      expect(result.isOk()).toBe(true);
-      if (result.isOk()) {
-        expect(result.value).toEqual({
+      expect(statsResult.isOk()).toBe(true);
+      if (statsResult.isOk()) {
+        expect(statsResult.value).toEqual({
           total: 4,
           running: 2, // 2 started machines
           stopped: 1, // 1 stopped machine

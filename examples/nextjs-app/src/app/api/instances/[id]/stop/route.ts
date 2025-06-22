@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import createLightfastComputer from '@lightfast/computer';
+import createLightfastComputer from '@lightfastai/computer';
 
 const sdk = createLightfastComputer();
 

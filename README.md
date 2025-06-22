@@ -29,7 +29,7 @@ Lightfast Computer is a TypeScript SDK that transforms Fly.io into a developer-f
 ### Installation
 
 ```bash
-npm install @lightfast/computer
+npm install @lightfastai/computer
 # or
 bun add @lightfast/computer
 ```
@@ -37,7 +37,7 @@ bun add @lightfast/computer
 ### Basic Usage
 
 ```typescript
-import createLightfastComputer from '@lightfast/computer';
+import createLightfastComputer from '@lightfastai/computer';
 
 const computer = createLightfastComputer();
 
