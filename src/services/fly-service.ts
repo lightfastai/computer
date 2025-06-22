@@ -43,8 +43,8 @@ const APP_NAME = 'lightfast-worker-instances';
 
 // Create headers for API requests
 const createHeaders = () => {
-  // Extract the first token if multiple are provided (comma-separated)
-  const token = config.flyApiToken.split(',')[0].trim();
+  // Use the full token string - Fly.io API requires all comma-separated tokens
+  const token = config.flyApiToken.trim();
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',

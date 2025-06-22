@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "dotenv -- bun run --hot src/index.ts",
-    "with-env": "dotenv --",
+    "with-env": "dotenv -e ./.env --",
     "build": "bun build src/index.ts --target node --outdir dist",
     "start": "NODE_ENV=production bun run dist/index.js",
     "test": "bun test",
