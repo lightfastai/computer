@@ -1,6 +1,6 @@
 {
   "name": "@lightfastai/computer",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A powerful SDK for creating and managing Ubuntu instances on Fly.io with GitHub integration, command execution, and real-time streaming",
   "type": "module",
   "main": "./dist/sdk.js",
