@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_FLY_API_TOKEN": "@fly_api_token",
+    "NEXT_PUBLIC_FLY_APP_NAME": "lightfast-worker-instances"
+  }
+}
