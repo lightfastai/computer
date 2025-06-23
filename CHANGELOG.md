@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-06-23
+
+### Changed
+- **BREAKING**: Simplified logger interface - users must now provide their own logger implementation
+- **BREAKING**: Removed `createLogger` and `createConsoleLogger` exports from SDK
+- **BREAKING**: Removed `LoggerConfig` and `LoggerFactory` types
+- Logger parameter is now optional - omit for silent mode (no logging)
+- Bundle size unchanged at ~165KB
+
+### Removed  
+- **BREAKING**: Removed `src/lib/console-logger.ts` and `src/lib/logger.ts` implementation files
+- **BREAKING**: Removed 5 test files and 500+ lines of logger implementation code
+- **BREAKING**: No longer export logger factory functions
+
+### Migration Guide
+Users must now provide their own logger implementation:
+```typescript
+// Before (v0.3.0)
+import { createLightfastComputer, createConsoleLogger } from '@lightfastai/computer';
+const computer = createLightfastComputer({
+  flyApiToken: 'token',
+  appName: 'app', 
+  logger: createConsoleLogger({ level: 'debug' })
+});
+
+// After (v0.4.0)
+import createLightfastComputer from '@lightfastai/computer';
+const computer = createLightfastComputer({
+  flyApiToken: 'token',
+  appName: 'app',
+  logger: {
+    info: (msg, ...args) => console.log(`[INFO] ${msg}`, ...args),
+    error: (msg, ...args) => console.error(`[ERROR] ${msg}`, ...args),
+    debug: (msg, ...args) => console.log(`[DEBUG] ${msg}`, ...args),
+    warn: (msg, ...args) => console.warn(`[WARN] ${msg}`, ...args),
+    level: 'debug'
+  }
+});
+
+// Or omit logger for silent mode
+const computer = createLightfastComputer({
+  flyApiToken: 'token',
+  appName: 'app'
+  // No logger = silent mode
+});
+```
+
 ## [0.3.0] - 2025-06-23
 
 ### Added
