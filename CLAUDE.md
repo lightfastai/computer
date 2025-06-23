@@ -690,16 +690,25 @@ git pull origin main
 # 2. Run version command (this creates commit + tag)
 npm version patch  # or minor/major based on changes
 
-# 3. Push commit and tag
-git push --follow-tags
+# 3. Publish to npm
+npm publish --access public
 
-# 4. Monitor GitHub Actions
-echo "🚀 GitHub Actions will now:"
-echo "  - Run tests"
-echo "  - Build package"
-echo "  - Publish to npm"
-echo ""
-echo "Monitor at: https://github.com/lightfastai/computer/actions"
+# 4. Update CHANGELOG.md with the new version
+# Add new section at the top with:
+# - Version number and date
+# - Changes categorized as Added/Changed/Fixed/Removed
+# - Update version comparison links at bottom
+
+# 5. Commit changelog update
+git add CHANGELOG.md
+git commit -m "docs: update changelog for vX.X.X release
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 6. Push changes
+git push origin main
 ```
 
 ### Step 7: Cleanup After Merge
@@ -884,3 +893,4 @@ fly machines list -a lightfast-worker-instances  # List instances
 10. **SUGGEST VERSIONS** - After PR merge, analyze commits and suggest version bumps
 11. **CHECK PUBLISHING** - Run `prepublishOnly` before creating PRs for npm packages
 12. **CONVENTIONAL COMMITS** - Use feat/fix/chore prefixes for automatic versioning
+13. **UPDATE CHANGELOG** - Always update CHANGELOG.md after publishing new versions with proper categorization and version links
