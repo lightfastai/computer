@@ -1,13 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'bun:test';
 import { err, ok } from 'neverthrow';
 import { AppError, InstanceCreationError, InstanceOperationError, NotFoundError } from '@/lib/error-handler';
-import { createLogger } from '@/lib/logger';
 import * as flyService from '@/services/fly-service';
 import * as instanceService from '@/services/instance-service';
 import type { Logger } from '@/types/logger';
 
 // Create test logger
-const testLogger: Logger = createLogger();
+const testLogger: Logger = {
+  info: () => {},
+  error: () => {},
+  debug: () => {},
+  warn: () => {},
+  level: 'silent',
+};
 const TEST_APP_NAME = 'lightfast-worker-instances';
 const TEST_FLY_TOKEN = 'test-fly-token-123';
 

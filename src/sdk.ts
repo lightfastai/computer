@@ -2,7 +2,6 @@ import type { Result } from 'neverthrow';
 import { err, ok } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
-import { createLogger } from '@/lib/logger';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
 import type { ExecuteCommandResult } from '@/services/command-service';
 import * as commandService from '@/services/command-service';
@@ -207,8 +206,14 @@ export const createLightfastComputer = (config: LightfastComputerConfig): Lightf
     throw new Error('appName is required');
   }
 
-  // Set defaults
-  const logger = config.logger || createLogger();
+  // Create silent logger if none provided
+  const logger = config.logger || {
+    info: () => {},
+    error: () => {},
+    debug: () => {},
+    warn: () => {},
+    level: 'silent',
+  };
 
   const fullConfig = { ...config, logger };
 
@@ -221,8 +226,6 @@ export const createLightfastComputer = (config: LightfastComputerConfig): Lightf
 // Default export for convenience
 export default createLightfastComputer;
 
-// Export logger utilities
-export { createConsoleLogger } from '@/lib/console-logger';
 export {
   AppError,
   InfrastructureError,
@@ -238,8 +241,6 @@ export type {
   CreateInstanceOptions,
   Instance,
   Logger,
-  LoggerConfig,
-  LoggerFactory,
 } from '@/types/index';
 
 // Export InstanceStats separately since it's defined in this file

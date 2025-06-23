@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, mock } from 'bun:test';
 import { InstanceCreationError } from '@/lib/error-handler';
-import { createLogger } from '@/lib/logger';
 import * as flyService from '@/services/fly-service';
 import type { Logger } from '@/types/logger';
 
 // Create test logger
-const testLogger: Logger = createLogger('test');
+const testLogger: Logger = {
+  info: () => {},
+  error: () => {},
+  debug: () => {},
+  warn: () => {},
+  level: 'silent',
+};
 
 // Save original fetch
 const originalFetch = global.fetch;
