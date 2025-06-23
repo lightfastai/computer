@@ -63,6 +63,8 @@ export const INSTANCE_STATUS = [
   'destroying',
   'destroyed',
   'failed',
+  'provisioning',
+  'unknown',
 ] as const;
 
 export const instanceNameSchema = z

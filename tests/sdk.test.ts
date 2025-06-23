@@ -86,6 +86,8 @@ describe('LightfastComputer SDK', () => {
           memoryMb: 512,
         },
         TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object), // logger
       );
       expect(mockCreateInstanceWithGitHub).not.toHaveBeenCalled();
     });
@@ -116,6 +118,8 @@ describe('LightfastComputer SDK', () => {
           },
         },
         TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object), // logger
       );
       expect(mockCreateInstance).not.toHaveBeenCalled();
     });
@@ -127,7 +131,12 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.get('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockGetInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockGetInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should validate instance ID in get', async () => {
@@ -154,7 +163,11 @@ describe('LightfastComputer SDK', () => {
         expect(result.value).toHaveLength(1);
         expect(result.value[0]).toEqual(mockInstance);
       }
-      expect(mockListInstances).toHaveBeenCalledWith(TEST_FLY_API_TOKEN);
+      expect(mockListInstances).toHaveBeenCalledWith(
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should start instance', async () => {
@@ -164,7 +177,12 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.start('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockStartInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockStartInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should stop instance', async () => {
@@ -174,7 +192,12 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.stop('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockStopInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockStopInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should restart instance', async () => {
@@ -184,7 +207,12 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.restart('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockRestartInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockRestartInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should destroy instance', async () => {
@@ -194,7 +222,12 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.destroy('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockDestroyInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockDestroyInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should check instance health', async () => {
@@ -207,7 +240,12 @@ describe('LightfastComputer SDK', () => {
       if (result.isOk()) {
         expect(result.value).toBe(true);
       }
-      expect(mockHealthCheckInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockHealthCheckInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should get instance statistics', async () => {
@@ -221,7 +259,11 @@ describe('LightfastComputer SDK', () => {
       if (result.isOk()) {
         expect(result.value).toEqual(stats);
       }
-      expect(mockGetInstanceStats).toHaveBeenCalledWith(TEST_FLY_API_TOKEN);
+      expect(mockGetInstanceStats).toHaveBeenCalledWith(
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should handle errors in list instances', async () => {
@@ -265,7 +307,11 @@ describe('LightfastComputer SDK', () => {
         expect(result.value).toHaveLength(2);
         expect(result.value[0].status).toBe('stopped');
       }
-      expect(mockStopAllInstances).toHaveBeenCalledWith(TEST_FLY_API_TOKEN);
+      expect(mockStopAllInstances).toHaveBeenCalledWith(
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should destroy all instances successfully', async () => {
@@ -275,7 +321,11 @@ describe('LightfastComputer SDK', () => {
       const result = await sdk.instances.destroyAll();
 
       expect(result.isOk()).toBe(true);
-      expect(mockDestroyAllInstances).toHaveBeenCalledWith(TEST_FLY_API_TOKEN);
+      expect(mockDestroyAllInstances).toHaveBeenCalledWith(
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
     });
 
     it('should handle errors in stopAll', async () => {
@@ -324,7 +374,12 @@ describe('LightfastComputer SDK', () => {
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockGetInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN);
+      expect(mockGetInstance).toHaveBeenCalledWith(
+        'test-id',
+        TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object),
+      );
       expect(mockExecuteCommand).toHaveBeenCalledWith(
         {
           instanceId: 'test-id',
@@ -336,6 +391,8 @@ describe('LightfastComputer SDK', () => {
           onError: undefined,
         },
         TEST_FLY_API_TOKEN,
+        'lightfast-worker-instances',
+        expect.any(Object), // logger
       );
     });
 

@@ -1,17 +1,17 @@
-import createLightfastComputer from '@lightfast/computer';
 import { type NextRequest, NextResponse } from 'next/server';
-
-const sdk = createLightfastComputer();
+import { computer, formatErrorResponse } from '@/lib/computer';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await sdk.commands.execute(body);
+    const result = await computer.commands.execute(body);
 
     if (result.isOk()) {
       return NextResponse.json(result.value);
     }
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+    
+    const { data, status } = formatErrorResponse(result.error);
+    return NextResponse.json(data, { status });
   } catch (error) {
     console.error('Failed to execute command:', error);
     return NextResponse.json({ error: 'Failed to execute command' }, { status: 500 });

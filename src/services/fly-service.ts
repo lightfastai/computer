@@ -1,9 +1,10 @@
 import { err, ok, type Result } from 'neverthrow';
+import type { Logger } from 'pino';
 import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
-import { createLogger } from '@/lib/logger';
 import type { CreateInstanceOptions } from '@/types/index';
 
-const log = createLogger();
+// Constants
+const API_URL = 'https://api.machines.dev/v1';
 
 interface FlyMachine {
   id: string;
@@ -35,10 +36,6 @@ interface FlyMachine {
   };
   created_at: string;
 }
-
-// Constants
-const API_URL = 'https://api.machines.dev/v1';
-const APP_NAME = 'lightfast-worker-instances';
 
 // Create headers for API requests
 const createHeaders = (flyApiToken: string) => {
@@ -162,11 +159,13 @@ const createMachineConfig = (options: CreateInstanceOptions): MachineConfig => {
 export const createMachine = async (
   options: CreateInstanceOptions,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<FlyMachine, InstanceCreationError | InfrastructureError>> => {
   const machineConfig = createMachineConfig(options);
 
   try {
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/machines`, {
       method: 'POST',
       headers: createHeaders(flyApiToken),
       body: JSON.stringify(machineConfig),
@@ -176,7 +175,7 @@ export const createMachine = async (
       const errorText = await response.text();
 
       // Log technical details for debugging
-      log.error('Fly.io machine creation failed:', {
+      logger.error('Fly.io machine creation failed:', {
         status: response.status,
         statusText: response.statusText,
         error: errorText,
@@ -189,24 +188,32 @@ export const createMachine = async (
         error: errorText,
       });
 
-      // Return user-friendly error based on status code
+      // Return user-friendly error based on status code with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        appName,
+        machineConfig,
+      };
+
       if (response.status >= 500) {
-        return err(new InfrastructureError('compute platform'));
+        return err(new InfrastructureError('compute platform', errorDetails));
       }
       if (response.status === 422) {
-        return err(new InstanceCreationError('invalid configuration'));
+        return err(new InstanceCreationError('invalid configuration', errorDetails));
       }
       if (response.status === 429) {
-        return err(new InstanceCreationError('rate limit exceeded'));
+        return err(new InstanceCreationError('rate limit exceeded', errorDetails));
       }
-      return err(new InstanceCreationError());
+      return err(new InstanceCreationError(undefined, errorDetails));
     }
 
     const machine = (await response.json()) as FlyMachine;
-    log.info(`Created Fly machine: ${machine.id}`);
+    logger.info(`Created Fly machine: ${machine.id}`);
 
     // Wait for machine to be ready
-    const readyResult = await waitForMachineReady(machine.id, flyApiToken);
+    const readyResult = await waitForMachineReady(machine.id, flyApiToken, appName, logger);
     if (readyResult.isErr()) {
       return err(readyResult.error);
     }
@@ -214,13 +221,19 @@ export const createMachine = async (
     return ok(machine);
   } catch (error) {
     // Log technical error with full details
-    log.error('Unexpected error creating Fly machine:', {
+    logger.error('Unexpected error creating Fly machine:', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       config: machineConfig,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        machineConfig,
+      }),
+    );
   }
 };
 
@@ -228,9 +241,11 @@ export const createMachine = async (
 export const getMachine = async (
   machineId: string,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<FlyMachine, InstanceOperationError | InfrastructureError>> => {
   try {
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/machines/${machineId}`, {
       method: 'GET',
       headers: createHeaders(flyApiToken),
     });
@@ -239,43 +254,59 @@ export const getMachine = async (
       const errorText = await response.text();
 
       // Log technical details for debugging
-      log.error('Failed to get Fly machine:', {
+      logger.error('Failed to get Fly machine:', {
         machineId,
         status: response.status,
         statusText: response.statusText,
         error: errorText,
       });
 
-      // Return user-friendly error based on status code
+      // Return user-friendly error based on status code with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        machineId,
+        appName,
+      };
+
       if (response.status >= 500) {
-        return err(new InfrastructureError('compute platform'));
+        return err(new InfrastructureError('compute platform', errorDetails));
       }
       if (response.status === 404) {
-        return err(new InstanceOperationError('retrieve', 'instance not found'));
+        return err(new InstanceOperationError('retrieve', 'instance not found', errorDetails));
       }
-      return err(new InstanceOperationError('retrieve'));
+      return err(new InstanceOperationError('retrieve', undefined, errorDetails));
     }
 
     const machine = (await response.json()) as FlyMachine;
     return ok(machine);
   } catch (error) {
     // Log technical error with full details
-    log.error('Unexpected error getting Fly machine:', {
+    logger.error('Unexpected error getting Fly machine:', {
       machineId,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        machineId,
+      }),
+    );
   }
 };
 
 // List all machines
 export const listMachines = async (
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<FlyMachine[], InstanceOperationError | InfrastructureError>> => {
   try {
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/machines`, {
       method: 'GET',
       headers: createHeaders(flyApiToken),
     });
@@ -284,29 +315,41 @@ export const listMachines = async (
       const errorText = await response.text();
 
       // Log technical details for debugging
-      log.error('Failed to list Fly machines:', {
+      logger.error('Failed to list Fly machines:', {
         status: response.status,
         statusText: response.statusText,
         error: errorText,
       });
 
-      // Return user-friendly error based on status code
+      // Return user-friendly error based on status code with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        appName,
+      };
+
       if (response.status >= 500) {
-        return err(new InfrastructureError('compute platform'));
+        return err(new InfrastructureError('compute platform', errorDetails));
       }
-      return err(new InstanceOperationError('list'));
+      return err(new InstanceOperationError('list', undefined, errorDetails));
     }
 
     const machines = (await response.json()) as FlyMachine[];
     return ok(machines);
   } catch (error) {
     // Log technical error with full details
-    log.error('Unexpected error listing Fly machines:', {
+    logger.error('Unexpected error listing Fly machines:', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }),
+    );
   }
 };
 
@@ -314,9 +357,11 @@ export const listMachines = async (
 export const destroyMachine = async (
   machineId: string,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/machines/${machineId}`, {
       method: 'DELETE',
       headers: createHeaders(flyApiToken),
     });
@@ -325,34 +370,48 @@ export const destroyMachine = async (
       const errorText = await response.text();
 
       // Log technical details for debugging
-      log.error('Failed to destroy Fly machine:', {
+      logger.error('Failed to destroy Fly machine:', {
         machineId,
         status: response.status,
         statusText: response.statusText,
         error: errorText,
       });
 
-      // Return user-friendly error based on status code
+      // Return user-friendly error based on status code with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        machineId,
+        appName,
+      };
+
       if (response.status >= 500) {
-        return err(new InfrastructureError('compute platform'));
+        return err(new InfrastructureError('compute platform', errorDetails));
       }
       if (response.status === 404) {
-        return err(new InstanceOperationError('destroy', 'instance not found'));
+        return err(new InstanceOperationError('destroy', 'instance not found', errorDetails));
       }
-      return err(new InstanceOperationError('destroy'));
+      return err(new InstanceOperationError('destroy', undefined, errorDetails));
     }
 
-    log.info(`Destroyed Fly machine: ${machineId}`);
+    logger.info(`Destroyed Fly machine: ${machineId}`);
     return ok(undefined);
   } catch (error) {
     // Log technical error with full details
-    log.error('Unexpected error destroying Fly machine:', {
+    logger.error('Unexpected error destroying Fly machine:', {
       machineId,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        machineId,
+      }),
+    );
   }
 };
 
@@ -360,9 +419,11 @@ export const destroyMachine = async (
 export const stopMachine = async (
   machineId: string,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}/stop`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/machines/${machineId}/stop`, {
       method: 'POST',
       headers: createHeaders(flyApiToken),
     });
@@ -371,34 +432,48 @@ export const stopMachine = async (
       const errorText = await response.text();
 
       // Log technical details for debugging
-      log.error('Failed to stop Fly machine:', {
+      logger.error('Failed to stop Fly machine:', {
         machineId,
         status: response.status,
         statusText: response.statusText,
         error: errorText,
       });
 
-      // Return user-friendly error based on status code
+      // Return user-friendly error based on status code with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        machineId,
+        appName,
+      };
+
       if (response.status >= 500) {
-        return err(new InfrastructureError('compute platform'));
+        return err(new InfrastructureError('compute platform', errorDetails));
       }
       if (response.status === 404) {
-        return err(new InstanceOperationError('stop', 'instance not found'));
+        return err(new InstanceOperationError('stop', 'instance not found', errorDetails));
       }
-      return err(new InstanceOperationError('stop'));
+      return err(new InstanceOperationError('stop', undefined, errorDetails));
     }
 
-    log.info(`Stopped Fly machine: ${machineId}`);
+    logger.info(`Stopped Fly machine: ${machineId}`);
     return ok(undefined);
   } catch (error) {
     // Log technical error with full details
-    log.error('Unexpected error stopping Fly machine:', {
+    logger.error('Unexpected error stopping Fly machine:', {
       machineId,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        machineId,
+      }),
+    );
   }
 };
 
@@ -406,9 +481,11 @@ export const stopMachine = async (
 export const startMachine = async (
   machineId: string,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
   try {
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/machines/${machineId}/start`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/machines/${machineId}/start`, {
       method: 'POST',
       headers: createHeaders(flyApiToken),
     });
@@ -417,26 +494,34 @@ export const startMachine = async (
       const errorText = await response.text();
 
       // Log technical details for debugging
-      log.error('Failed to start Fly machine:', {
+      logger.error('Failed to start Fly machine:', {
         machineId,
         status: response.status,
         statusText: response.statusText,
         error: errorText,
       });
 
-      // Return user-friendly error based on status code
+      // Return user-friendly error based on status code with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        machineId,
+        appName,
+      };
+
       if (response.status >= 500) {
-        return err(new InfrastructureError('compute platform'));
+        return err(new InfrastructureError('compute platform', errorDetails));
       }
       if (response.status === 404) {
-        return err(new InstanceOperationError('start', 'instance not found'));
+        return err(new InstanceOperationError('start', 'instance not found', errorDetails));
       }
-      return err(new InstanceOperationError('start'));
+      return err(new InstanceOperationError('start', undefined, errorDetails));
     }
 
-    log.info(`Started Fly machine: ${machineId}`);
+    logger.info(`Started Fly machine: ${machineId}`);
 
-    const readyResult = await waitForMachineReady(machineId, flyApiToken);
+    const readyResult = await waitForMachineReady(machineId, flyApiToken, appName, logger);
     if (readyResult.isErr()) {
       return err(readyResult.error);
     }
@@ -444,13 +529,19 @@ export const startMachine = async (
     return ok(undefined);
   } catch (error) {
     // Log technical error with full details
-    log.error('Unexpected error starting Fly machine:', {
+    logger.error('Unexpected error starting Fly machine:', {
       machineId,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        machineId,
+      }),
+    );
   }
 };
 
@@ -458,12 +549,14 @@ export const startMachine = async (
 export const waitForMachineReady = async (
   machineId: string,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
   maxAttempts = 30,
 ): Promise<Result<void, InstanceOperationError | InfrastructureError>> => {
-  log.info(`Waiting for machine ${machineId} to be ready...`);
+  logger.info(`Waiting for machine ${machineId} to be ready...`);
 
   for (let i = 0; i < maxAttempts; i++) {
-    const machineResult = await getMachine(machineId, flyApiToken);
+    const machineResult = await getMachine(machineId, flyApiToken, appName, logger);
 
     if (machineResult.isErr()) {
       return err(machineResult.error);
@@ -472,40 +565,55 @@ export const waitForMachineReady = async (
     const machine = machineResult.value;
 
     if (machine.state === 'started') {
-      log.info(`Machine ${machineId} is ready`);
+      logger.info(`Machine ${machineId} is ready`);
       return ok(undefined);
     }
 
     if (machine.state === 'failed' || machine.state === 'destroyed') {
       // Log technical details for debugging
-      log.error('Machine failed to start:', {
+      logger.error('Machine failed to start:', {
         machineId,
         state: machine.state,
         attempt: i + 1,
         maxAttempts,
       });
 
-      return err(new InstanceOperationError('start', `instance entered ${machine.state} state`));
+      return err(
+        new InstanceOperationError('start', `instance entered ${machine.state} state`, {
+          machineId,
+          state: machine.state,
+          attempt: i + 1,
+          maxAttempts,
+        }),
+      );
     }
 
-    log.debug(`Waiting for machine ${machineId}, current state: ${machine.state}`);
+    logger.debug(`Waiting for machine ${machineId}, current state: ${machine.state}`);
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
   // Log timeout details for debugging
-  log.error('Machine failed to become ready in time:', {
+  logger.error('Machine failed to become ready in time:', {
     machineId,
     maxAttempts,
     timeoutSeconds: maxAttempts * 2,
   });
 
-  return err(new InstanceOperationError('start', 'timeout waiting for instance to become ready'));
+  return err(
+    new InstanceOperationError('start', 'timeout waiting for instance to become ready', {
+      machineId,
+      maxAttempts,
+      timeoutSeconds: maxAttempts * 2,
+    }),
+  );
 };
 
 // Set app-level secrets
 export const setAppSecrets = async (
   secrets: Record<string, string>,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<void, InfrastructureError>> => {
   try {
     const secretsArray = Object.entries(secrets).map(([key, value]) => ({
@@ -513,7 +621,7 @@ export const setAppSecrets = async (
       value: value,
     }));
 
-    const response = await fetch(`${API_URL}/apps/${APP_NAME}/secrets`, {
+    const response = await fetch(`${API_URL}/apps/${appName}/secrets`, {
       method: 'PUT',
       headers: createHeaders(flyApiToken),
       body: JSON.stringify({ secrets: secretsArray }),
@@ -522,23 +630,35 @@ export const setAppSecrets = async (
     if (!response.ok) {
       const errorText = await response.text();
 
-      log.error('Failed to set app secrets:', {
+      logger.error('Failed to set app secrets:', {
         status: response.status,
         statusText: response.statusText,
         error: errorText,
       });
 
-      return err(new InfrastructureError('Failed to set app secrets'));
+      return err(
+        new InfrastructureError('Failed to set app secrets', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          appName,
+        }),
+      );
     }
 
-    log.info('App secrets updated successfully');
+    logger.info('App secrets updated successfully');
     return ok(undefined);
   } catch (error) {
-    log.error('Unexpected error setting app secrets:', {
+    logger.error('Unexpected error setting app secrets:', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
 
-    return err(new InfrastructureError('compute platform'));
+    return err(
+      new InfrastructureError('compute platform', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }),
+    );
   }
 };
