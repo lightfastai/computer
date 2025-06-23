@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-06-23
+
+### Added
+- Generic `Logger` interface to decouple SDK from specific logging frameworks
+- `createConsoleLogger()` utility - lightweight, pure JavaScript logger implementation
+- `LoggerConfig` and `LoggerFactory` types for flexible logger configuration
+- Structured logging support with JSON output for object arguments
+- Log level filtering (silent < error < warn < info < debug)
+- Test environment detection with automatic silent mode
+- Comprehensive logger interface documentation (`LOGGER_INTERFACE.md`)
+
+### Changed
+- **BREAKING** (Type imports): Import `Logger` type from SDK instead of Pino: `import type { Logger } from '@lightfastai/computer'`
+- Default logger implementation now uses lightweight console logger instead of Pino
+- Reduced bundle size from 186KB to 167KB (-19KB) by removing Pino dependency
+- Enhanced SDK exports to include `Logger`, `LoggerConfig`, `LoggerFactory` types
+- Updated all service functions to use generic Logger interface
+
+### Removed
+- **BREAKING**: Pino dependency removed from package.json
+- **BREAKING**: `createPinoLogger` utility removed (users can implement their own Pino adapter)
+
+### Fixed
+- SDK now truly standalone with no external logging framework dependencies
+- Improved performance with lighter default logger implementation
+
 ## [0.2.1] - 2025-06-23
 
 ### Fixed
@@ -66,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure handling of GitHub tokens and credentials
 - Command execution whitelist for security
 
+[0.3.0]: https://github.com/lightfastai/computer/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/lightfastai/computer/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/lightfastai/computer/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/lightfastai/computer/compare/v0.1.0...v0.1.1
