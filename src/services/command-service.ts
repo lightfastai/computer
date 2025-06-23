@@ -58,12 +58,24 @@ export const executeCommand = async (
     const fullCommand = [command, ...args].join(' ');
 
     // Prepare the request body
-    // Note: The exact API format is not documented, so this is based on common patterns
-    // This may need adjustment based on the actual API response
+    // Based on the error message, Fly.io expects cmd to be a string, not an array
+    // Timeout must be in seconds (not milliseconds) and cannot exceed 60 seconds
+    const timeoutInSeconds = Math.min(Math.floor((timeout || 30000) / 1000), 60);
     const requestBody = {
-      cmd: ['sh', '-c', fullCommand],
-      timeout: timeout || 30000, // Default 30 seconds
+      cmd: fullCommand,
+      timeout: timeoutInSeconds,
     };
+
+    logger.info(
+      {
+        instanceId,
+        machineId,
+        command,
+        args,
+        url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
+      },
+      'Executing command via REST API',
+    );
 
     // Make the API request
     const controller = new AbortController();
@@ -81,13 +93,27 @@ export const executeCommand = async (
     if (!response.ok) {
       const errorText = await response.text();
 
-      logger.error('Failed to execute command via REST API:', {
-        instanceId,
-        machineId,
-        command,
-        args,
+      logger.error(
+        {
+          instanceId,
+          machineId,
+          command,
+          args,
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          appName,
+          url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
+        },
+        'Failed to execute command via REST API',
+      );
+
+      // Also log to console for immediate visibility
+      console.error('Command execution failed:', {
         status: response.status,
+        statusText: response.statusText,
         error: errorText,
+        url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
       });
 
       // Handle specific error cases with technical details
