@@ -6,9 +6,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Bun](https://img.shields.io/badge/Bun-000?logo=bun&logoColor=white)](https://bun.sh)
 
-A powerful, open-source SDK for creating and managing Ubuntu instances on Fly.io with GitHub integration, command execution, and real-time streaming. Build developer tools, CI/CD systems, and sandboxed environments with ease.
+A powerful, serverless-compatible SDK for creating and managing Ubuntu instances on Fly.io with GitHub integration, command execution, and real-time streaming. Build developer tools, CI/CD systems, and sandboxed environments with ease.
 
 🚀 **Production Ready**: Used by the Lightfast team for scalable compute infrastructure
+
+✨ **New in v0.2.0**: Serverless platform support, custom app names, and flexible logging
 
 ## About
 
@@ -16,13 +18,24 @@ Lightfast Computer is a TypeScript SDK that transforms Fly.io into a developer-f
 
 ### Why Lightfast Computer?
 
-- 📦 **Pure SDK**: Lightweight TypeScript library with dependency injection and zero server dependencies
+- 📦 **Pure SDK**: Lightweight TypeScript library with zero Node.js dependencies
+- ☁️ **Serverless Compatible**: Works on Vercel, Cloudflare Workers, and other platforms
 - 🐧 **Ubuntu Sandboxes**: Fresh, isolated instances with GitHub integration
 - 🔄 **Real-time Streaming**: Live command output with callback support
 - 🔄 **Stateless Architecture**: Direct Fly.io API integration without local storage
-- 🛡️ **Production Ready**: Robust error handling with Result types
+- 🛡️ **Production Ready**: Robust error handling with Result types and detailed debugging
 - 🏗️ **Developer First**: Full TypeScript support and comprehensive documentation
 - 🚀 **Fly.io Powered**: Leverage global edge compute infrastructure
+
+## What's New in v0.2.0
+
+- **Serverless Compatibility**: Removed `node:child_process` dependency - now works on Vercel, Cloudflare Workers, and other serverless platforms
+- **Custom App Names**: Configure your own Fly.io app name with the `appName` parameter
+- **Flexible Logging**: Bring your own Pino-compatible logger for custom logging implementations
+- **Enhanced Debugging**: All errors now include technical details from Fly.io API responses
+- **Improved Command Execution**: Direct REST API integration for better reliability
+
+[See full changelog](CHANGELOG.md)
 
 ## Quick Start
 
@@ -41,7 +54,9 @@ import createLightfastComputer from '@lightfastai/computer';
 
 // Initialize the SDK with your Fly.io API token
 const computer = createLightfastComputer({
-  flyApiToken: 'your_fly_api_token'
+  flyApiToken: 'your_fly_api_token',
+  appName: 'my-app-name',  // Optional: defaults to 'lightfast-worker-instances'
+  logger: customLogger     // Optional: use your own Pino-compatible logger
 });
 
 // Create Ubuntu instance with GitHub access
@@ -71,6 +86,35 @@ if (result.isOk()) {
 ## Configuration
 
 The SDK requires a Fly.io API token to be passed during initialization. No environment variables are required.
+
+### SDK Options
+
+```typescript
+interface LightfastComputerConfig {
+  flyApiToken: string;    // Required: Your Fly.io API token
+  appName?: string;       // Optional: Fly.io app name (default: 'lightfast-worker-instances')
+  logger?: Logger;        // Optional: Pino-compatible logger instance
+}
+```
+
+### Advanced Configuration Examples
+
+```typescript
+import createLightfastComputer from '@lightfastai/computer';
+import pino from 'pino';
+
+// With custom logger for debugging
+const computer = createLightfastComputer({
+  flyApiToken: process.env.FLY_API_TOKEN,
+  logger: pino({ level: 'debug' })
+});
+
+// With custom app name for your Fly.io organization
+const computer = createLightfastComputer({
+  flyApiToken: process.env.FLY_API_TOKEN,
+  appName: 'my-compute-instances'
+});
+```
 
 ### 🔑 Getting API Keys
 
@@ -105,6 +149,33 @@ fly auth token
 - **Result Types**: neverthrow integration for safe error handling
 - **Typed Errors**: Specific error types for different failure modes
 - **User-friendly Messages**: Clear error descriptions for common issues
+- **Technical Details**: Enhanced debugging with Fly.io API error details
+
+### Error Handling Examples
+
+```typescript
+// Handle errors with detailed debugging information
+const result = await computer.instances.create({ name: 'test' });
+
+if (result.isErr()) {
+  console.error('User-friendly message:', result.error.message);
+  
+  // Access technical details for debugging (new in v0.2.0)
+  if (result.error.technicalDetails) {
+    console.error('Technical details:', result.error.technicalDetails);
+    // Outputs: { status: 422, error: "Invalid configuration", ... }
+  }
+}
+
+// All error types now include technical details
+if (error instanceof ValidationError) {
+  // Handle validation errors
+} else if (error instanceof NotFoundError) {
+  // Handle not found errors
+} else if (error instanceof InfrastructureError) {
+  // Handle infrastructure errors with retry logic
+}
+```
 
 ## Development
 
@@ -118,6 +189,7 @@ bun install
 
 # Create a .env file for local development (optional)
 echo "FLY_API_TOKEN=your_fly_api_token" > .env
+echo "FLY_APP_NAME=your_app_name" >> .env  # Optional
 
 # Run tests
 bun test --watch
