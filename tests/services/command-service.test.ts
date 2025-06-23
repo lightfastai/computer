@@ -52,8 +52,8 @@ describe('command-service', () => {
             'Content-Type': 'application/json',
           }),
           body: JSON.stringify({
-            cmd: ['sh', '-c', 'ls -la'],
-            timeout: 30000,
+            cmd: 'ls -la',
+            timeout: 30,
           }),
         }),
       );
@@ -89,8 +89,8 @@ describe('command-service', () => {
         'https://api.machines.dev/v1/apps/test-app/machines/machine-123/exec',
         expect.objectContaining({
           body: JSON.stringify({
-            cmd: ['sh', '-c', 'pwd'],
-            timeout: 30000,
+            cmd: 'pwd',
+            timeout: 30,
           }),
         }),
       );
