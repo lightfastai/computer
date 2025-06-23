@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-06-23
+
+### Fixed
+- Serverless platform compatibility by changing build target from `node` to `browser`
+- Removed Node.js-specific imports (`node:module`) from bundled output
+- Reduced bundle size from 298KB to 184KB
+- Fixed import errors in Convex and other serverless environments
+
 ## [0.2.0] - 2025-06-23
 
 ### Added
@@ -58,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure handling of GitHub tokens and credentials
 - Command execution whitelist for security
 
+[0.2.1]: https://github.com/lightfastai/computer/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/lightfastai/computer/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/lightfastai/computer/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/lightfastai/computer/releases/tag/v0.1.0
