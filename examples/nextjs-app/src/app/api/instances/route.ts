@@ -3,11 +3,11 @@ import { computer, formatErrorResponse } from '@/lib/computer';
 
 export async function GET() {
   const result = await computer.instances.list();
-  
+
   if (result.isOk()) {
     return NextResponse.json(result.value);
   }
-  
+
   const { data, status } = formatErrorResponse(result.error);
   return NextResponse.json(data, { status });
 }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (result.isOk()) {
       return NextResponse.json(result.value);
     }
-    
+
     const { data, status } = formatErrorResponse(result.error);
     return NextResponse.json(data, { status });
   } catch (error) {

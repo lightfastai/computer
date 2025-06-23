@@ -1,28 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import createLightfastComputer from '@lightfast/computer';
+import { type NextRequest, NextResponse } from 'next/server';
+import { computer, formatErrorResponse } from '@/lib/computer';
 
-const sdk = createLightfastComputer();
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const result = await sdk.instances.start(params.id);
-    
+    const result = await computer.instances.start(params.id);
+
     if (result.isOk()) {
       return NextResponse.json(result.value);
-    } else {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 400 }
-      );
     }
+
+    const { data, status } = formatErrorResponse(result.error);
+    return NextResponse.json(data, { status });
   } catch (error) {
     console.error('Failed to start instance:', error);
-    return NextResponse.json(
-      { error: 'Failed to start instance' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to start instance' }, { status: 500 });
   }
 }
