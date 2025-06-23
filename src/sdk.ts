@@ -12,7 +12,7 @@ import type { Logger } from '@/types/logger';
 
 export interface LightfastComputerConfig {
   flyApiToken: string;
-  appName?: string;
+  appName: string;
   logger?: Logger;
 }
 
@@ -203,12 +203,14 @@ export const createLightfastComputer = (config: LightfastComputerConfig): Lightf
   if (!config.flyApiToken) {
     throw new Error('flyApiToken is required');
   }
+  if (!config.appName) {
+    throw new Error('appName is required');
+  }
 
   // Set defaults
-  const appName = config.appName || 'lightfast-worker-instances';
   const logger = config.logger || createLogger();
 
-  const fullConfig = { ...config, appName, logger };
+  const fullConfig = { ...config, logger };
 
   return {
     instances: createInstanceManager(fullConfig),

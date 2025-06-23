@@ -52,10 +52,10 @@ bun add @lightfast/computer
 ```typescript
 import createLightfastComputer from '@lightfastai/computer';
 
-// Initialize the SDK with your Fly.io API token
+// Initialize the SDK with your Fly.io API token and app name
 const computer = createLightfastComputer({
   flyApiToken: 'your_fly_api_token',
-  appName: 'my-app-name',  // Optional: defaults to 'lightfast-worker-instances'
+  appName: 'my-app-name',  // Required: Your Fly.io app name
   logger: customLogger     // Optional: use your own Pino-compatible logger
 });
 
@@ -85,14 +85,14 @@ if (result.isOk()) {
 
 ## Configuration
 
-The SDK requires a Fly.io API token to be passed during initialization. No environment variables are required.
+The SDK requires a Fly.io API token and app name to be passed during initialization. No environment variables are required.
 
 ### SDK Options
 
 ```typescript
 interface LightfastComputerConfig {
   flyApiToken: string;    // Required: Your Fly.io API token
-  appName?: string;       // Optional: Fly.io app name (default: 'lightfast-worker-instances')
+  appName: string;        // Required: Your Fly.io app name
   logger?: Logger;        // Optional: Pino-compatible logger instance
 }
 ```

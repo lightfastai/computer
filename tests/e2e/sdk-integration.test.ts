@@ -7,6 +7,9 @@ import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 
 describe('SDK E2E Integration Tests', () => {
+  const TEST_FLY_TOKEN = 'test-fly-token-123';
+  const TEST_APP_NAME = 'test-app-name';
+
   let sdk: LightfastComputerSDK;
 
   // Mock instance service to prevent actual API calls
@@ -60,7 +63,7 @@ describe('SDK E2E Integration Tests', () => {
     );
 
     // Create SDK with flyApiToken
-    sdk = createLightfastComputer({ flyApiToken: 'test-fly-token-123' });
+    sdk = createLightfastComputer({ flyApiToken: TEST_FLY_TOKEN, appName: TEST_APP_NAME });
   });
 
   afterEach(() => {
@@ -233,7 +236,7 @@ describe('SDK E2E Integration Tests', () => {
     });
 
     it('should create SDK with flyApiToken', () => {
-      const sdk1 = createLightfastComputer({ flyApiToken: 'test-token' });
+      const sdk1 = createLightfastComputer({ flyApiToken: 'test-token', appName: TEST_APP_NAME });
       expect(sdk1).toBeDefined();
       expect(sdk1.instances).toBeDefined();
       expect(sdk1.commands).toBeDefined();
@@ -242,7 +245,7 @@ describe('SDK E2E Integration Tests', () => {
 
   describe('Error Handling Patterns', () => {
     it('should use Result types consistently', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: 'test-token' });
+      const sdk = createLightfastComputer({ flyApiToken: 'test-token', appName: TEST_APP_NAME });
 
       // All instance methods should return Results
       const createResult = await sdk.instances.create({ name: 'test' });
@@ -277,7 +280,7 @@ describe('SDK E2E Integration Tests', () => {
     });
 
     it('should provide meaningful error messages', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: 'test-token' });
+      const sdk = createLightfastComputer({ flyApiToken: 'test-token', appName: TEST_APP_NAME });
 
       // Test various error scenarios
       const scenarios = [
@@ -312,7 +315,7 @@ describe('SDK E2E Integration Tests', () => {
   describe('TypeScript Types', () => {
     it('should export all necessary types', () => {
       // This is a compile-time test, but we can check runtime exports
-      const sdk = createLightfastComputer({ flyApiToken: 'test-token' });
+      const sdk = createLightfastComputer({ flyApiToken: 'test-token', appName: TEST_APP_NAME });
 
       // Check that the SDK has the expected shape
       expect(typeof sdk.instances.create).toBe('function');

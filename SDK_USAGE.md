@@ -19,7 +19,8 @@ import { createLightfastComputer } from '@lightfastai/computer';
 
 // Basic usage
 const computer = createLightfastComputer({
-  flyApiToken: 'your_fly_api_token'
+  flyApiToken: 'your_fly_api_token',
+  appName: 'my-app-name'  // Required: Your Fly.io app name
 });
 
 // With custom app name and logger
@@ -29,25 +30,27 @@ const customLogger = pino({ level: 'debug' });
 
 const computer = createLightfastComputer({
   flyApiToken: 'your_fly_api_token',
-  appName: 'my-custom-app', // defaults to 'lightfast-worker-instances'
-  logger: customLogger // defaults to built-in logger
+  appName: 'my-custom-app', // Required: Your Fly.io app name
+  logger: customLogger // Optional: defaults to built-in logger
 });
 ```
 
 ## Configuration
 
-The SDK requires a Fly.io API token passed directly to the constructor:
+The SDK requires a Fly.io API token and app name passed directly to the constructor:
 
 ```typescript
 const computer = createLightfastComputer({
-  flyApiToken: 'your_fly_api_token' // Required
+  flyApiToken: 'your_fly_api_token', // Required
+  appName: 'my-app-name' // Required
 });
 ```
 
-### Optional Configuration
+### Configuration Options
 
-- `appName`: The Fly.io app name (defaults to 'lightfast-worker-instances')
-- `logger`: A custom Pino logger instance (defaults to built-in logger)
+- `flyApiToken`: Your Fly.io API token (required)
+- `appName`: Your Fly.io app name (required)
+- `logger`: A custom Pino logger instance (optional, defaults to built-in logger)
 
 # Optional
 NODE_ENV=development
