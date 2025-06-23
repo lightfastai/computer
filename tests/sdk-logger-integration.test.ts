@@ -4,6 +4,7 @@ import type { Logger, LoggerConfig } from '@/types/logger';
 
 describe('SDK Logger Integration', () => {
   const TEST_FLY_TOKEN = 'test-fly-token-123';
+  const TEST_APP_NAME = 'test-app-name';
 
   describe('Logger interface support', () => {
     it('should accept custom logger implementation', () => {
@@ -17,6 +18,7 @@ describe('SDK Logger Integration', () => {
 
       const computer = createLightfastComputer({
         flyApiToken: TEST_FLY_TOKEN,
+        appName: TEST_APP_NAME,
         logger: customLogger,
       });
 
@@ -30,6 +32,7 @@ describe('SDK Logger Integration', () => {
 
       const computer = createLightfastComputer({
         flyApiToken: TEST_FLY_TOKEN,
+        appName: TEST_APP_NAME,
         logger: consoleLogger,
       });
 
@@ -40,6 +43,7 @@ describe('SDK Logger Integration', () => {
     it('should create default logger when none provided', () => {
       const computer = createLightfastComputer({
         flyApiToken: TEST_FLY_TOKEN,
+        appName: TEST_APP_NAME,
       });
 
       expect(computer).toBeDefined();
@@ -60,6 +64,7 @@ describe('SDK Logger Integration', () => {
 
       const computer = createLightfastComputer({
         flyApiToken: TEST_FLY_TOKEN,
+        appName: TEST_APP_NAME,
         logger: customLogger,
       });
 
@@ -113,6 +118,7 @@ describe('SDK Logger Integration', () => {
       // Should work with SDK
       const computer = createLightfastComputer({
         flyApiToken: TEST_FLY_TOKEN,
+        appName: TEST_APP_NAME,
         logger,
       });
 
