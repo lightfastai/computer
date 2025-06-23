@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, mock } from 'bun:test';
 import { InstanceCreationError } from '@/lib/error-handler';
+import { createLogger } from '@/lib/logger';
 import * as flyService from '@/services/fly-service';
+
+// Create test logger
+const testLogger = createLogger('test');
 
 // Save original fetch
 const originalFetch = global.fetch;
@@ -95,6 +99,8 @@ describe('fly-service', () => {
           region: 'iad',
         },
         'test-fly-token-123',
+        'lightfast-worker-instances',
+        testLogger,
       );
 
       expect(result.isOk()).toBe(true);
@@ -119,7 +125,12 @@ describe('fly-service', () => {
         text: async () => 'Invalid machine configuration',
       } as Response);
 
-      const result = await flyService.createMachine({ name: 'test' }, 'test-fly-token-123');
+      const result = await flyService.createMachine(
+        { name: 'test' },
+        'test-fly-token-123',
+        'lightfast-worker-instances',
+        testLogger,
+      );
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -137,7 +148,12 @@ describe('fly-service', () => {
         json: async () => mockMachine,
       } as Response);
 
-      const result = await flyService.getMachine('machine-123', 'test-fly-token-123');
+      const result = await flyService.getMachine(
+        'machine-123',
+        'test-fly-token-123',
+        'lightfast-worker-instances',
+        testLogger,
+      );
 
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
@@ -158,7 +174,7 @@ describe('fly-service', () => {
         ok: true,
       } as Response);
 
-      await flyService.destroyMachine('machine-123', 'test-fly-token-123');
+      await flyService.destroyMachine('machine-123', 'test-fly-token-123', 'lightfast-worker-instances', testLogger);
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/machines/machine-123'),

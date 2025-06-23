@@ -1,9 +1,9 @@
-import { spawn } from 'node:child_process';
 import { err, ok, type Result } from 'neverthrow';
-import { type InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
-import { createLogger } from '@/lib/logger';
+import type { Logger } from 'pino';
+import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
 
-const log = createLogger();
+// Constants
+const API_URL = 'https://api.machines.dev/v1';
 
 // Types
 export interface CommandExecution {
@@ -35,87 +35,119 @@ export interface ExecuteCommandResult {
   exitCode: number | null;
 }
 
-// Execute command using Fly.io exec (if available) or via SSH proxy
+// Create headers for API requests
+const createHeaders = (flyApiToken: string) => {
+  const token = flyApiToken.trim();
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
+
+// Execute command using Fly.io REST API
 export const executeCommand = async (
   options: ExecuteCommandOptions,
   flyApiToken: string,
+  appName: string,
+  logger: Logger,
 ): Promise<Result<ExecuteCommandResult, InstanceOperationError | InfrastructureError>> => {
-  const { instanceId, machineId, command, args, timeout, onData, onError } = options;
+  const { instanceId, machineId, command, args, timeout } = options;
 
   try {
-    // For now, we'll use the Fly.io CLI as a proxy since the REST API exec endpoint
-    // is not well documented. In production, this should use the REST API directly.
-
-    // Build the command
+    // Build the full command
     const fullCommand = [command, ...args].join(' ');
 
-    // Use flyctl machine exec with proper argument format
-    const flyctl = spawn(
-      'fly',
-      ['machine', 'exec', machineId, '-a', 'lightfast-worker-instances', `sh -c "${fullCommand}"`],
-      {
-        env: {
-          ...process.env,
-          FLY_API_TOKEN: flyApiToken,
-        },
-      },
-    );
+    // Prepare the request body
+    // Note: The exact API format is not documented, so this is based on common patterns
+    // This may need adjustment based on the actual API response
+    const requestBody = {
+      cmd: ['sh', '-c', fullCommand],
+      timeout: timeout || 30000, // Default 30 seconds
+    };
 
-    let output = '';
-    let error = '';
-    let exitCode: number | null = null;
+    // Make the API request
+    const controller = new AbortController();
+    const timeoutId = timeout ? setTimeout(() => controller.abort(), timeout) : null;
 
-    // Handle stdout
-    flyctl.stdout.on('data', (data: Buffer) => {
-      const chunk = data.toString();
-      output += chunk;
-      if (onData) {
-        onData(chunk);
-      }
+    const response = await fetch(`${API_URL}/apps/${appName}/machines/${machineId}/exec`, {
+      method: 'POST',
+      headers: createHeaders(flyApiToken),
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
 
-    // Handle stderr
-    flyctl.stderr.on('data', (data: Buffer) => {
-      const chunk = data.toString();
-      error += chunk;
-      if (onError) {
-        onError(chunk);
-      }
-    });
+    if (timeoutId) clearTimeout(timeoutId);
 
-    // Handle completion
-    const resultPromise = new Promise<ExecuteCommandResult>((resolve, reject) => {
-      flyctl.on('close', (code) => {
-        exitCode = code;
-        resolve({ output, error, exitCode });
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      logger.error('Failed to execute command via REST API:', {
+        instanceId,
+        machineId,
+        command,
+        args,
+        status: response.status,
+        error: errorText,
       });
 
-      flyctl.on('error', (err) => {
-        reject(err);
-      });
-    });
+      // Handle specific error cases with technical details
+      const errorDetails = {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        machineId,
+        instanceId,
+        command,
+        args,
+        appName,
+      };
 
-    // Apply timeout if specified
-    let timeoutHandle: NodeJS.Timeout | null = null;
-    if (timeout) {
-      timeoutHandle = setTimeout(() => {
-        flyctl.kill();
-        error += `\nCommand timed out after ${timeout}ms`;
-      }, timeout);
+      if (response.status === 404) {
+        return err(new InstanceOperationError('execute', 'Machine not found', errorDetails));
+      }
+      if (response.status >= 500) {
+        return err(new InfrastructureError('compute platform', errorDetails));
+      }
+      if (response.status === 401 || response.status === 403) {
+        return err(new InstanceOperationError('execute', 'Authentication failed', errorDetails));
+      }
+
+      return err(new InstanceOperationError('execute', 'Command execution failed', errorDetails));
     }
 
-    // Wait for completion
-    const result = await resultPromise;
+    // Parse the response
+    // The response format is unknown, but likely contains:
+    // - stdout: string
+    // - stderr: string
+    // - exit_code: number
+    const result = (await response.json()) as {
+      stdout?: string;
+      stderr?: string;
+      exit_code?: number;
+      // Alternative field names
+      output?: string;
+      error?: string;
+      exitCode?: number;
+    };
 
-    // Clear timeout if it was set
-    if (timeoutHandle) {
-      clearTimeout(timeoutHandle);
+    // Normalize the response to our expected format
+    const commandResult: ExecuteCommandResult = {
+      output: result.stdout || result.output || '',
+      error: result.stderr || result.error || '',
+      exitCode: result.exit_code ?? result.exitCode ?? null,
+    };
+
+    // Call callbacks if provided (for compatibility)
+    if (options.onData && commandResult.output) {
+      options.onData(commandResult.output);
+    }
+    if (options.onError && commandResult.error) {
+      options.onError(commandResult.error);
     }
 
-    // Return result directly - no storage in stateless SDK
-    return ok(result);
+    return ok(commandResult);
   } catch (error) {
-    log.error('Failed to execute command:', {
+    logger.error('Failed to execute command:', {
       instanceId,
       machineId,
       command,
@@ -123,6 +155,28 @@ export const executeCommand = async (
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return err(new InstanceOperationError('execute', 'Command execution failed'));
+    // Handle abort errors
+    if (error instanceof Error && error.name === 'AbortError') {
+      return err(
+        new InstanceOperationError('execute', `Command timed out after ${timeout}ms`, {
+          timeout,
+          machineId,
+          instanceId,
+          command,
+          args,
+        }),
+      );
+    }
+
+    return err(
+      new InstanceOperationError('execute', 'Command execution failed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        machineId,
+        instanceId,
+        command,
+        args,
+      }),
+    );
   }
 };

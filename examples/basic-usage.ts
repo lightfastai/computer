@@ -1,7 +1,10 @@
-import createLightfastComputer from '@lightfast/computer';
+import createLightfastComputer from '@lightfastai/computer';
 
-// Initialize the SDK (stateless - no storage needed)
-const sdk = createLightfastComputer();
+// Initialize the SDK with your Fly.io API token
+const sdk = createLightfastComputer({
+  flyApiToken: process.env.FLY_API_TOKEN || 'your_fly_api_token_here',
+  appName: process.env.FLY_APP_NAME || 'lightfast-worker-instances'
+});
 
 async function main() {
   // Create an instance
@@ -14,6 +17,10 @@ async function main() {
 
   if (createResult.isErr()) {
     console.error('Failed to create instance:', createResult.error.message);
+    // Log technical details in development
+    if (createResult.error.technicalDetails) {
+      console.error('Technical details:', createResult.error.technicalDetails);
+    }
     return;
   }
 

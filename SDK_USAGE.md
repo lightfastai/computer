@@ -15,19 +15,39 @@ bun add lightfast-computer
 ```typescript
 import createLightfastComputer from '@lightfastai/computer';
 // or
-import { createLightfastComputer } from 'lightfast-computer';
+import { createLightfastComputer } from '@lightfastai/computer';
 
-const computer = createLightfastComputer();
+// Basic usage
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token'
+});
+
+// With custom app name and logger
+import pino from 'pino';
+
+const customLogger = pino({ level: 'debug' });
+
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token',
+  appName: 'my-custom-app', // defaults to 'lightfast-worker-instances'
+  logger: customLogger // defaults to built-in logger
+});
 ```
 
-## Environment Setup
+## Configuration
 
-The SDK requires environment variables to be set:
+The SDK requires a Fly.io API token passed directly to the constructor:
 
-```bash
-# Required
-FLY_API_TOKEN=your_fly_api_token
-FLY_ORG_SLUG=lightfast
+```typescript
+const computer = createLightfastComputer({
+  flyApiToken: 'your_fly_api_token' // Required
+});
+```
+
+### Optional Configuration
+
+- `appName`: The Fly.io app name (defaults to 'lightfast-worker-instances')
+- `logger`: A custom Pino logger instance (defaults to built-in logger)
 
 # Optional
 NODE_ENV=development
@@ -195,6 +215,34 @@ if (result.isOk()) {
 } else {
   // Error case
   const error = result.error;
+  
+  // Access technical details for debugging
+  if (error.technicalDetails) {
+    console.error('Technical details:', error.technicalDetails);
+    // Contains Fly.io error response, status codes, etc.
+  }
+}
+```
+
+### Error Details
+
+All errors now include technical details for better debugging:
+
+```typescript
+const result = await computer.instances.create({ name: 'test' });
+
+if (result.isErr()) {
+  const error = result.error;
+  
+  // User-friendly message
+  console.error('Error:', error.message);
+  
+  // Technical details (when available)
+  if (error.technicalDetails) {
+    console.error('Status:', error.technicalDetails.status);
+    console.error('Fly.io Error:', error.technicalDetails.error);
+    console.error('Request Details:', error.technicalDetails.machineConfig);
+  }
 }
 ```
 

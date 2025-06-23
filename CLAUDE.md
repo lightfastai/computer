@@ -596,11 +596,14 @@ done
    mockFlyService.mockResolvedValue({ id: 'test-123' });
    ```
 
-2. **Lint Warnings (any types)**
+2. **Type-Safe Mocking**
    ```typescript
-   // Add biome-ignore comment
-   // biome-ignore lint/suspicious/noExplicitAny: Mock types from bun:test
-   let mockFunction: any;
+   // Use proper typing with bun:test mocks
+   import { type Mock, mock } from 'bun:test';
+   const mockFetch = mock() as Mock<typeof fetch>;
+   
+   // Or use spyOn for existing functions
+   const mockCreateInstance = spyOn(instanceService, 'createInstance');
    ```
 
 3. **Test Isolation Issues**

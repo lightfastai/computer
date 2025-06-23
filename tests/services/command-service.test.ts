@@ -1,27 +1,34 @@
-import { describe, expect, it, spyOn } from 'bun:test';
-import * as child_process from 'node:child_process';
+import { afterEach, beforeEach, describe, expect, it, type Mock, mock } from 'bun:test';
+import { createLogger } from '@/lib/logger';
 import * as commandService from '@/services/command-service';
 
 describe('command-service', () => {
   describe('executeCommand', () => {
-    it('should call fly exec with correct arguments', async () => {
-      const mockSpawn = spyOn(child_process, 'spawn');
+    let mockFetch: Mock<typeof fetch>;
+    const mockLogger = createLogger();
+    const testAppName = 'test-app';
 
-      // Create a mock child process
-      const mockChildProcess = {
-        stdout: { on: () => {} },
-        stderr: { on: () => {} },
-        on: (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            // Simulate immediate completion with success
-            setTimeout(() => callback(0), 0);
-          }
-        },
-        kill: () => {},
+    beforeEach(() => {
+      mockFetch = mock() as Mock<typeof fetch>;
+      global.fetch = mockFetch;
+    });
+
+    afterEach(() => {
+      mockFetch.mockClear();
+    });
+
+    it('should execute command via REST API with correct arguments', async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          stdout: 'total 8\ndrwxr-xr-x 2 root root\n',
+          stderr: '',
+          exit_code: 0,
+        }),
       };
 
-      // Cast to unknown first, then to the expected type to satisfy TypeScript
-      mockSpawn.mockReturnValue(mockChildProcess as unknown as ReturnType<typeof child_process.spawn>);
+      mockFetch.mockResolvedValue(mockResponse);
 
       const result = await commandService.executeCommand(
         {
@@ -31,40 +38,41 @@ describe('command-service', () => {
           args: ['-la'],
         },
         'test-fly-token-123',
+        testAppName,
+        mockLogger,
       );
 
       expect(result.isOk()).toBe(true);
-      expect(mockSpawn).toHaveBeenCalledWith(
-        'fly',
-        ['machine', 'exec', 'machine-123', '-a', 'lightfast-worker-instances', 'sh -c "ls -la"'],
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.machines.dev/v1/apps/test-app/machines/machine-123/exec',
         expect.objectContaining({
-          env: expect.objectContaining({
-            FLY_API_TOKEN: 'test-fly-token-123',
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-fly-token-123',
+            'Content-Type': 'application/json',
+          }),
+          body: JSON.stringify({
+            cmd: ['sh', '-c', 'ls -la'],
+            timeout: 30000,
           }),
         }),
       );
-
-      mockSpawn.mockRestore();
     });
 
     it('should handle command with no arguments', async () => {
-      const mockSpawn = spyOn(child_process, 'spawn');
-
-      const mockChildProcess = {
-        stdout: { on: () => {} },
-        stderr: { on: () => {} },
-        on: (event: string, callback: (code: number) => void) => {
-          if (event === 'close') {
-            setTimeout(() => callback(0), 0);
-          }
-        },
-        kill: () => {},
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          stdout: '/workspace\n',
+          stderr: '',
+          exit_code: 0,
+        }),
       };
 
-      // Cast to unknown first, then to the expected type to satisfy TypeScript
-      mockSpawn.mockReturnValue(mockChildProcess as unknown as ReturnType<typeof child_process.spawn>);
+      mockFetch.mockResolvedValue(mockResponse);
 
-      await commandService.executeCommand(
+      const result = await commandService.executeCommand(
         {
           instanceId: 'test-instance',
           machineId: 'machine-123',
@@ -72,23 +80,85 @@ describe('command-service', () => {
           args: [],
         },
         'test-fly-token-123',
+        testAppName,
+        mockLogger,
       );
 
-      expect(mockSpawn).toHaveBeenCalledWith(
-        'fly',
-        ['machine', 'exec', 'machine-123', '-a', 'lightfast-worker-instances', 'sh -c "pwd"'],
+      expect(result.isOk()).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.machines.dev/v1/apps/test-app/machines/machine-123/exec',
         expect.objectContaining({
-          env: expect.objectContaining({
-            FLY_API_TOKEN: 'test-fly-token-123',
+          body: JSON.stringify({
+            cmd: ['sh', '-c', 'pwd'],
+            timeout: 30000,
           }),
         }),
       );
+    });
 
-      mockSpawn.mockRestore();
+    it('should handle API errors', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 404,
+        text: async () => 'Machine not found',
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await commandService.executeCommand(
+        {
+          instanceId: 'test-instance',
+          machineId: 'non-existent',
+          command: 'echo',
+          args: ['test'],
+        },
+        'test-fly-token-123',
+        testAppName,
+        mockLogger,
+      );
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.message).toBe('Failed to execute instance: Machine not found');
+      }
+    });
+
+    it('should handle callbacks', async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          stdout: 'Output data',
+          stderr: 'Error data',
+          exit_code: 0,
+        }),
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      let capturedOutput = '';
+      let capturedError = '';
+
+      await commandService.executeCommand(
+        {
+          instanceId: 'test-instance',
+          machineId: 'machine-123',
+          command: 'test',
+          args: [],
+          onData: (data) => {
+            capturedOutput = data;
+          },
+          onError: (error) => {
+            capturedError = error;
+          },
+        },
+        'test-fly-token-123',
+        testAppName,
+        mockLogger,
+      );
+
+      expect(capturedOutput).toBe('Output data');
+      expect(capturedError).toBe('Error data');
     });
   });
-
-  // Note: Full integration tests would require:
-  // 1. Having fly CLI installed and a real Fly.io instance
-  // For now, we focus on testing the argument format and history management
 });
