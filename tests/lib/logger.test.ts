@@ -1,5 +1,6 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { createLogger } from '@/lib/logger';
+import type { Logger } from '@/types/logger';
 
 describe('logger configuration', () => {
   it('should detect test environment', () => {
@@ -10,7 +11,7 @@ describe('logger configuration', () => {
 
   it('should be silent during tests', () => {
     // Create a logger instance using our factory
-    const logger = createLogger();
+    const logger: Logger = createLogger();
 
     // In test environment, logger should be silent
     expect(logger.level).toBe('silent');
@@ -21,7 +22,7 @@ describe('logger configuration', () => {
     const stdoutSpy = spyOn(process.stdout, 'write');
 
     // Create logger and try to log
-    const logger = createLogger();
+    const logger: Logger = createLogger();
     logger.info('This should not appear');
     logger.error('This should not appear');
     logger.warn('This should not appear');

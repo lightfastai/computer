@@ -4,9 +4,10 @@ import { AppError, InstanceCreationError, InstanceOperationError, NotFoundError 
 import { createLogger } from '@/lib/logger';
 import * as flyService from '@/services/fly-service';
 import * as instanceService from '@/services/instance-service';
+import type { Logger } from '@/types/logger';
 
 // Create test logger
-const testLogger = createLogger('test');
+const testLogger: Logger = createLogger();
 const TEST_APP_NAME = 'lightfast-worker-instances';
 const TEST_FLY_TOKEN = 'test-fly-token-123';
 
