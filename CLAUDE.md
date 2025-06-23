@@ -678,28 +678,47 @@ echo ""
 echo "This will trigger the GitHub Action to publish to npm."
 ```
 
-### Step 6: npm Publishing Workflow
+### Step 6: Complete npm Publishing Workflow
 
-When user agrees to version bump:
+When user agrees to version bump, follow this complete end-to-end workflow:
 
 ```bash
 # 1. Ensure on main with latest changes
 git checkout main
 git pull origin main
 
-# 2. Run version command (this creates commit + tag)
+# 2. Run version command (this creates commit + tag locally)
 npm version patch  # or minor/major based on changes
 
-# 3. Publish to npm
+# 3. Publish to npm (includes prepublishOnly checks)
 npm publish --access public
 
-# 4. Update CHANGELOG.md with the new version
+# 4. **CRITICAL**: Push the git tag to GitHub
+git push --tags
+
+# 5. Update CHANGELOG.md with the new version
 # Add new section at the top with:
-# - Version number and date
-# - Changes categorized as Added/Changed/Fixed/Removed
+# - Version number and date  
+# - Changes categorized as Added/Changed/Fixed/Removed/Breaking
 # - Update version comparison links at bottom
 
-# 5. Commit changelog update
+# Example CHANGELOG.md entry:
+# ## [X.X.X] - YYYY-MM-DD
+# 
+# ### Added
+# - New feature descriptions
+# 
+# ### Changed  
+# - **BREAKING**: Breaking change descriptions
+# - Non-breaking change descriptions
+# 
+# ### Fixed
+# - Bug fix descriptions
+# 
+# ### Removed
+# - **BREAKING**: Removed feature descriptions
+
+# 6. Commit changelog update
 git add CHANGELOG.md
 git commit -m "docs: update changelog for vX.X.X release
 
@@ -707,9 +726,35 @@ git commit -m "docs: update changelog for vX.X.X release
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
-# 6. Push changes
+# 7. Push changelog changes
 git push origin main
+
+# 8. Verify publication success
+echo "✅ Release Complete!"
+echo "🔗 GitHub Release: https://github.com/lightfastai/computer/releases/tag/vX.X.X"
+echo "📦 npm Package: https://www.npmjs.com/package/@lightfastai/computer/v/X.X.X"
 ```
+
+### Critical Publishing Checklist
+
+**Before Publishing:**
+- [ ] All tests pass (`bun test`)
+- [ ] Build succeeds (`bun run build`)  
+- [ ] Linting passes (`bun run lint`)
+- [ ] On main branch with latest changes
+- [ ] All CI checks are green
+
+**During Publishing:**
+- [ ] Version bump appropriate (patch/minor/major)
+- [ ] npm publish succeeds
+- [ ] **Git tags pushed to GitHub** (`git push --tags`)
+- [ ] CHANGELOG.md updated with proper categories
+- [ ] Changelog changes committed and pushed
+
+**After Publishing:**
+- [ ] Verify GitHub release exists
+- [ ] Verify npm package is available
+- [ ] Test installation: `npm install @lightfastai/computer@latest`
 
 ### Step 7: Cleanup After Merge
 
@@ -721,6 +766,43 @@ git worktree remove worktrees/<feature_name>
 # Sync main branch after merge
 git checkout main
 git pull origin main
+```
+
+## 🚨 CRITICAL: Publishing Workflow Lessons Learned
+
+### Git Tags Are Not Automatically Pushed
+
+**IMPORTANT**: `npm version` creates tags locally but does NOT push them to GitHub automatically.
+
+```bash
+# ❌ INCOMPLETE: This only publishes to npm
+npm version minor
+npm publish --access public
+
+# ✅ COMPLETE: This ensures GitHub releases work
+npm version minor
+npm publish --access public
+git push --tags  # 🚨 CRITICAL STEP
+```
+
+### Common Publishing Mistakes to Avoid
+
+1. **Forgetting to push tags** → GitHub releases don't exist
+2. **Not updating CHANGELOG** → Users don't know what changed  
+3. **Skipping verification** → Broken packages may be published
+4. **Wrong version bumps** → Breaking changes with patch versions
+
+### Publishing Decision Tree
+
+```
+User requests publish
+├── Analyze commits since last version
+├── Determine bump type (patch/minor/major)
+├── Ask user confirmation
+├── Execute complete publishing workflow
+├── Update CHANGELOG with proper categories
+├── Verify all components published successfully
+└── Report completion with links
 ```
 
 ## 📦 npm Package Management & Versioning
@@ -845,9 +927,10 @@ fly machines list -a lightfast-worker-instances  # List instances
 ## Key Dependencies
 
 - **neverthrow**: Functional error handling with Result types
-- **pino**: Structured logging
 - **zod**: Schema validation and TypeScript type inference
 - **TypeScript**: Strict mode with comprehensive type coverage
+
+**Note**: As of v0.3.0, Pino is no longer a dependency. The SDK includes a lightweight console logger and supports any Logger interface implementation.
 
 ## CI/CD Cost Optimization
 
@@ -893,4 +976,6 @@ fly machines list -a lightfast-worker-instances  # List instances
 10. **SUGGEST VERSIONS** - After PR merge, analyze commits and suggest version bumps
 11. **CHECK PUBLISHING** - Run `prepublishOnly` before creating PRs for npm packages
 12. **CONVENTIONAL COMMITS** - Use feat/fix/chore prefixes for automatic versioning
-13. **UPDATE CHANGELOG** - Always update CHANGELOG.md after publishing new versions with proper categorization and version links
+13. **COMPLETE PUBLISHING** - Follow full workflow: npm version → npm publish → git push --tags → update CHANGELOG → commit & push
+14. **UPDATE CHANGELOG** - Always update CHANGELOG.md after publishing with Added/Changed/Fixed/Removed/Breaking categories
+15. **VERIFY RELEASES** - Confirm GitHub releases and npm packages are available after publishing
