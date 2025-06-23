@@ -1,4 +1,4 @@
-import { createPinoLogger } from '@/lib/pino-logger';
+import { createConsoleLogger } from '@/lib/console-logger';
 import type { Logger, LoggerConfig, LoggerFactory } from '@/types/logger';
 
 // Detect if we're running in a test environment
@@ -13,7 +13,7 @@ export const createLogger: LoggerFactory = (config?: LoggerConfig): Logger => {
     silent: config?.silent || isTestEnvironment,
   };
 
-  return createPinoLogger(loggerConfig);
+  return createConsoleLogger(loggerConfig);
 };
 
 // Export a default logger instance

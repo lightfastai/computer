@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { createLightfastComputer, createPinoLogger } from '@/sdk';
+import { createConsoleLogger, createLightfastComputer } from '@/sdk';
 import type { Logger, LoggerConfig } from '@/types/logger';
 
 describe('SDK Logger Integration', () => {
@@ -25,16 +25,16 @@ describe('SDK Logger Integration', () => {
       expect(computer.commands).toBeDefined();
     });
 
-    it('should work with Pino logger from factory', () => {
-      const pinoLogger = createPinoLogger({ level: 'info' });
+    it('should work with console logger from factory', () => {
+      const consoleLogger = createConsoleLogger({ level: 'info' });
 
       const computer = createLightfastComputer({
         flyApiToken: TEST_FLY_TOKEN,
-        logger: pinoLogger,
+        logger: consoleLogger,
       });
 
       expect(computer).toBeDefined();
-      expect(pinoLogger.level).toBe('info');
+      expect(consoleLogger.level).toBe('info');
     });
 
     it('should create default logger when none provided', () => {
@@ -86,8 +86,8 @@ describe('SDK Logger Integration', () => {
       expect(config.silent).toBe(false);
     });
 
-    it('should export createPinoLogger utility', () => {
-      const logger = createPinoLogger({ level: 'warn' });
+    it('should export createConsoleLogger utility', () => {
+      const logger = createConsoleLogger({ level: 'warn' });
 
       expect(logger).toBeDefined();
       expect(typeof logger.info).toBe('function');

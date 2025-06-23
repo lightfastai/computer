@@ -1,15 +1,16 @@
 # Logger Interface Documentation
 
-This document describes the logger interface abstraction introduced to decouple the SDK from Pino, allowing users to provide their own logging implementations.
+This document describes the logger interface abstraction that makes the SDK completely framework-agnostic for logging, allowing users to provide their own logging implementations while keeping the SDK lightweight and standalone.
 
 ## Overview
 
 The SDK now uses a generic `Logger` interface instead of directly depending on Pino. This provides several benefits:
 
 1. **Flexibility**: Users can provide their own logger implementations
-2. **Framework Independence**: No hard dependency on Pino for consumers
-3. **Testing**: Easier to mock and test logging behavior
-4. **Compatibility**: Works with any logging framework that implements the interface
+2. **Framework Independence**: No dependencies on any logging framework
+3. **Lightweight**: Reduced bundle size by removing external logging dependencies
+4. **Testing**: Easier to mock and test logging behavior
+5. **Compatibility**: Works with any logging framework that implements the interface
 
 ## Logger Interface
 
@@ -41,7 +42,7 @@ type LoggerFactory = (config?: LoggerConfig) => Logger;
 ```typescript
 import { createLightfastComputer } from '@lightfastai/computer';
 
-// Uses default Pino logger
+// Uses default lightweight console logger
 const computer = createLightfastComputer({
   flyApiToken: 'your_token'
 });
@@ -75,37 +76,43 @@ const computer = createLightfastComputer({
 });
 ```
 
-### Using Pino with Custom Configuration
+### Using Built-in Console Logger with Custom Configuration
 
 ```typescript
-import { createLightfastComputer, createPinoLogger } from '@lightfastai/computer';
+import { createLightfastComputer, createConsoleLogger } from '@lightfastai/computer';
 
-// Create Pino logger with custom config
-const pinoLogger = createPinoLogger({
+// Create console logger with custom config
+const consoleLogger = createConsoleLogger({
   level: 'debug',
   silent: false
 });
 
 const computer = createLightfastComputer({
   flyApiToken: 'your_token',
-  logger: pinoLogger
+  logger: consoleLogger
 });
 ```
 
 ## Built-in Implementations
 
-### Pino Logger Adapter
+### Console Logger
 
-The SDK includes a Pino adapter that implements the Logger interface:
+The SDK includes a lightweight console logger that implements the Logger interface:
 
 ```typescript
-import { createPinoLogger } from '@lightfastai/computer';
+import { createConsoleLogger } from '@lightfastai/computer';
 
-const logger = createPinoLogger({
+const logger = createConsoleLogger({
   level: 'debug',
   silent: false
 });
 ```
+
+Features:
+- **Structured logging**: Supports JSON output for single object arguments
+- **Log level filtering**: Respects level hierarchy (error < warn < info < debug)
+- **Test environment detection**: Automatically silent during tests
+- **No dependencies**: Pure JavaScript implementation
 
 ### Default Logger Factory
 
@@ -225,21 +232,35 @@ logger.debug('Waiting for machine', {
 });
 ```
 
-## Migration from Direct Pino Usage
+## Migration Guide
 
-If you were previously importing Pino types directly, update your imports:
+### From Previous SDK Versions
 
-### Before
+The Logger interface is backward compatible. If you were providing a Pino logger before:
+
 ```typescript
-import type { Logger } from 'pino';
+// Still works - provide any logger that implements the interface
+import pino from 'pino';
+import { createLightfastComputer } from '@lightfastai/computer';
+
+const pinoLogger = pino();
+const computer = createLightfastComputer({
+  flyApiToken: 'your_token',
+  logger: pinoLogger // Works if it implements Logger interface
+});
 ```
 
-### After
+### Type Imports
+
+Update type imports to use the SDK interface:
+
 ```typescript
+// Before
+import type { Logger } from 'pino';
+
+// After
 import type { Logger } from '@lightfastai/computer';
 ```
-
-The interface is compatible, so existing code should work without changes.
 
 ## Testing
 

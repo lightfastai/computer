@@ -219,6 +219,8 @@ export const createLightfastComputer = (config: LightfastComputerConfig): Lightf
 // Default export for convenience
 export default createLightfastComputer;
 
+// Export logger utilities
+export { createConsoleLogger } from '@/lib/console-logger';
 export {
   AppError,
   InfrastructureError,
@@ -228,9 +230,6 @@ export {
   NotFoundError,
   ValidationError,
 } from '@/lib/error-handler';
-
-// Export logger utilities
-export { createPinoLogger } from '@/lib/pino-logger';
 
 // Named exports for types
 export type {
