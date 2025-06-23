@@ -5,10 +5,3 @@ export interface Logger {
   warn(message: string, ...args: unknown[]): void;
   level: string;
 }
-
-export interface LoggerConfig {
-  level?: string;
-  silent?: boolean;
-}
-
-export type LoggerFactory = (config?: LoggerConfig) => Logger;

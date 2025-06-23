@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import type { Logger, LoggerConfig, LoggerFactory } from '@/types/logger';
+import type { Logger } from '@/types/logger';
 
 describe('Logger Interface', () => {
   it('should define logger interface with required methods', () => {
@@ -18,39 +18,16 @@ describe('Logger Interface', () => {
     expect(typeof mockLogger.level).toBe('string');
   });
 
-  it('should define logger config interface', () => {
-    const config: LoggerConfig = {
+  it('should support custom logger implementations', () => {
+    const customLogger: Logger = {
+      info: (message: string) => console.log(`[INFO] ${message}`),
+      error: (message: string) => console.error(`[ERROR] ${message}`),
+      debug: (message: string) => console.log(`[DEBUG] ${message}`),
+      warn: (message: string) => console.warn(`[WARN] ${message}`),
       level: 'debug',
-      silent: false,
     };
 
-    expect(typeof config.level).toBe('string');
-    expect(typeof config.silent).toBe('boolean');
-  });
-
-  it('should define logger factory type', () => {
-    const factory: LoggerFactory = (config?: LoggerConfig) => ({
-      info: () => {},
-      error: () => {},
-      debug: () => {},
-      warn: () => {},
-      level: config?.level || 'info',
-    });
-
-    const logger = factory({ level: 'debug' });
-    expect(logger.level).toBe('debug');
-  });
-
-  it('should support optional config in factory', () => {
-    const factory: LoggerFactory = (config?: LoggerConfig) => ({
-      info: () => {},
-      error: () => {},
-      debug: () => {},
-      warn: () => {},
-      level: config?.level || 'info',
-    });
-
-    const logger = factory();
-    expect(logger.level).toBe('info');
+    expect(customLogger.level).toBe('debug');
+    expect(typeof customLogger.info).toBe('function');
   });
 });

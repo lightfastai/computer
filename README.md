@@ -31,7 +31,7 @@ Lightfast Computer is a TypeScript SDK that transforms Fly.io into a developer-f
 
 - **Serverless Compatibility**: Removed `node:child_process` dependency - now works on Vercel, Cloudflare Workers, and other serverless platforms
 - **Custom App Names**: Configure your own Fly.io app name with the `appName` parameter
-- **Flexible Logging**: Bring your own Pino-compatible logger for custom logging implementations
+- **Flexible Logging**: Bring your own logger implementation or use silent mode
 - **Enhanced Debugging**: All errors now include technical details from Fly.io API responses
 - **Improved Command Execution**: Direct REST API integration for better reliability
 
@@ -56,7 +56,7 @@ import createLightfastComputer from '@lightfastai/computer';
 const computer = createLightfastComputer({
   flyApiToken: 'your_fly_api_token',
   appName: 'my-app-name',  // Required: Your Fly.io app name
-  logger: customLogger     // Optional: use your own Pino-compatible logger
+  logger: customLogger     // Optional: use your own logger or omit for silent mode
 });
 
 // Create Ubuntu instance with GitHub access
@@ -93,7 +93,7 @@ The SDK requires a Fly.io API token and app name to be passed during initializat
 interface LightfastComputerConfig {
   flyApiToken: string;    // Required: Your Fly.io API token
   appName: string;        // Required: Your Fly.io app name
-  logger?: Logger;        // Optional: Pino-compatible logger instance
+  logger?: Logger;        // Optional: Your logger implementation (silent if omitted)
 }
 ```
 
@@ -101,18 +101,25 @@ interface LightfastComputerConfig {
 
 ```typescript
 import createLightfastComputer from '@lightfastai/computer';
-import pino from 'pino';
 
 // With custom logger for debugging
 const computer = createLightfastComputer({
   flyApiToken: process.env.FLY_API_TOKEN,
-  logger: pino({ level: 'debug' })
+  appName: 'my-compute-instances',
+  logger: {
+    info: (msg, ...args) => console.log(`[INFO] ${msg}`, ...args),
+    error: (msg, ...args) => console.error(`[ERROR] ${msg}`, ...args),
+    debug: (msg, ...args) => console.log(`[DEBUG] ${msg}`, ...args),
+    warn: (msg, ...args) => console.warn(`[WARN] ${msg}`, ...args),
+    level: 'debug'
+  }
 });
 
-// With custom app name for your Fly.io organization
+// Silent mode (no logging)
 const computer = createLightfastComputer({
   flyApiToken: process.env.FLY_API_TOKEN,
   appName: 'my-compute-instances'
+  // No logger = silent mode
 });
 ```
 
