@@ -1,8 +1,8 @@
 import { err, ok, type Result } from 'neverthrow';
-import type { Logger } from 'pino';
 import { AppError, NotFoundError } from '@/lib/error-handler';
 import * as flyService from '@/services/fly-service';
 import type { CreateInstanceOptions, FlyRegion, Instance, InstanceStatus, MachineSize } from '@/types/index';
+import type { Logger } from '@/types/logger';
 
 // Create instance with GitHub integration
 export const createInstanceWithGitHub = async (

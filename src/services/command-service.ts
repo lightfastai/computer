@@ -1,6 +1,6 @@
 import { err, ok, type Result } from 'neverthrow';
-import type { Logger } from 'pino';
 import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
+import type { Logger } from '@/types/logger';
 
 // Constants
 const API_URL = 'https://api.machines.dev/v1';
@@ -66,16 +66,13 @@ export const executeCommand = async (
       timeout: timeoutInSeconds,
     };
 
-    logger.info(
-      {
-        instanceId,
-        machineId,
-        command,
-        args,
-        url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
-      },
-      'Executing command via REST API',
-    );
+    logger.info('Executing command via REST API', {
+      instanceId,
+      machineId,
+      command,
+      args,
+      url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
+    });
 
     // Make the API request
     const controller = new AbortController();
@@ -93,20 +90,17 @@ export const executeCommand = async (
     if (!response.ok) {
       const errorText = await response.text();
 
-      logger.error(
-        {
-          instanceId,
-          machineId,
-          command,
-          args,
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
-          appName,
-          url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
-        },
-        'Failed to execute command via REST API',
-      );
+      logger.error('Failed to execute command via REST API', {
+        instanceId,
+        machineId,
+        command,
+        args,
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        appName,
+        url: `${API_URL}/apps/${appName}/machines/${machineId}/exec`,
+      });
 
       // Also log to console for immediate visibility
       console.error('Command execution failed:', {

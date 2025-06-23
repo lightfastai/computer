@@ -1,7 +1,7 @@
 import { err, ok, type Result } from 'neverthrow';
-import type { Logger } from 'pino';
 import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
 import type { CreateInstanceOptions } from '@/types/index';
+import type { Logger } from '@/types/logger';
 
 // Constants
 const API_URL = 'https://api.machines.dev/v1';

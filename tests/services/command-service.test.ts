@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, mock } from 'bun:test';
 import { createLogger } from '@/lib/logger';
 import * as commandService from '@/services/command-service';
+import type { Logger } from '@/types/logger';
 
 describe('command-service', () => {
   describe('executeCommand', () => {
     let mockFetch: Mock<typeof fetch>;
-    const mockLogger = createLogger();
+    const mockLogger: Logger = createLogger();
     const testAppName = 'test-app';
 
     beforeEach(() => {

@@ -1,6 +1,5 @@
 import type { Result } from 'neverthrow';
 import { err, ok } from 'neverthrow';
-import type { Logger } from 'pino';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
 import { createLogger } from '@/lib/logger';
@@ -9,6 +8,7 @@ import type { ExecuteCommandResult } from '@/services/command-service';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
+import type { Logger } from '@/types/logger';
 
 export interface LightfastComputerConfig {
   flyApiToken: string;
@@ -228,10 +228,17 @@ export {
   NotFoundError,
   ValidationError,
 } from '@/lib/error-handler';
+
+// Export logger utilities
+export { createPinoLogger } from '@/lib/pino-logger';
+
 // Named exports for types
 export type {
   CreateInstanceOptions,
   Instance,
+  Logger,
+  LoggerConfig,
+  LoggerFactory,
 } from '@/types/index';
 
 // Export InstanceStats separately since it's defined in this file
