@@ -7,7 +7,6 @@ import * as instanceService from '@/services/instance-service';
 
 // Mock dependencies
 const mockCreateInstance = spyOn(instanceService, 'createInstance');
-const mockCreateInstanceWithGitHub = spyOn(instanceService, 'createInstanceWithGitHub');
 const mockGetInstance = spyOn(instanceService, 'getInstance');
 const mockListInstances = spyOn(instanceService, 'listInstances');
 const mockStartInstance = spyOn(instanceService, 'startInstance');
@@ -34,14 +33,16 @@ const mockInstance = {
   privateIpAddress: 'fdaa:0:1234::5',
 };
 
-const TEST_FLY_API_TOKEN = 'test-fly-token-123';
-const TEST_APP_NAME = 'test-app-name';
+const TEST_CONFIG = {
+  provider: 'fly' as const,
+  flyApiToken: 'test-fly-token-123',
+  appName: 'test-app-name',
+};
 
 describe('LightfastComputer SDK', () => {
   beforeEach(() => {
     // Clear all mocks
     mockCreateInstance.mockClear();
-    mockCreateInstanceWithGitHub.mockClear();
     mockGetInstance.mockClear();
     mockListInstances.mockClear();
     mockStartInstance.mockClear();
@@ -56,30 +57,30 @@ describe('LightfastComputer SDK', () => {
   });
 
   describe('SDK configuration', () => {
-    it('should require flyApiToken parameter', () => {
+    it('should require provider configuration', () => {
       expect(() => {
-        // @ts-expect-error - We expect this to fail without flyApiToken
+        // @ts-expect-error - We expect this to fail without provider config
         createLightfastComputer();
       }).toThrow();
     });
 
-    it('should require appName parameter', () => {
+    it('should require flyApiToken for fly provider', () => {
       expect(() => {
-        // @ts-expect-error - We expect this to fail without appName
-        createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN });
-      }).toThrow('appName is required');
+        // @ts-expect-error - We expect this to fail without flyApiToken
+        createLightfastComputer({ provider: 'fly', appName: 'test-app' });
+      }).toThrow('flyApiToken');
     });
 
-    it('should accept flyApiToken and appName parameters', () => {
+    it('should accept valid fly provider configuration', () => {
       expect(() => {
-        createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+        createLightfastComputer(TEST_CONFIG);
       }).not.toThrow();
     });
   });
 
   describe('instances', () => {
     it('should create instance without GitHub integration', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockCreateInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.instances.create({ name: 'test' });
@@ -93,16 +94,13 @@ describe('LightfastComputer SDK', () => {
           size: 'shared-cpu-1x',
           memoryMb: 512,
         },
-        TEST_FLY_API_TOKEN,
-        TEST_APP_NAME,
-        expect.any(Object), // logger
+        expect.any(Object), // provider
       );
-      expect(mockCreateInstanceWithGitHub).not.toHaveBeenCalled();
     });
 
     it('should create instance with GitHub integration', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
-      mockCreateInstanceWithGitHub.mockResolvedValue(ok(mockInstance));
+      const sdk = createLightfastComputer(TEST_CONFIG);
+      mockCreateInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.instances.create({
         name: 'test',
@@ -113,7 +111,7 @@ describe('LightfastComputer SDK', () => {
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockCreateInstanceWithGitHub).toHaveBeenCalledWith(
+      expect(mockCreateInstance).toHaveBeenCalledWith(
         {
           name: 'test',
           region: 'iad',
@@ -125,25 +123,22 @@ describe('LightfastComputer SDK', () => {
             githubUsername: 'testuser',
           },
         },
-        TEST_FLY_API_TOKEN,
-        TEST_APP_NAME,
-        expect.any(Object), // logger
+        expect.any(Object), // provider
       );
-      expect(mockCreateInstance).not.toHaveBeenCalled();
     });
 
     it('should get instance by id', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockGetInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.instances.get('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockGetInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockGetInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
     });
 
     it('should validate instance ID in get', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
 
       const result = await sdk.instances.get('');
 
@@ -156,7 +151,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should list all instances', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockListInstances.mockResolvedValue(ok([mockInstance]));
 
       const result = await sdk.instances.list();
@@ -166,61 +161,51 @@ describe('LightfastComputer SDK', () => {
         expect(result.value).toHaveLength(1);
         expect(result.value[0]).toEqual(mockInstance);
       }
-      expect(mockListInstances).toHaveBeenCalledWith(TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockListInstances).toHaveBeenCalledWith(expect.any(Object));
     });
 
     it('should start instance', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockStartInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.instances.start('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockStartInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockStartInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
     });
 
     it('should stop instance', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockStopInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.instances.stop('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockStopInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockStopInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
     });
 
     it('should restart instance', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockRestartInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.instances.restart('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockRestartInstance).toHaveBeenCalledWith(
-        'test-id',
-        TEST_FLY_API_TOKEN,
-        TEST_APP_NAME,
-        expect.any(Object),
-      );
+      expect(mockRestartInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
     });
 
     it('should destroy instance', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockDestroyInstance.mockResolvedValue(ok(undefined));
 
       const result = await sdk.instances.destroy('test-id');
 
       expect(result.isOk()).toBe(true);
-      expect(mockDestroyInstance).toHaveBeenCalledWith(
-        'test-id',
-        TEST_FLY_API_TOKEN,
-        TEST_APP_NAME,
-        expect.any(Object),
-      );
+      expect(mockDestroyInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
     });
 
     it('should check instance health', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockHealthCheckInstance.mockResolvedValue(ok(true));
 
       const result = await sdk.instances.healthCheck('test-id');
@@ -229,16 +214,11 @@ describe('LightfastComputer SDK', () => {
       if (result.isOk()) {
         expect(result.value).toBe(true);
       }
-      expect(mockHealthCheckInstance).toHaveBeenCalledWith(
-        'test-id',
-        TEST_FLY_API_TOKEN,
-        TEST_APP_NAME,
-        expect.any(Object),
-      );
+      expect(mockHealthCheckInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
     });
 
     it('should get instance statistics', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const stats = { total: 5, running: 3, stopped: 1, failed: 1 };
       mockGetInstanceStats.mockResolvedValue(ok(stats));
 
@@ -248,11 +228,11 @@ describe('LightfastComputer SDK', () => {
       if (result.isOk()) {
         expect(result.value).toEqual(stats);
       }
-      expect(mockGetInstanceStats).toHaveBeenCalledWith(TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockGetInstanceStats).toHaveBeenCalledWith(expect.any(Object));
     });
 
     it('should handle errors in list instances', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const error = new ValidationError('Failed to list instances');
       mockListInstances.mockResolvedValue(err(error));
 
@@ -265,7 +245,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should handle errors in getStats', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const error = new ValidationError('Failed to get stats');
       mockGetInstanceStats.mockResolvedValue(err(error));
 
@@ -278,7 +258,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should stop all instances successfully', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const stoppedInstances = [
         { ...mockInstance, status: 'stopped' as const },
         { ...mockInstance, id: 'test-2', status: 'stopped' as const },
@@ -292,21 +272,21 @@ describe('LightfastComputer SDK', () => {
         expect(result.value).toHaveLength(2);
         expect(result.value[0].status).toBe('stopped');
       }
-      expect(mockStopAllInstances).toHaveBeenCalledWith(TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockStopAllInstances).toHaveBeenCalledWith(expect.any(Object));
     });
 
     it('should destroy all instances successfully', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockDestroyAllInstances.mockResolvedValue(ok(undefined));
 
       const result = await sdk.instances.destroyAll();
 
       expect(result.isOk()).toBe(true);
-      expect(mockDestroyAllInstances).toHaveBeenCalledWith(TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockDestroyAllInstances).toHaveBeenCalledWith(expect.any(Object));
     });
 
     it('should handle errors in stopAll', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const error = new ValidationError('Failed to stop instances');
       mockStopAllInstances.mockResolvedValue(err(error));
 
@@ -319,7 +299,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should handle errors in destroyAll', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const error = new ValidationError('Failed to destroy instances');
       mockDestroyAllInstances.mockResolvedValue(err(error));
 
@@ -334,7 +314,7 @@ describe('LightfastComputer SDK', () => {
 
   describe('commands', () => {
     it('should execute command successfully', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockGetInstance.mockResolvedValue(ok(mockInstance));
       mockExecuteCommand.mockResolvedValue(
         ok({
@@ -351,7 +331,7 @@ describe('LightfastComputer SDK', () => {
       });
 
       expect(result.isOk()).toBe(true);
-      expect(mockGetInstance).toHaveBeenCalledWith('test-id', TEST_FLY_API_TOKEN, TEST_APP_NAME, expect.any(Object));
+      expect(mockGetInstance).toHaveBeenCalledWith('test-id', expect.any(Object));
       expect(mockExecuteCommand).toHaveBeenCalledWith(
         {
           instanceId: 'test-id',
@@ -362,14 +342,12 @@ describe('LightfastComputer SDK', () => {
           onData: undefined,
           onError: undefined,
         },
-        TEST_FLY_API_TOKEN,
-        TEST_APP_NAME,
-        expect.any(Object), // logger
+        expect.any(Object), // provider
       );
     });
 
     it('should validate instance ID in execute', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
 
       const result = await sdk.commands.execute({
         instanceId: '',
@@ -385,7 +363,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should validate command in execute', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
 
       const result = await sdk.commands.execute({
         instanceId: 'test-id',
@@ -401,7 +379,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should validate instance is running', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       const stoppedInstance = { ...mockInstance, status: 'stopped' as const };
       mockGetInstance.mockResolvedValue(ok(stoppedInstance));
 
@@ -419,7 +397,7 @@ describe('LightfastComputer SDK', () => {
     });
 
     it('should validate allowed commands', async () => {
-      const sdk = createLightfastComputer({ flyApiToken: TEST_FLY_API_TOKEN, appName: TEST_APP_NAME });
+      const sdk = createLightfastComputer(TEST_CONFIG);
       mockGetInstance.mockResolvedValue(ok(mockInstance));
 
       const result = await sdk.commands.execute({
