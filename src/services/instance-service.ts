@@ -1,7 +1,7 @@
 import { err, ok, type Result } from 'neverthrow';
-import { AppError, NotFoundError } from '@/lib/error-handler';
+import { type AppError, NotFoundError } from '@/lib/error-handler';
 import type { CreateInstanceOptions, FlyRegion, Instance, InstanceStatus, MachineSize } from '@/types/index';
-import type { ComputeProvider, Machine, CreateMachineOptions } from '@/types/provider';
+import type { ComputeProvider, CreateMachineOptions, Machine } from '@/types/provider';
 
 // Map provider Machine to SDK Instance
 const mapMachineToInstance = (machine: Machine, metadata?: Record<string, string>): Instance => {

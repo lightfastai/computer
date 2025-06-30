@@ -2,17 +2,17 @@ import type { Result } from 'neverthrow';
 import { err, ok } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
+import { createProvider } from '@/providers/provider-factory';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
+import type { LightfastComputerConfig } from '@/schemas/sdk-config';
 import type { ExecuteCommandResult } from '@/services/command-service';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
-import type { LightfastComputerConfig } from '@/schemas/sdk-config';
 import type { ComputeProvider } from '@/types/provider';
-import { createProvider } from '@/providers/provider-factory';
 
 // Re-export the config types for convenience
-export type { LightfastComputerConfig, FlyProviderConfig, VercelProviderConfig } from '@/schemas/sdk-config';
+export type { FlyProviderConfig, LightfastComputerConfig, VercelProviderConfig } from '@/schemas/sdk-config';
 
 export interface LightfastComputerSDK {
   instances: InstanceManager;

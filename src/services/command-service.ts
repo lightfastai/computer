@@ -1,5 +1,5 @@
 import { err, ok, type Result } from 'neverthrow';
-import { InfrastructureError, InstanceOperationError } from '@/lib/error-handler';
+import { InfrastructureError, type InstanceOperationError } from '@/lib/error-handler';
 import type { ComputeProvider } from '@/types/provider';
 
 // Types

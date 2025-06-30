@@ -1,8 +1,8 @@
 import { err, ok, type Result } from 'neverthrow';
-import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
 import type { AppError } from '@/lib/error-handler';
-import type { ComputeProvider, Machine, CreateMachineOptions, CommandOptions, CommandResult } from '@/types/provider';
+import { InfrastructureError, InstanceCreationError, InstanceOperationError } from '@/lib/error-handler';
 import type { Logger } from '@/types/logger';
+import type { CommandOptions, CommandResult, ComputeProvider, CreateMachineOptions, Machine } from '@/types/provider';
 
 const API_URL = 'https://api.machines.dev/v1';
 

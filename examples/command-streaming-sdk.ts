@@ -11,8 +11,9 @@
 
 import createLightfastComputer from '@lightfastai/computer';
 
-// Initialize the SDK
+// Initialize the SDK with the new provider configuration
 const computer = createLightfastComputer({
+  provider: 'fly',
   flyApiToken: process.env.FLY_API_TOKEN || 'your_fly_api_token_here',
   appName: process.env.FLY_APP_NAME || 'lightfast-worker-instances'
 });

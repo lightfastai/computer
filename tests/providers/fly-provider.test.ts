@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, spyOn } from 'bun:test';
+import { beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { FlyProvider } from '@/providers/fly-provider';
 import type { Logger } from '@/types/logger';
 

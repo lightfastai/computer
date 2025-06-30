@@ -1,116 +1,131 @@
 #!/usr/bin/env bun
 
 /**
- * Example: Create a Fly.io instance with GitHub access
+ * Example: Create a Fly.io instance with GitHub access using SDK
  * 
  * This example demonstrates how to:
- * 1. Create an instance with GitHub credentials
- * 2. Clone a repository automatically
- * 3. Execute commands in the instance
+ * 1. Use the new provider abstraction pattern
+ * 2. Create an instance with proper configuration
+ * 3. Clone a GitHub repository
+ * 4. Execute commands and handle streaming output
+ * 5. List files and explore the repository
  */
 
-const API_URL = 'http://localhost:3000/api';
+import createLightfastComputer from '@lightfastai/computer';
 
-async function createInstanceWithGitHub() {
-  console.log('🚀 Creating instance with GitHub access...');
+// Initialize the SDK with the new provider configuration
+const computer = createLightfastComputer({
+  provider: 'fly',
+  flyApiToken: process.env.FLY_API_TOKEN || 'your_fly_api_token_here',
+  appName: process.env.FLY_APP_NAME || 'lightfast-worker-instances'
+});
 
-  // Step 1: Create instance with GitHub credentials
-  const createResponse = await fetch(`${API_URL}/instances`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+async function executeCommand(instanceId: string, command: string, args: string[] = [], description?: string) {
+  if (description) {
+    console.log(`\n🚀 ${description}`);
+  }
+  console.log(`Executing: ${command} ${args.join(' ')}`);
+  
+  const result = await computer.commands.execute({
+    instanceId,
+    command,
+    args,
+    timeout: 60000,
+    onData: (data) => {
+      process.stdout.write(data);
     },
-    body: JSON.stringify({
-      name: 'github-dev-instance',
-      region: 'iad',
-      size: 'shared-cpu-2x',
-      memoryMb: 1024,
-      secrets: {
-        githubToken: process.env.GITHUB_TOKEN || 'ghp_your_token_here',
-        githubUsername: process.env.GITHUB_USERNAME || 'your-username',
-      },
-      repoUrl: 'https://github.com/your-org/your-repo.git',
-      metadata: {
-        purpose: 'development',
-        owner: 'dev-team',
-      },
-    }),
+    onError: (error) => {
+      process.stderr.write(error);
+    }
   });
 
-  if (!createResponse.ok) {
-    const error = await createResponse.text();
-    throw new Error(`Failed to create instance: ${error}`);
+  if (result.isErr()) {
+    console.error('❌ Error:', result.error.message);
+    return false;
   }
 
-  const instance = await createResponse.json();
-  console.log('✅ Instance created:', instance);
+  console.log(`✅ Completed with exit code: ${result.value.exitCode}`);
+  return result.value.exitCode === 0;
+}
+
+async function createInstanceWithGitHub() {
+  console.log('🚀 Creating instance with GitHub access using SDK...');
+
+  // Step 1: Create instance
+  const createResult = await computer.instances.create({
+    name: 'github-dev-instance',
+    region: 'iad', 
+    size: 'shared-cpu-2x',
+    memoryMb: 1024,
+  });
+
+  if (createResult.isErr()) {
+    console.error('❌ Failed to create instance:', createResult.error.message);
+    if (createResult.error.technicalDetails) {
+      console.error('Technical details:', createResult.error.technicalDetails);
+    }
+    throw new Error('Instance creation failed');
+  }
+
+  const instance = createResult.value;
+  console.log('✅ Instance created:', {
+    id: instance.id,
+    name: instance.name,
+    region: instance.region,
+    status: instance.status
+  });
 
   // Wait for instance to be ready
   console.log('⏳ Waiting for instance to be ready...');
-  await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
-
-  // Step 2: Execute commands in the instance
-  console.log('🔍 Listing cloned repository contents...');
+  let retries = 0;
+  const maxRetries = 30;
   
-  const execResponse = await fetch(`${API_URL}/commands/${instance.id}/exec`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      command: 'ls',
-      args: ['-la', '/workspace'],
-      timeout: 30000,
-    }),
-  });
-
-  if (!execResponse.ok) {
-    const error = await execResponse.text();
-    throw new Error(`Failed to execute command: ${error}`);
+  while (retries < maxRetries) {
+    const statusResult = await computer.instances.get(instance.id);
+    if (statusResult.isOk() && statusResult.value.status === 'running') {
+      console.log('✅ Instance is ready!');
+      break;
+    }
+    
+    console.log(`⏳ Instance status: ${statusResult.isOk() ? statusResult.value.status : 'unknown'} (${retries + 1}/${maxRetries})`);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    retries++;
   }
 
-  // Parse Server-Sent Events stream
-  const reader = execResponse.body?.getReader();
-  const decoder = new TextDecoder();
+  if (retries >= maxRetries) {
+    throw new Error('Instance failed to become ready within timeout');
+  }
 
-  if (reader) {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+  // Install Git and clone repository
+  await executeCommand(instance.id, 'apt-get', ['update'], 'Updating package list');
+  await executeCommand(instance.id, 'apt-get', ['install', '-y', 'git'], 'Installing Git');
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+  // Clone the repository
+  const repoUrl = process.env.GITHUB_REPO_URL || 'https://github.com/octocat/Hello-World.git';
+  const workspaceDir = '/workspace';
+  
+  await executeCommand(instance.id, 'mkdir', ['-p', workspaceDir], 'Creating workspace directory');
+  await executeCommand(instance.id, 'git', ['clone', repoUrl, workspaceDir], `Cloning repository: ${repoUrl}`);
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = JSON.parse(line.slice(6));
-          
-          switch (data.type) {
-            case 'status':
-              console.log('📋', data.message);
-              break;
-            case 'stdout':
-              console.log('📤', data.data);
-              break;
-            case 'stderr':
-              console.error('❌', data.data);
-              break;
-            case 'complete':
-              console.log('✅ Command completed with exit code:', data.exitCode);
-              break;
-            case 'error':
-              console.error('❌ Error:', data.message);
-              break;
-          }
-        }
-      }
+  // Step 2: Explore the cloned repository
+  console.log('\n🔍 Exploring cloned repository...');
+  await executeCommand(instance.id, 'ls', ['-la', workspaceDir], 'Listing workspace contents');
+  await executeCommand(instance.id, 'find', [workspaceDir, '-type', 'f'], 'Finding all files');
+  
+  // Show git information
+  await executeCommand(instance.id, 'git', ['-C', workspaceDir, 'log', '--oneline', '-5'], 'Recent commits');
+  await executeCommand(instance.id, 'git', ['-C', workspaceDir, 'status'], 'Repository status');
+  
+  // Read any README files
+  const readmeFiles = ['README.md', 'README.txt', 'readme.md', 'readme.txt'];
+  for (const readmeFile of readmeFiles) {
+    const fullPath = `${workspaceDir}/${readmeFile}`;
+    const checkResult = await executeCommand(instance.id, 'test', ['-f', fullPath], `Checking for ${readmeFile}`);
+    if (checkResult) {
+      await executeCommand(instance.id, 'cat', [fullPath], `Reading ${readmeFile}`);
+      break;
     }
   }
-
-  // Step 3: Check command history
-  const historyResponse = await fetch(`${API_URL}/commands/${instance.id}/history`);
-  const history = await historyResponse.json();
-  console.log('\n📜 Command history:', history);
 
   return instance;
 }
