@@ -2,18 +2,17 @@ import type { Result } from 'neverthrow';
 import { err, ok } from 'neverthrow';
 import type { AppError, NotFoundError } from '@/lib/error-handler';
 import { ValidationError } from '@/lib/error-handler';
+import { createProvider } from '@/providers/provider-factory';
 import { createInstanceSchema, executeCommandSchema, instanceIdSchema } from '@/schemas';
+import type { LightfastComputerConfig } from '@/schemas/sdk-config';
 import type { ExecuteCommandResult } from '@/services/command-service';
 import * as commandService from '@/services/command-service';
 import * as instanceService from '@/services/instance-service';
 import type { CreateInstanceOptions, Instance } from '@/types/index';
-import type { Logger } from '@/types/logger';
+import type { ComputeProvider } from '@/types/provider';
 
-export interface LightfastComputerConfig {
-  flyApiToken: string;
-  appName: string;
-  logger?: Logger;
-}
+// Re-export the config types for convenience
+export type { FlyProviderConfig, LightfastComputerConfig, VercelProviderConfig } from '@/schemas/sdk-config';
 
 export interface LightfastComputerSDK {
   instances: InstanceManager;
@@ -69,16 +68,11 @@ const validateInstanceId = (id: string): Result<string, ValidationError> => {
   }
 };
 
-const createInstanceManager = (
-  config: LightfastComputerConfig & { appName: string; logger: Logger },
-): InstanceManager => ({
+const createInstanceManager = (provider: ComputeProvider): InstanceManager => ({
   create: async (options: CreateInstanceOptions) => {
     try {
       const validated = createInstanceSchema.parse(options);
-      if (validated.secrets?.githubToken) {
-        return instanceService.createInstanceWithGitHub(validated, config.flyApiToken, config.appName, config.logger);
-      }
-      return instanceService.createInstance(validated, config.flyApiToken, config.appName, config.logger);
+      return instanceService.createInstance(validated, provider);
     } catch (error) {
       if (error instanceof Error) {
         return err(new ValidationError(error.message));
@@ -92,17 +86,17 @@ const createInstanceManager = (
     if (validation.isErr()) {
       return err(validation.error);
     }
-    return instanceService.getInstance(validation.value, config.flyApiToken, config.appName, config.logger);
+    return instanceService.getInstance(validation.value, provider);
   },
 
-  list: () => instanceService.listInstances(config.flyApiToken, config.appName, config.logger),
+  list: () => instanceService.listInstances(provider),
 
   start: async (id: string) => {
     const validation = validateInstanceId(id);
     if (validation.isErr()) {
       return err(validation.error);
     }
-    return instanceService.startInstance(validation.value, config.flyApiToken, config.appName, config.logger);
+    return instanceService.startInstance(validation.value, provider);
   },
 
   stop: async (id: string) => {
@@ -110,7 +104,7 @@ const createInstanceManager = (
     if (validation.isErr()) {
       return err(validation.error);
     }
-    return instanceService.stopInstance(validation.value, config.flyApiToken, config.appName, config.logger);
+    return instanceService.stopInstance(validation.value, provider);
   },
 
   restart: async (id: string) => {
@@ -118,7 +112,7 @@ const createInstanceManager = (
     if (validation.isErr()) {
       return err(validation.error);
     }
-    return instanceService.restartInstance(validation.value, config.flyApiToken, config.appName, config.logger);
+    return instanceService.restartInstance(validation.value, provider);
   },
 
   destroy: async (id: string) => {
@@ -126,7 +120,7 @@ const createInstanceManager = (
     if (validation.isErr()) {
       return err(validation.error);
     }
-    return instanceService.destroyInstance(validation.value, config.flyApiToken, config.appName, config.logger);
+    return instanceService.destroyInstance(validation.value, provider);
   },
 
   healthCheck: async (id: string) => {
@@ -134,19 +128,17 @@ const createInstanceManager = (
     if (validation.isErr()) {
       return err(validation.error);
     }
-    return instanceService.healthCheckInstance(validation.value, config.flyApiToken, config.appName, config.logger);
+    return instanceService.healthCheckInstance(validation.value, provider);
   },
 
-  getStats: () => instanceService.getInstanceStats(config.flyApiToken, config.appName, config.logger),
+  getStats: () => instanceService.getInstanceStats(provider),
 
-  stopAll: () => instanceService.stopAllInstances(config.flyApiToken, config.appName, config.logger),
+  stopAll: () => instanceService.stopAllInstances(provider),
 
-  destroyAll: () => instanceService.destroyAllInstances(config.flyApiToken, config.appName, config.logger),
+  destroyAll: () => instanceService.destroyAllInstances(provider),
 });
 
-const createCommandManager = (
-  config: LightfastComputerConfig & { appName: string; logger: Logger },
-): CommandManager => ({
+const createCommandManager = (provider: ComputeProvider): CommandManager => ({
   execute: async (options: ExecuteCommandOptions) => {
     try {
       // Validate command options first
@@ -156,12 +148,7 @@ const createCommandManager = (
       const validatedInstanceId = instanceIdSchema.parse(options.instanceId);
 
       // Check instance exists and get machine ID
-      const instanceResult = await instanceService.getInstance(
-        validatedInstanceId,
-        config.flyApiToken,
-        config.appName,
-        config.logger,
-      );
+      const instanceResult = await instanceService.getInstance(validatedInstanceId, provider);
       if (instanceResult.isErr()) {
         return err(instanceResult.error);
       }
@@ -185,9 +172,7 @@ const createCommandManager = (
           onData: options.onData,
           onError: options.onError,
         },
-        config.flyApiToken,
-        config.appName,
-        config.logger,
+        provider,
       );
     } catch (error) {
       if (error instanceof Error) {
@@ -199,27 +184,11 @@ const createCommandManager = (
 });
 
 export const createLightfastComputer = (config: LightfastComputerConfig): LightfastComputerSDK => {
-  if (!config.flyApiToken) {
-    throw new Error('flyApiToken is required');
-  }
-  if (!config.appName) {
-    throw new Error('appName is required');
-  }
-
-  // Create silent logger if none provided
-  const logger = config.logger || {
-    info: () => {},
-    error: () => {},
-    debug: () => {},
-    warn: () => {},
-    level: 'silent',
-  };
-
-  const fullConfig = { ...config, logger };
+  const provider = createProvider(config);
 
   return {
-    instances: createInstanceManager(fullConfig),
-    commands: createCommandManager(fullConfig),
+    instances: createInstanceManager(provider),
+    commands: createCommandManager(provider),
   };
 };
 

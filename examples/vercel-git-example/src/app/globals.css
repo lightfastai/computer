@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+* {
+  border-color: theme(colors.border);
+}
+
+body {
+  background-color: theme(colors.background);
+  color: theme(colors.foreground);
+}
+
+.dark {
+  color-scheme: dark;
+}

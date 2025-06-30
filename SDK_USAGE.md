@@ -17,40 +17,105 @@ import createLightfastComputer from '@lightfastai/computer';
 // or
 import { createLightfastComputer } from '@lightfastai/computer';
 
-// Basic usage
+// Fly.io Provider (primary)
 const computer = createLightfastComputer({
+  provider: 'fly',
   flyApiToken: 'your_fly_api_token',
   appName: 'my-app-name'  // Required: Your Fly.io app name
 });
 
-// With custom app name and logger
-import pino from 'pino';
-
-const customLogger = pino({ level: 'debug' });
-
+// With custom logger
 const computer = createLightfastComputer({
+  provider: 'fly',
   flyApiToken: 'your_fly_api_token',
-  appName: 'my-custom-app', // Required: Your Fly.io app name
-  logger: customLogger // Optional: defaults to built-in logger
+  appName: 'my-custom-app',
+  logger: {
+    info: console.log,
+    error: console.error,
+    debug: console.debug,
+    warn: console.warn
+  }
+});
+
+// Future: Vercel Provider
+const computer = createLightfastComputer({
+  provider: 'vercel',
+  vercelToken: 'your_vercel_token',
+  projectId: 'your-project-id', // optional
+  teamId: 'your-team-id' // optional
 });
 ```
 
 ## Configuration
 
-The SDK requires a Fly.io API token and app name passed directly to the constructor:
+The SDK now uses a provider abstraction pattern. You must specify which provider to use.
+
+### Fly.io Provider Configuration
 
 ```typescript
 const computer = createLightfastComputer({
+  provider: 'fly', // Required: Provider type
   flyApiToken: 'your_fly_api_token', // Required
   appName: 'my-app-name' // Required
 });
 ```
 
+### Vercel Provider Configuration (Future)
+
+```typescript
+const computer = createLightfastComputer({
+  provider: 'vercel', // Required: Provider type
+  vercelToken: 'your_vercel_token', // Required
+  projectId: 'your-project-id', // Optional
+  teamId: 'your-team-id' // Optional
+});
+```
+
 ### Configuration Options
 
+#### Fly.io Provider
+- `provider`: Must be `'fly'` (required)
 - `flyApiToken`: Your Fly.io API token (required)
 - `appName`: Your Fly.io app name (required)
-- `logger`: A custom Pino logger instance (optional, defaults to built-in logger)
+- `logger`: A custom logger instance (optional)
+
+#### Vercel Provider (Future)
+- `provider`: Must be `'vercel'` (required)
+- `vercelToken`: Your Vercel token (required)
+- `projectId`: Vercel project ID (optional)
+- `teamId`: Vercel team ID (optional)
+- `logger`: A custom logger instance (optional)
+
+### Migration from Legacy Configuration
+
+If you're upgrading from a previous version, update your configuration:
+
+```typescript
+// Before (Legacy)
+const computer = createLightfastComputer({
+  flyApiToken: 'your_token',
+  appName: 'your_app'
+});
+
+// After (Provider Pattern)
+const computer = createLightfastComputer({
+  provider: 'fly',
+  flyApiToken: 'your_token',
+  appName: 'your_app'
+});
+```
+
+### Environment Variables
+
+```bash
+# Required for Fly.io provider
+FLY_API_TOKEN=your_fly_api_token_here
+FLY_APP_NAME=your-app-name
+
+# Required for Vercel provider (future)
+VERCEL_TOKEN=your_vercel_token_here
+VERCEL_PROJECT_ID=your-project-id
+VERCEL_TEAM_ID=your-team-id
 
 # Optional
 NODE_ENV=development
