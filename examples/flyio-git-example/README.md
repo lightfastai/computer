@@ -36,7 +36,7 @@ This is a Next.js example application demonstrating how to use the **@lightfasta
 
 ### Prerequisites
 
-- Node.js 18+
+- Bun 1.0+
 - A Fly.io account and API token
 - The parent `@lightfastai/computer` package built locally
 
@@ -49,7 +49,7 @@ This is a Next.js example application demonstrating how to use the **@lightfasta
 
 2. **Install dependencies:**
    ```bash
-   npm install
+   bun install
    ```
 
 3. **Set up environment variables:**
@@ -72,7 +72,7 @@ This is a Next.js example application demonstrating how to use the **@lightfasta
 
 5. **Start the development server:**
    ```bash
-   npm run dev
+   bun run dev
    ```
 
 6. **Open your browser:**
@@ -248,10 +248,10 @@ The file explorer supports multiple development file types:
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
+- `bun run dev` - Start development server
+- `bun run build` - Build for production
+- `bun start` - Start production server
+- `bun run lint` - Run ESLint
 
 ## Dependencies
 

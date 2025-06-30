@@ -1,11 +1,19 @@
 import createLightfastComputer from '@lightfastai/computer';
 
+// Lazy initialization to avoid errors during build
+let computerInstance: ReturnType<typeof createLightfastComputer> | null = null;
+
 // Create a single SDK instance to be shared across API routes
-export const computer = createLightfastComputer({
-  provider: 'fly',
-  flyApiToken: process.env.FLY_API_TOKEN || '',
-  appName: process.env.FLY_APP_NAME || 'lightfast-worker-instances', // required for provider pattern
-});
+export function getComputer() {
+  if (!computerInstance) {
+    computerInstance = createLightfastComputer({
+      provider: 'fly',
+      flyApiToken: process.env.FLY_API_TOKEN || '',
+      appName: process.env.FLY_APP_NAME || 'lightfast-worker-instances', // required for provider pattern
+    });
+  }
+  return computerInstance;
+}
 
 // Helper to format error responses with optional technical details
 export function formatErrorResponse(error: any) {

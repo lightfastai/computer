@@ -7,9 +7,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import SandboxForm from '@/components/sandbox-form';
 import SandboxList from '@/components/sandbox-list';
 import CommandTerminal from '@/components/command-terminal';
-import FileExplorer from '@/components/file-explorer';
+import GitFileExplorer from '@/components/git/GitFileExplorer';
+import GitHistory from '@/components/git/GitHistory';
+import GitBranchSelector from '@/components/git/GitBranchSelector';
+import GitStatusPanel from '@/components/git/GitStatusPanel';
 import { apiClient, type Instance } from '@/lib/api-client';
-import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, GitBranch, GitCommit, Folder, Terminal } from 'lucide-react';
 
 export default function HomePage() {
   const [instances, setInstances] = useState<Instance[]>([]);
@@ -137,7 +140,17 @@ export default function HomePage() {
 
   const handleSelectInstance = (instance: Instance) => {
     setSelectedInstance(instance);
-    setActiveTab('terminal');
+    setActiveTab('git-files');
+  };
+
+  const handleBranchChange = () => {
+    // Refresh the active tab when branch changes
+    if (activeTab === 'git-files' || activeTab === 'git-history') {
+      // Force a small delay to let git update
+      setTimeout(() => {
+        setActiveTab(prev => prev);
+      }, 100);
+    }
   };
 
   // Load instances on component mount
@@ -176,8 +189,22 @@ export default function HomePage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             {selectedInstance && (
               <>
-                <TabsTrigger value="terminal">Terminal</TabsTrigger>
-                <TabsTrigger value="files">Files</TabsTrigger>
+                <TabsTrigger value="git-files" className="flex items-center gap-2">
+                  <Folder className="h-4 w-4" />
+                  Repository Files
+                </TabsTrigger>
+                <TabsTrigger value="git-history" className="flex items-center gap-2">
+                  <GitCommit className="h-4 w-4" />
+                  Commit History
+                </TabsTrigger>
+                <TabsTrigger value="git-branches" className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  Branches & Status
+                </TabsTrigger>
+                <TabsTrigger value="terminal" className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4" />
+                  Terminal
+                </TabsTrigger>
               </>
             )}
           </TabsList>
@@ -222,15 +249,36 @@ export default function HomePage() {
 
         {selectedInstance && (
           <>
-            <TabsContent value="terminal">
-              <CommandTerminal
+            <TabsContent value="git-files">
+              <GitFileExplorer
                 instance={selectedInstance}
                 onExecuteCommand={executeCommand}
               />
             </TabsContent>
 
-            <TabsContent value="files">
-              <FileExplorer
+            <TabsContent value="git-history">
+              <GitHistory
+                instance={selectedInstance}
+                onExecuteCommand={executeCommand}
+              />
+            </TabsContent>
+
+            <TabsContent value="git-branches">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <GitBranchSelector
+                  instance={selectedInstance}
+                  onExecuteCommand={executeCommand}
+                  onBranchChange={handleBranchChange}
+                />
+                <GitStatusPanel
+                  instance={selectedInstance}
+                  onExecuteCommand={executeCommand}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="terminal">
+              <CommandTerminal
                 instance={selectedInstance}
                 onExecuteCommand={executeCommand}
               />

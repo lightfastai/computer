@@ -59,7 +59,7 @@ const SandboxList: React.FC<SandboxListProps> = ({
               <div>
                 <CardTitle className="text-lg">{instance.name}</CardTitle>
                 <CardDescription>
-                  Created {formatDate(instance.created_at)} • ID: {instance.id}
+                  Created {formatDate(instance.createdAt)} • ID: {instance.id}
                 </CardDescription>
               </div>
               <Badge className={getStatusBadgeColor(instance.status)}>
@@ -149,23 +149,8 @@ const SandboxList: React.FC<SandboxListProps> = ({
                 Destroy
               </Button>
               
-              {instance.private_ip && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => window.open(`https://${instance.private_ip}`, '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Open
-                </Button>
-              )}
             </div>
             
-            {instance.private_ip && (
-              <div className="mt-3 p-2 bg-muted rounded text-sm">
-                <strong>Domain:</strong> {instance.private_ip}
-              </div>
-            )}
           </CardContent>
         </Card>
       ))}

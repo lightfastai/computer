@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
   serverExternalPackages: ['@vercel/sandbox', '@lightfastai/computer'],
   webpack: (config, { isServer }) => {
     // Handle ESM modules
@@ -28,4 +29,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

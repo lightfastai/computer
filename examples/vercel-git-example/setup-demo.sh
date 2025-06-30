@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Setting up Vercel Sandbox Next.js Demo"
+echo "🚀 Setting up Vercel Git Example - Repository Explorer"
 echo ""
 
 # Check if environment file exists
@@ -49,8 +49,10 @@ echo ""
 echo "Then open http://localhost:3000 in your browser"
 echo ""
 echo "📚 Features available:"
-echo "  • Create Vercel Sandbox instances"
-echo "  • Clone Git repositories into sandboxes"
-echo "  • Interactive terminal with command execution"
-echo "  • File browser and content viewer"
-echo "  • Instance lifecycle management"
+echo "  • Create Vercel Sandbox instances with git repositories"
+echo "  • Clone and explore any public git repository"
+echo "  • Browse commit history and branch structures"
+echo "  • Git-aware file tree with status indicators"
+echo "  • View file diffs and blame information"
+echo "  • Execute git commands in interactive terminal"
+echo "  • Syntax highlighting for code viewing"

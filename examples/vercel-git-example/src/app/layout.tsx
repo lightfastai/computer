@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Vercel Sandbox Demo - Lightfast Computer SDK',
-  description: 'Demonstration of the Lightfast Computer SDK with Vercel Sandbox provider',
+  title: 'Vercel Git Explorer - Lightfast Computer SDK',
+  description: 'Git repository exploration using Lightfast Computer SDK with Vercel Sandbox - browse commits, branches, and code',
 };
 
 export default function RootLayout({
@@ -22,9 +22,9 @@ export default function RootLayout({
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold">Vercel Sandbox Demo</h1>
+                  <h1 className="text-2xl font-bold">Vercel Git Explorer</h1>
                   <p className="text-muted-foreground">
-                    Powered by Lightfast Computer SDK
+                    Repository exploration powered by Lightfast Computer SDK
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

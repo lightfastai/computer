@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { computer, formatErrorResponse } from '@/lib/computer';
+import { getComputer, formatErrorResponse } from '@/lib/computer';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await computer.commands.execute(body);
+    const result = await getComputer().commands.execute(body);
 
     if (result.isOk()) {
       return NextResponse.json(result.value);

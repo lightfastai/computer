@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { type Instance } from '@/lib/api-client';
-import { Terminal, Send, Loader2, X } from 'lucide-react';
+import { Terminal, Send, Loader2, X, GitBranch, GitCommit, GitPullRequest } from 'lucide-react';
+import { commonGitCommands } from '@/lib/git-utils';
 
 interface CommandTerminalProps {
   instance: Instance;
@@ -27,16 +28,13 @@ const CommandTerminal: React.FC<CommandTerminalProps> = ({ instance, onExecuteCo
   const [historyIndex, setHistoryIndex] = useState(-1);
   const outputRef = useRef<HTMLDivElement>(null);
 
-  // Common commands for quick access
-  const commonCommands = [
-    'ls -la',
-    'pwd',
-    'git status',
-    'git log --oneline -10',
-    'npm install',
-    'npm start',
-    'python3 --version',
-    'node --version',
+  // Git-focused commands for quick access
+  const quickCommands = [
+    { label: 'Status', command: 'git status', icon: GitBranch },
+    { label: 'Log', command: 'git log --oneline -10', icon: GitCommit },
+    { label: 'Branches', command: 'git branch -a', icon: GitPullRequest },
+    { label: 'List Files', command: 'ls -la', icon: null },
+    { label: 'Current Dir', command: 'pwd', icon: null },
   ];
 
   const executeCommand = async (cmd: string) => {
@@ -124,27 +122,54 @@ const CommandTerminal: React.FC<CommandTerminalProps> = ({ instance, onExecuteCo
           Terminal - {instance.name}
         </CardTitle>
         <CardDescription>
-          Execute commands on your Vercel Sandbox
+          Execute git commands and explore your repository
         </CardDescription>
       </CardHeader>
       
       <CardContent className="flex-1 flex flex-col p-0">
         {/* Quick Commands */}
         <div className="px-6 pb-4">
-          <p className="text-sm text-muted-foreground mb-2">Quick Commands:</p>
-          <div className="flex flex-wrap gap-2">
-            {commonCommands.map((cmd) => (
-              <Button
-                key={cmd}
-                size="sm"
-                variant="outline"
-                onClick={() => executeCommand(cmd)}
-                disabled={isExecuting}
-                className="text-xs"
-              >
-                {cmd}
-              </Button>
-            ))}
+          <div className="space-y-3">
+            {/* Primary Quick Commands */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Quick Commands:</p>
+              <div className="flex flex-wrap gap-2">
+                {quickCommands.map((cmd) => (
+                  <Button
+                    key={cmd.command}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => executeCommand(cmd.command)}
+                    disabled={isExecuting}
+                    className="text-xs flex items-center gap-1"
+                  >
+                    {cmd.icon && <cmd.icon className="h-3 w-3" />}
+                    {cmd.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Git Commands by Category */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Git Commands:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {commonGitCommands.slice(0, 6).map((cmd) => (
+                  <Button
+                    key={cmd.command}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => executeCommand(cmd.command)}
+                    disabled={isExecuting}
+                    className="text-xs justify-start"
+                    title={cmd.description}
+                  >
+                    <GitCommit className="h-3 w-3 mr-1" />
+                    {cmd.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -155,7 +180,9 @@ const CommandTerminal: React.FC<CommandTerminalProps> = ({ instance, onExecuteCo
         >
           {history.length === 0 ? (
             <div className="text-gray-500">
-              Welcome to the Vercel Sandbox terminal. Type a command and press Enter.
+              Welcome to the Git Repository Explorer terminal. Type a command and press Enter.
+              <br />
+              Try 'git status' to check the repository state or 'git log' to view history.
             </div>
           ) : (
             history.map((entry, index) => (

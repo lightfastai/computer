@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { computer, formatErrorResponse } from '@/lib/computer';
+import { getComputer, formatErrorResponse } from '@/lib/computer';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
     switch (operation) {
       case 'clone':
-        const cloneResult = await computer.commands.execute({
+        const cloneResult = await getComputer().commands.execute({
           instanceId,
           command: 'git',
           args: ['clone', repoUrl, 'cloned-repo']
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         });
 
       case 'status':
-        const statusResult = await computer.commands.execute({
+        const statusResult = await getComputer().commands.execute({
           instanceId,
           command: 'git',
           args: ['-C', 'cloned-repo', 'status', '--porcelain']
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         });
 
       case 'branches':
-        const branchResult = await computer.commands.execute({
+        const branchResult = await getComputer().commands.execute({
           instanceId,
           command: 'git',
           args: ['-C', 'cloned-repo', 'branch', '-r']
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ branches });
 
       case 'checkout':
-        const checkoutResult = await computer.commands.execute({
+        const checkoutResult = await getComputer().commands.execute({
           instanceId,
           command: 'git',
           args: ['-C', 'cloned-repo', 'checkout', branch]
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         });
 
       case 'log':
-        const logResult = await computer.commands.execute({
+        const logResult = await getComputer().commands.execute({
           instanceId,
           command: 'git',
           args: ['-C', 'cloned-repo', 'log', '--oneline', '-10']
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
       case 'tree':
         // Enhanced file tree with directory structure
-        const treeResult = await computer.commands.execute({
+        const treeResult = await getComputer().commands.execute({
           instanceId,
           command: 'find',
           args: [
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
 
       case 'readme':
         // Look for README files
-        const readmeResult = await computer.commands.execute({
+        const readmeResult = await getComputer().commands.execute({
           instanceId,
           command: 'find',
           args: [
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
 
         if (readmeFiles.length > 0) {
           // Read the first README file (usually README.md)
-          const readContentResult = await computer.commands.execute({
+          const readContentResult = await getComputer().commands.execute({
             instanceId,
             command: 'head',
             args: [

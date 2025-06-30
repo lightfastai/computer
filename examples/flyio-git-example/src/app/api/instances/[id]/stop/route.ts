@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { computer } from '@/lib/computer';
+import { getComputer } from '@/lib/computer';
 
 export async function POST(request: NextRequest, context: { params: { id: string } }) {
   const { params } = context;
   try {
-    const result = await computer.instances.stop(params.id);
+    const result = await getComputer().instances.stop(params.id);
 
     if (result.isOk()) {
       return NextResponse.json(result.value);
